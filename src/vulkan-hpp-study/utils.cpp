@@ -175,6 +175,11 @@ namespace vk {
             return static_cast<uint32_t>(std::distance(queueFamilyProperties.begin(), graphicsQueueFamilyProperty));
         }
 
+        std::vector<std::string> getDeviceExtensions()
+        {
+            return { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+        }
+
         //----------- WindowData
         WindowData::WindowData(GLFWwindow* wnd, std::string const& name, vk::Extent2D const& extent) : handle{ wnd }, name{ name }, extent{ extent } {}
 
@@ -252,6 +257,25 @@ namespace vk {
                 else {
                     return vk::raii::Instance(context, vk::InstanceCreateInfo{ {}, &applicationInfo, enabledLayers, enabledExtensions });
                 }                   
+            }
+
+            vk::raii::Device makeDevice(vk::raii::PhysicalDevice const& physicalDevice,
+                uint32_t queueFamilyIndex,
+                std::vector<std::string> const& extensions,
+                vk::PhysicalDeviceFeatures const* physicalDeviceFeatures,
+                void const* pNext)
+            {
+                std::vector<char const*> enabledExtensions;
+                enabledExtensions.reserve(extensions.size());
+                for (auto const& ext : extensions)
+                {
+                    enabledExtensions.push_back(ext.data());
+                }
+
+                float                     queuePriority = 0.0f;
+                vk::DeviceQueueCreateInfo deviceQueueCreateInfo(vk::DeviceQueueCreateFlags(), queueFamilyIndex, 1, &queuePriority);
+                vk::DeviceCreateInfo      deviceCreateInfo(vk::DeviceCreateFlags(), deviceQueueCreateInfo, {}, enabledExtensions, physicalDeviceFeatures, pNext);
+                return vk::raii::Device(physicalDevice, deviceCreateInfo);
             }
         }
     }

@@ -23,6 +23,12 @@ namespace vku {
 
 namespace vk {
     namespace su {
+        template <class T>
+        VULKAN_HPP_INLINE constexpr const T& clamp(const T& v, const T& lo, const T& hi)
+        {
+            return v < lo ? lo : hi < v ? hi : v;
+        }
+
         template <typename TargetType, typename SourceType>
         VULKAN_HPP_INLINE TargetType checked_cast(SourceType value)
         {
@@ -56,6 +62,8 @@ namespace vk {
 
         uint32_t findGraphicsQueueFamilyIndex(std::vector<vk::QueueFamilyProperties> const& queueFamilyProperties);
 
+        std::vector<std::string> getDeviceExtensions();
+
         // TODO: This API is bad, copy-pasted and then quickly added logic for acquiring vulkanExtensions. Moved fast. 
         class WindowData
         {
@@ -85,8 +93,13 @@ namespace vk {
                 std::vector<std::string> const& layers = {},
                 std::vector<std::string> const& extensions = {},
                 uint32_t                         apiVersion = VK_API_VERSION_1_3);
-        }
 
+            vk::raii::Device makeDevice(vk::raii::PhysicalDevice const& physicalDevice,
+                uint32_t queueFamilyIndex,
+                std::vector<std::string> const& extensions = {},
+                vk::PhysicalDeviceFeatures const* physicalDeviceFeatures = nullptr,
+                void const* pNext = nullptr);
+        }
     }
 }
 
