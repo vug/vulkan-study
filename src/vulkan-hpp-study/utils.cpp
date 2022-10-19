@@ -174,6 +174,58 @@ namespace vk {
             assert(graphicsQueueFamilyProperty != queueFamilyProperties.end());
             return static_cast<uint32_t>(std::distance(queueFamilyProperties.begin(), graphicsQueueFamilyProperty));
         }
+
+        //----------- WindowData
+        WindowData::WindowData(GLFWwindow* wnd, std::string const& name, vk::Extent2D const& extent) : handle{ wnd }, name{ name }, extent{ extent } {}
+
+        WindowData::WindowData(WindowData&& other) : handle{}, name{}, extent{}, vulkanExtensions{}
+        {
+            std::swap(handle, other.handle);
+            std::swap(name, other.name);
+            std::swap(extent, other.extent);
+            std::swap(vulkanExtensions, other.vulkanExtensions);
+        }
+
+        WindowData::~WindowData() noexcept
+        {
+            glfwDestroyWindow(handle);
+        }
+
+        WindowData createWindow(std::string const& windowName, vk::Extent2D const& extent)
+        {
+            struct glfwContext
+            {
+                glfwContext()
+                {
+                    glfwInit();
+                    glfwSetErrorCallback(
+                        [](int error, const char* msg)
+                        {
+                            std::cerr << "glfw: "
+                                << "(" << error << ") " << msg << std::endl;
+                        });                        
+                }
+
+                ~glfwContext()
+                {
+                    glfwTerminate();
+                }
+            };
+
+            static auto glfwCtx = glfwContext();
+            (void)glfwCtx;
+
+            glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+            GLFWwindow* window = glfwCreateWindow(extent.width, extent.height, windowName.c_str(), nullptr, nullptr);
+            auto wd = WindowData(window, windowName, extent);
+
+            uint32_t count;
+            const char** extensions = glfwGetRequiredInstanceExtensions(&count);
+            for (size_t ix = 0; ix < count; ++ix)
+                wd.vulkanExtensions.push_back(extensions[ix]);
+                
+            return wd;
+        }
     }
 }
 
