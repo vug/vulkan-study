@@ -21,6 +21,8 @@ namespace vku {
 
 namespace vk {
     namespace su {
+        std::vector<std::string> getInstanceExtensions();
+
         vk::DebugUtilsMessengerCreateInfoEXT makeDebugUtilsMessengerCreateInfoEXT();
 
         VKAPI_ATTR VkBool32 VKAPI_CALL debugUtilsMessengerCallback(VkDebugUtilsMessageSeverityFlagBitsEXT       messageSeverity,
