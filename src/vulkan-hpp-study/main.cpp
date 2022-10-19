@@ -1,6 +1,8 @@
 #include "utils.hpp"
 
 #include <vulkan/vulkan_raii.hpp>
+#define GLFW_INCLUDE_NONE
+#include <GLFW/glfw3.h>
 
 #include <iostream>
 #include <string>
@@ -10,6 +12,8 @@ static std::string EngineName = "Vulkan.hpp";
 
 int main() {
 	std::cout << "Hello, Vulkan!\n";
+
+	glfwInit();
 
 	vk::raii::Context context;
 	vk::raii::Instance instance = vk::raii::su::makeInstance(context, AppName, EngineName, {}, vk::su::getInstanceExtensions());
