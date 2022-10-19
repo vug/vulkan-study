@@ -17,10 +17,12 @@ int main() {
 #if !defined( NDEBUG )
 	vk::raii::DebugUtilsMessengerEXT debugUtilsMessenger(instance, vk::su::makeDebugUtilsMessengerCreateInfoEXT());
 #endif
-	vk::raii::PhysicalDevices physicalDevices(instance);
+	vk::raii::PhysicalDevice physicalDevice = vk::raii::PhysicalDevices(instance).front();
+	uint32_t graphicsQueueFamilyIndex = vk::su::findGraphicsQueueFamilyIndex(physicalDevice.getQueueFamilyProperties());
+
 	// simple test that physical device found
-	auto features = physicalDevices.front().getFeatures();
-	std::cout << "numDevices: " << physicalDevices.size() << ", physicalDevice[0] has multi-viewport: " << features.multiViewport << '\n';
+	auto features = physicalDevice.getFeatures();
+	std::cout << "physicalDevice has multi-viewport: " << features.multiViewport << ", graphicsQueueFamilyIndex: " << graphicsQueueFamilyIndex << '\n';
 
 	std::cout << "Bye, Vulkan!\n";
 	return 0;

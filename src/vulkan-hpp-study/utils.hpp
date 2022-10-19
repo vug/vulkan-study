@@ -42,6 +42,8 @@ namespace vk {
             makeInstanceCreateInfoChain(vk::ApplicationInfo const& applicationInfo,
                 std::vector<char const*> const& layers,
                 std::vector<char const*> const& extensions);
+
+        uint32_t findGraphicsQueueFamilyIndex(std::vector<vk::QueueFamilyProperties> const& queueFamilyProperties);
     }
 
     namespace raii {
