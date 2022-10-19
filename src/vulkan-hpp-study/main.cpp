@@ -19,6 +19,10 @@ int main() {
 #endif
 	vk::raii::PhysicalDevice physicalDevice = vk::raii::PhysicalDevices(instance).front();
 	uint32_t graphicsQueueFamilyIndex = vk::su::findGraphicsQueueFamilyIndex(physicalDevice.getQueueFamilyProperties());
+	float queuePriority = 0.0f;
+	vk::DeviceQueueCreateInfo deviceQueueCreateInfo({}, graphicsQueueFamilyIndex, 1, &queuePriority);
+	vk::DeviceCreateInfo deviceCreateInfo({}, deviceQueueCreateInfo);
+	vk::raii::Device device(physicalDevice, deviceCreateInfo);
 
 	// simple test that physical device found
 	auto features = physicalDevice.getFeatures();
