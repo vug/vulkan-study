@@ -16,18 +16,18 @@ namespace vk {
             VkDebugUtilsMessengerCallbackDataEXT const* pCallbackData,
             void* /*pUserData*/)
         {
-#if !defined( NDEBUG )
-            if (pCallbackData->messageIdNumber == 648835635)
-            {
-                // UNASSIGNED-khronos-Validation-debug-build-warning-message
-                return VK_FALSE;
+            if (vku::isDebugBuild) {
+                if (pCallbackData->messageIdNumber == 648835635)
+                {
+                    // UNASSIGNED-khronos-Validation-debug-build-warning-message
+                    return VK_FALSE;
+                }
+                if (pCallbackData->messageIdNumber == 767975156)
+                {
+                    // UNASSIGNED-BestPractices-vkCreateInstance-specialuse-extension
+                    return VK_FALSE;
+                }
             }
-            if (pCallbackData->messageIdNumber == 767975156)
-            {
-                // UNASSIGNED-BestPractices-vkCreateInstance-specialuse-extension
-                return VK_FALSE;
-            }
-#endif
 
             std::cerr << vk::to_string(static_cast<vk::DebugUtilsMessageSeverityFlagBitsEXT>(messageSeverity)) << ": "
                 << vk::to_string(static_cast<vk::DebugUtilsMessageTypeFlagsEXT>(messageTypes)) << ":\n";
@@ -68,12 +68,7 @@ namespace vk {
             return VK_TRUE;
         }
 
-        std::vector<char const*> gatherLayers(std::vector<std::string> const& layers
-#if !defined( NDEBUG )
-            ,
-            std::vector<vk::LayerProperties> const& layerProperties
-#endif
-        )
+        std::vector<char const*> gatherLayers(std::vector<std::string> const& layers, std::vector<vk::LayerProperties> const& layerProperties)
         {
             std::vector<char const*> enabledLayers;
             enabledLayers.reserve(layers.size());
@@ -83,26 +78,24 @@ namespace vk {
                     layerProperties.end());
                 enabledLayers.push_back(layer.data());
             }
-#if !defined( NDEBUG )
-            // Enable standard validation layer to find as much errors as possible!
-            if (std::find(layers.begin(), layers.end(), "VK_LAYER_KHRONOS_validation") == layers.end() &&
-                std::find_if(layerProperties.begin(),
-                    layerProperties.end(),
-                    [](vk::LayerProperties const& lp)
-                    { return (strcmp("VK_LAYER_KHRONOS_validation", lp.layerName) == 0); }) != layerProperties.end())
-            {
-                enabledLayers.push_back("VK_LAYER_KHRONOS_validation");
+
+            if (vku::isDebugBuild) {
+                // Enable standard validation layer to find as much errors as possible!
+                const char* standard_validation_layer = "VK_LAYER_KHRONOS_validation";
+                if (std::find(layers.begin(), layers.end(), standard_validation_layer) == layers.end() &&
+                    std::find_if(layerProperties.begin(),
+                        layerProperties.end(),
+                        [&](vk::LayerProperties const& lp)
+                        { return (strcmp(standard_validation_layer, lp.layerName) == 0); }) != layerProperties.end())
+                {
+                    enabledLayers.push_back(standard_validation_layer);
+                }
             }
-#endif
+
             return enabledLayers;
         }
 
-        std::vector<char const*> gatherExtensions(std::vector<std::string> const& extensions
-#if !defined( NDEBUG )
-            ,
-            std::vector<vk::ExtensionProperties> const& extensionProperties
-#endif
-        )
+        std::vector<char const*> gatherExtensions(std::vector<std::string> const& extensions, std::vector<vk::ExtensionProperties> const& extensionProperties)
         {
             std::vector<char const*> enabledExtensions;
             enabledExtensions.reserve(extensions.size());
@@ -113,33 +106,25 @@ namespace vk {
                     [ext](vk::ExtensionProperties const& ep) { return ext == ep.extensionName; }) != extensionProperties.end());
                 enabledExtensions.push_back(ext.data());
             }
-#if !defined( NDEBUG )
-            if (std::find(extensions.begin(), extensions.end(), VK_EXT_DEBUG_UTILS_EXTENSION_NAME) == extensions.end() &&
-                std::find_if(extensionProperties.begin(),
-                    extensionProperties.end(),
-                    [](vk::ExtensionProperties const& ep)
-                    { return (strcmp(VK_EXT_DEBUG_UTILS_EXTENSION_NAME, ep.extensionName) == 0); }) != extensionProperties.end())
-            {
-                enabledExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+
+            if (vku::isDebugBuild) {
+                if (std::find(extensions.begin(), extensions.end(), VK_EXT_DEBUG_UTILS_EXTENSION_NAME) == extensions.end() &&
+                    std::find_if(extensionProperties.begin(),
+                        extensionProperties.end(),
+                        [](vk::ExtensionProperties const& ep)
+                        { return (strcmp(VK_EXT_DEBUG_UTILS_EXTENSION_NAME, ep.extensionName) == 0); }) != extensionProperties.end())
+                {
+                    enabledExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+                }
             }
-#endif
             return enabledExtensions;
         }
 
-
-#if defined( NDEBUG )
-        vk::StructureChain<vk::InstanceCreateInfo>
-#else
         vk::StructureChain<vk::InstanceCreateInfo, vk::DebugUtilsMessengerCreateInfoEXT>
-#endif
-            makeInstanceCreateInfoChain(vk::ApplicationInfo const& applicationInfo,
+            makeInstanceCreateInfoChainWithDebug(vk::ApplicationInfo const& applicationInfo,
                 std::vector<char const*> const& layers,
                 std::vector<char const*> const& extensions)
         {
-#if defined( NDEBUG )
-            // in non-debug mode just use the InstanceCreateInfo for instance creation
-            vk::StructureChain<vk::InstanceCreateInfo> instanceCreateInfo({ {}, &applicationInfo, layers, extensions });
-#else
             // in debug mode, addionally use the debugUtilsMessengerCallback in instance creation!
             vk::DebugUtilsMessageSeverityFlagsEXT severityFlags(vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
                 vk::DebugUtilsMessageSeverityFlagBitsEXT::eError);
@@ -147,7 +132,6 @@ namespace vk {
                 vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation);
             vk::StructureChain<vk::InstanceCreateInfo, vk::DebugUtilsMessengerCreateInfoEXT> instanceCreateInfo(
                 { {}, &applicationInfo, layers, extensions }, { {}, severityFlags, messageTypeFlags, &vk::su::debugUtilsMessengerCallback });
-#endif
             return instanceCreateInfo;
         }
 
@@ -176,26 +160,18 @@ namespace vk {
                 uint32_t                         apiVersion)
             {
                 vk::ApplicationInfo       applicationInfo(appName.c_str(), 1, engineName.c_str(), 1, apiVersion);
-                std::vector<char const*> enabledLayers = vk::su::gatherLayers(layers
-#if !defined( NDEBUG )
-                    ,
-                    context.enumerateInstanceLayerProperties()
-#endif
-                );
-                std::vector<char const*> enabledExtensions = vk::su::gatherExtensions(extensions
-#if !defined( NDEBUG )
-                    ,
-                    context.enumerateInstanceExtensionProperties()
-#endif
-                );
-#if defined( NDEBUG )
-                vk::StructureChain<vk::InstanceCreateInfo>
-#else
-                vk::StructureChain<vk::InstanceCreateInfo, vk::DebugUtilsMessengerCreateInfoEXT>
-#endif
-                    instanceCreateInfoChain = vk::su::makeInstanceCreateInfoChain(applicationInfo, enabledLayers, enabledExtensions);
+                const auto layerProperties = vku::isDebugBuild ? context.enumerateInstanceLayerProperties() : std::vector<vk::LayerProperties>{};
+                std::vector<char const*> enabledLayers = vk::su::gatherLayers(layers, layerProperties);
+                const auto extensionProperties = vku::isDebugBuild ? context.enumerateInstanceExtensionProperties() : std::vector<vk::ExtensionProperties>{};
+                std::vector<char const*> enabledExtensions = vk::su::gatherExtensions(extensions, extensionProperties);
 
-                return vk::raii::Instance(context, instanceCreateInfoChain.get<vk::InstanceCreateInfo>());
+                if (vku::isDebugBuild) {
+                    const auto instanceCreateInfoChain = vk::su::makeInstanceCreateInfoChainWithDebug(applicationInfo, enabledLayers, enabledExtensions);
+                    return vk::raii::Instance(context, instanceCreateInfoChain.get<vk::InstanceCreateInfo>());
+                }
+                else {
+                    return vk::raii::Instance(context, vk::InstanceCreateInfo{ {}, &applicationInfo, enabledLayers, enabledExtensions });
+                }                   
             }
         }
     }

@@ -14,9 +14,8 @@ int main() {
 	vk::raii::Context context;
 	vk::ApplicationInfo applicationInfo(AppName.c_str(), 1, EngineName.c_str(), 1, VK_API_VERSION_1_3);
 	vk::raii::Instance instance = vk::raii::su::makeInstance(context, AppName, EngineName);
-#if !defined( NDEBUG )
-	vk::raii::DebugUtilsMessengerEXT debugUtilsMessenger(instance, vk::su::makeDebugUtilsMessengerCreateInfoEXT());
-#endif
+	if(vku::isDebugBuild)
+		vk::raii::DebugUtilsMessengerEXT debugUtilsMessenger(instance, vk::su::makeDebugUtilsMessengerCreateInfoEXT());
 	vk::raii::PhysicalDevice physicalDevice = vk::raii::PhysicalDevices(instance).front();
 	uint32_t graphicsQueueFamilyIndex = vk::su::findGraphicsQueueFamilyIndex(physicalDevice.getQueueFamilyProperties());
 	float queuePriority = 0.0f;

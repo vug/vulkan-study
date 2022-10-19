@@ -11,6 +11,14 @@
 - https://github.com/KhronosGroup/Vulkan-Hpp/blob/master/samples/utils/utils.cpp
 */ 
 
+namespace vku {   
+#if !defined( NDEBUG )
+    constexpr bool isDebugBuild = true;
+#else
+    constexpr bool isDebugBuild = false;
+#endif
+}
+
 namespace vk {
     namespace su {
         vk::DebugUtilsMessengerCreateInfoEXT makeDebugUtilsMessengerCreateInfoEXT();
@@ -20,26 +28,12 @@ namespace vk {
             VkDebugUtilsMessengerCallbackDataEXT const* pCallbackData,
             void* /*pUserData*/);
 
-        std::vector<char const*> gatherLayers(std::vector<std::string> const& layers
-#if !defined( NDEBUG )
-            ,
-            std::vector<vk::LayerProperties> const& layerProperties
-#endif
-        );
+        std::vector<char const*> gatherLayers(std::vector<std::string> const& layers, std::vector<vk::LayerProperties> const& layerProperties);
 
-        std::vector<char const*> gatherExtensions(std::vector<std::string> const& extensions
-#if !defined( NDEBUG )
-            ,
-            std::vector<vk::ExtensionProperties> const& extensionProperties
-#endif
-        );
+        std::vector<char const*> gatherExtensions(std::vector<std::string> const& extensions, std::vector<vk::ExtensionProperties> const& extensionProperties);
 
-#if defined( NDEBUG )
-        vk::StructureChain<vk::InstanceCreateInfo>
-#else
         vk::StructureChain<vk::InstanceCreateInfo, vk::DebugUtilsMessengerCreateInfoEXT>
-#endif
-            makeInstanceCreateInfoChain(vk::ApplicationInfo const& applicationInfo,
+            makeInstanceCreateInfoChainWithDebug(vk::ApplicationInfo const& applicationInfo,
                 std::vector<char const*> const& layers,
                 std::vector<char const*> const& extensions);
 
