@@ -17,3 +17,4 @@ add_subdirectory(dependencies/vk-bootstrap)
 
 # projects
 add_subdirectory(src/vulkan-hpp-study)
+add_subdirectory(src/vk-bootstrap-study)
