@@ -238,6 +238,40 @@ int main() {
   vk::SubpassDescription subpass(vk::SubpassDescriptionFlags{}, vk::PipelineBindPoint::eGraphics, {}, colorReference, {}, &depthReference);
   vk::raii::RenderPass renderPass{ device, vk::RenderPassCreateInfo{vk::RenderPassCreateFlags(), attachmentDescriptions, subpass} };
 
+  const std::string vertexShaderStr = R"(
+#version 450
+#extension GL_ARB_separate_shader_objects : enable
+
+layout (location = 0) out vec3 fragColor;
+
+vec2 positions[3] = vec2[](vec2 (0.0, -0.5), vec2 (0.5, 0.5), vec2 (-0.5, 0.5));
+
+vec3 colors[3] = vec3[](vec3 (1.0, 0.0, 0.0), vec3 (0.0, 1.0, 0.0), vec3 (0.0, 0.0, 1.0));
+
+void main ()
+{
+	gl_Position = vec4 (positions[gl_VertexIndex], 0.0, 1.0);
+	fragColor = colors[gl_VertexIndex];
+}
+)";
+
+  const std::string fragmentShaderStr = R"(
+#version 450
+#extension GL_ARB_separate_shader_objects : enable
+
+layout (location = 0) in vec3 fragColor;
+
+layout (location = 0) out vec4 outColor;
+
+void main () { outColor = vec4 (fragColor, 1.0); }
+)";
+  glslang::InitializeProcess();
+  std::vector<unsigned int> vertexShaderSpv;
+  std::vector<unsigned int> fragmentShaderSpv;
+  const bool vertexShaderCompilationSuccessful = GLSLtoSPV(vk::ShaderStageFlagBits::eVertex, vertexShaderStr, vertexShaderSpv);
+  const bool fragmentShaderCompilationSuccessful = GLSLtoSPV(vk::ShaderStageFlagBits::eFragment, fragmentShaderStr, fragmentShaderSpv);
+  std::cout << "vert successful: " << vertexShaderCompilationSuccessful << ", frag succesful: " << fragmentShaderCompilationSuccessful << '\n';
+  glslang::FinalizeProcess();
 
   // END
   glfwDestroyWindow(window);
