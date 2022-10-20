@@ -9,7 +9,8 @@
       "installRoot": "${projectDir}\\out\\install\\${name}",
       "cmakeCommandArgs": "",
       "buildCommandArgs": "",
-      "ctestCommandArgs": ""
+      "ctestCommandArgs": "",
+      "cmakeExecutable": "c:\\Program Files\\CMake\\bin\\cmake.exe"
     },
     {
       "name": "x64-Release",
@@ -21,7 +22,7 @@
       "buildCommandArgs": "",
       "ctestCommandArgs": "",
       "inheritEnvironments": [ "msvc_x64_x64" ],
-      "variables": []
+      "cmakeExecutable": "c:\\Program Files\\CMake\\bin\\cmake.exe"
     },
     {
       "name": "x64-Release-With-Debug-Info",
@@ -33,7 +34,7 @@
       "buildCommandArgs": "",
       "ctestCommandArgs": "",
       "inheritEnvironments": [ "msvc_x64_x64" ],
-      "variables": []
+      "cmakeExecutable": "c:\\Program Files\\CMake\\bin\\cmake.exe"
     }
   ]
 }

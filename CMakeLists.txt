@@ -1,6 +1,4 @@
-cmake_minimum_required(VERSION 3.20)
-
-#set(ENV{VULKAN_SDK} "C:/VulkanSDK/1.3.224.1/")
+cmake_minimum_required(VERSION 3.24) # needed for improved FindVulkan module
 
 project(VulkanStudy
   VERSION 0.1
@@ -16,5 +14,5 @@ add_subdirectory(dependencies/glfw)
 add_subdirectory(dependencies/vk-bootstrap)
 
 # projects
-add_subdirectory(src/vulkan-hpp-study)
+#add_subdirectory(src/vulkan-hpp-study) # temporarily turned off for faster builds
 add_subdirectory(src/vk-bootstrap-study)
