@@ -72,9 +72,45 @@ int main() {
 	auto vkbDevice = vkb::DeviceBuilder { vkbPhysicalDevice }.build().value();
 	vk::raii::Device device{ physicalDevice, vkbDevice.device};
 
-	auto vkbSwapchain = vkb::SwapchainBuilder{ vkbDevice }.build().value();
+	// TODO: find a better format picking scheme // can get available formats via: auto surfaceFormats = physicalDevice.getSurfaceFormatsKHR(*surface);
+	auto desiredColorFormat = vk::Format::eB8G8R8A8Unorm; // or vk::Format::eB8G8R8A8Srgb;
+	auto desiredColorSpace = vk::ColorSpaceKHR::eSrgbNonlinear;
+	auto vkbSwapchain = vkb::SwapchainBuilder{ vkbDevice }
+		.set_desired_format({ static_cast<VkFormat>(desiredColorFormat), static_cast<VkColorSpaceKHR>(desiredColorSpace)}) // default
+		.set_desired_present_mode(VK_PRESENT_MODE_MAILBOX_KHR) // default. other: VK_PRESENT_MODE_FIFO_KHR
+		.build().value();
+	assert(vkbSwapchain.image_format == static_cast<VkFormat>(desiredColorFormat));
+	assert(vkbSwapchain.color_space == static_cast<VkColorSpaceKHR>(desiredColorSpace));
 	vk::raii::SwapchainKHR swapChain{ device, vkbSwapchain.swapchain };
 	// TODO: implement recreateSwapchain which recreates FrameBuffers, CommandPools, and CommandBuffers with it
+
+	vk::raii::Queue graphicsQueue{ device, vkbDevice.get_queue(vkb::QueueType::graphics).value() };
+	vk::raii::Queue presentQueue{ device, vkbDevice.get_queue(vkb::QueueType::present).value() };
+
+	// RenderPass
+	std::array<vk::AttachmentDescription, 2> attachmentDescriptions;
+	attachmentDescriptions[0] = vk::AttachmentDescription(vk::AttachmentDescriptionFlags(),
+		desiredColorFormat,
+		vk::SampleCountFlagBits::e1, // TODO: try MSAA
+		vk::AttachmentLoadOp::eClear,
+		vk::AttachmentStoreOp::eStore,
+		vk::AttachmentLoadOp::eDontCare,
+		vk::AttachmentStoreOp::eDontCare,
+		vk::ImageLayout::eUndefined,
+		vk::ImageLayout::ePresentSrcKHR);
+	attachmentDescriptions[1] = vk::AttachmentDescription(vk::AttachmentDescriptionFlags(),
+		vk::Format::eD16Unorm, // TODO: what other options are there for depth?
+		vk::SampleCountFlagBits::e1,
+		vk::AttachmentLoadOp::eClear,
+		vk::AttachmentStoreOp::eDontCare,
+		vk::AttachmentLoadOp::eDontCare,
+		vk::AttachmentStoreOp::eDontCare,
+		vk::ImageLayout::eUndefined,
+		vk::ImageLayout::eDepthStencilAttachmentOptimal);
+	vk::AttachmentReference colorReference(0, vk::ImageLayout::eColorAttachmentOptimal);
+	vk::AttachmentReference depthReference(1, vk::ImageLayout::eDepthStencilAttachmentOptimal);
+	vk::SubpassDescription subpass(vk::SubpassDescriptionFlags{}, vk::PipelineBindPoint::eGraphics, {}, colorReference, {}, &depthReference);
+	vk::raii::RenderPass renderPass{ device, vk::RenderPassCreateInfo{vk::RenderPassCreateFlags(), attachmentDescriptions, subpass} };
 
 
 	// END
