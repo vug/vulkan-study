@@ -1,3 +1,6 @@
 [submodule "dependencies/glfw"]
 	path = dependencies/glfw
 	url = https://github.com/glfw/glfw.git
+[submodule "dependencies/vk-bootstrap"]
+	path = dependencies/vk-bootstrap
+	url = https://github.com/charles-lunarg/vk-bootstrap.git

@@ -74,3 +74,12 @@ cl /std:c++20 /W4 /external:I"../dependencies" /external:W0 /I"../dependencies/g
 ```
 
 Also choose appropriate optimization flags, or use `/Zi` for generating debug symbols
+
+# vk-bootstrap
+
+* https://github.com/charles-lunarg/vk-bootstrap
+* [vk\-bootstrap/getting\_started\.md at master · charles\-lunarg/vk\-bootstrap](https://github.com/charles-lunarg/vk-bootstrap/blob/master/docs/getting_started.md)
+
+```cmd
+git submodule add https://github.com/charles-lunarg/vk-bootstrap.git
+```
