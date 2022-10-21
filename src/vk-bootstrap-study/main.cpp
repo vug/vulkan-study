@@ -36,11 +36,11 @@ int main() {
     vulkanInstanceExtensions.push_back(extensions[ix]);
 
   //---- Instance
-  auto systemInfo = vkb::SystemInfo::get_system_info().value(); // has methods about available layers and extensions
+  vkb::SystemInfo systemInfo = vkb::SystemInfo::get_system_info().value(); // has methods about available layers and extensions
   for (const auto& ext : vulkanInstanceExtensions)
     assert(systemInfo.is_extension_available(ext.c_str()));
 
-  auto vkbInstanceBuilder = vkb::InstanceBuilder{}
+  vkb::InstanceBuilder vkbInstanceBuilder = vkb::InstanceBuilder{}
     .set_app_name("Example Vulkan Application")
     .require_api_version(1, 3, 0)
     .enable_validation_layers(vku::isDebugBuild) // == .enable_layer("VK_LAYER_KHRONOS_validation")
@@ -50,7 +50,7 @@ int main() {
   for (const auto& ext : vulkanInstanceExtensions)
     vkbInstanceBuilder.enable_extension(ext.c_str());
 
-  auto vkbInstance = vkbInstanceBuilder
+  vkb::Instance vkbInstance = vkbInstanceBuilder
     .build()
     .value();
 
@@ -64,14 +64,14 @@ int main() {
 
   //---- Physical Device
   vkb::PhysicalDeviceSelector phys_device_selector(vkbInstance);
-  auto vkbPhysicalDevice = phys_device_selector
+  vkb::PhysicalDevice vkbPhysicalDevice = phys_device_selector
     .set_surface(*surface)
     .select()
     .value();
   vk::raii::PhysicalDevice physicalDevice{ instance, vkbPhysicalDevice.physical_device };
 
   //---- Logical Device
-  auto vkbDevice = vkb::DeviceBuilder{ vkbPhysicalDevice }.build().value();
+  vkb::Device vkbDevice = vkb::DeviceBuilder{ vkbPhysicalDevice }.build().value();
   vk::raii::Device device{ physicalDevice, vkbDevice.device };
 
   //---- Swapchain
@@ -79,7 +79,7 @@ int main() {
   // TODO: find a better format picking scheme // can get available formats via: auto surfaceFormats = physicalDevice.getSurfaceFormatsKHR(*surface);
   auto desiredColorFormat = vk::Format::eB8G8R8A8Unorm; // or vk::Format::eB8G8R8A8Srgb;
   auto desiredColorSpace = vk::ColorSpaceKHR::eSrgbNonlinear;
-  auto vkbSwapchain = vkb::SwapchainBuilder{ vkbDevice }
+  vkb::Swapchain vkbSwapchain = vkb::SwapchainBuilder{ vkbDevice }
     .set_desired_format({ static_cast<VkFormat>(desiredColorFormat), static_cast<VkColorSpaceKHR>(desiredColorSpace) }) // default
     .set_desired_present_mode(VK_PRESENT_MODE_MAILBOX_KHR) // default. other: VK_PRESENT_MODE_FIFO_KHR
     .set_required_min_image_count(NUM_IMAGES)
@@ -284,11 +284,9 @@ void main () { outColor = vec4 (fragColor, 1.0); }
   //---- CommandBuffer
   vk::CommandPoolCreateInfo commandPoolCreateInfo({}, graphicsQueueFamilyIndex);
   vk::raii::CommandPool commandPool(device, commandPoolCreateInfo);
-  
-  
+ 
   vk::CommandBufferAllocateInfo commandBufferAllocateInfo(*commandPool, vk::CommandBufferLevel::ePrimary, 3);
   vk::raii::CommandBuffers commandBuffers(device, commandBufferAllocateInfo);
-
 
   for (size_t i = 0; i < commandBuffers.size(); ++i) {
     vk::raii::CommandBuffer& cmdBuf = commandBuffers[i];
