@@ -23,7 +23,7 @@ namespace vku {
 int main() {
   std::cout << "Hello, Vulkan!\n";
 
-  // GLFW init
+  //---- GLFW init
   glfwInit();
   glfwSetErrorCallback([](int error, const char* msg) { std::cerr << "glfw: " << "(" << error << ") " << msg << std::endl; });
   glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -35,7 +35,7 @@ int main() {
   for (size_t ix = 0; ix < count; ++ix)
     vulkanInstanceExtensions.push_back(extensions[ix]);
 
-  // Instance
+  //---- Instance
   auto systemInfo = vkb::SystemInfo::get_system_info().value(); // has methods about available layers and extensions
   for (const auto& ext : vulkanInstanceExtensions)
     assert(systemInfo.is_extension_available(ext.c_str()));
@@ -57,12 +57,12 @@ int main() {
   vk::raii::Context context;
   vk::raii::Instance instance{ context, vkbInstance.instance };
 
-  // Surface
+  //---- Surface
   VkSurfaceKHR vkSurface = VK_NULL_HANDLE;
   glfwCreateWindowSurface(static_cast<VkInstance>(*instance), window, nullptr, &vkSurface);
   vk::raii::SurfaceKHR surface{ instance, vkSurface };
 
-  // Physical Device
+  //---- Physical Device
   vkb::PhysicalDeviceSelector phys_device_selector(vkbInstance);
   auto vkbPhysicalDevice = phys_device_selector
     .set_surface(*surface)
@@ -70,11 +70,11 @@ int main() {
     .value();
   vk::raii::PhysicalDevice physicalDevice{ instance, vkbPhysicalDevice.physical_device };
 
-  // Logical Device
+  //---- Logical Device
   auto vkbDevice = vkb::DeviceBuilder{ vkbPhysicalDevice }.build().value();
   vk::raii::Device device{ physicalDevice, vkbDevice.device };
 
-  // Swapchain
+  //---- Swapchain
   // TODO: find a better format picking scheme // can get available formats via: auto surfaceFormats = physicalDevice.getSurfaceFormatsKHR(*surface);
   auto desiredColorFormat = vk::Format::eB8G8R8A8Unorm; // or vk::Format::eB8G8R8A8Srgb;
   auto desiredColorSpace = vk::ColorSpaceKHR::eSrgbNonlinear;
@@ -91,8 +91,34 @@ int main() {
   vk::raii::Queue graphicsQueue{ device, vkbDevice.get_queue(vkb::QueueType::graphics).value() };
   vk::raii::Queue presentQueue{ device, vkbDevice.get_queue(vkb::QueueType::present).value() };
 
-  // RenderPass
-  std::array<vk::AttachmentDescription, 2> attachmentDescriptions;
+  //---- RenderPass
+  if (false)
+  {
+    std::array<vk::AttachmentDescription, 2> attachmentDescriptions;
+    attachmentDescriptions[0] = vk::AttachmentDescription(vk::AttachmentDescriptionFlags(),
+      desiredColorFormat,
+      vk::SampleCountFlagBits::e1, // TODO: try MSAA
+      vk::AttachmentLoadOp::eClear,
+      vk::AttachmentStoreOp::eStore,
+      vk::AttachmentLoadOp::eDontCare,
+      vk::AttachmentStoreOp::eDontCare,
+      vk::ImageLayout::eUndefined,
+      vk::ImageLayout::ePresentSrcKHR);
+    attachmentDescriptions[1] = vk::AttachmentDescription(vk::AttachmentDescriptionFlags(),
+      vk::Format::eD16Unorm, // TODO: what other options are there for depth?
+      vk::SampleCountFlagBits::e1,
+      vk::AttachmentLoadOp::eClear,
+      vk::AttachmentStoreOp::eDontCare,
+      vk::AttachmentLoadOp::eDontCare,
+      vk::AttachmentStoreOp::eDontCare,
+      vk::ImageLayout::eUndefined,
+      vk::ImageLayout::eDepthStencilAttachmentOptimal);
+    vk::AttachmentReference colorReference(0, vk::ImageLayout::eColorAttachmentOptimal);
+    vk::AttachmentReference depthReference(1, vk::ImageLayout::eDepthStencilAttachmentOptimal);
+    vk::SubpassDescription subpass(vk::SubpassDescriptionFlags{}, vk::PipelineBindPoint::eGraphics, {}, colorReference, {}, &depthReference);
+    vk::raii::RenderPass renderPass{ device, vk::RenderPassCreateInfo{vk::RenderPassCreateFlags(), attachmentDescriptions, subpass} };
+  }
+  std::array<vk::AttachmentDescription, 1> attachmentDescriptions;
   attachmentDescriptions[0] = vk::AttachmentDescription(vk::AttachmentDescriptionFlags(),
     desiredColorFormat,
     vk::SampleCountFlagBits::e1, // TODO: try MSAA
@@ -102,20 +128,11 @@ int main() {
     vk::AttachmentStoreOp::eDontCare,
     vk::ImageLayout::eUndefined,
     vk::ImageLayout::ePresentSrcKHR);
-  attachmentDescriptions[1] = vk::AttachmentDescription(vk::AttachmentDescriptionFlags(),
-    vk::Format::eD16Unorm, // TODO: what other options are there for depth?
-    vk::SampleCountFlagBits::e1,
-    vk::AttachmentLoadOp::eClear,
-    vk::AttachmentStoreOp::eDontCare,
-    vk::AttachmentLoadOp::eDontCare,
-    vk::AttachmentStoreOp::eDontCare,
-    vk::ImageLayout::eUndefined,
-    vk::ImageLayout::eDepthStencilAttachmentOptimal);
   vk::AttachmentReference colorReference(0, vk::ImageLayout::eColorAttachmentOptimal);
-  vk::AttachmentReference depthReference(1, vk::ImageLayout::eDepthStencilAttachmentOptimal);
-  vk::SubpassDescription subpass(vk::SubpassDescriptionFlags{}, vk::PipelineBindPoint::eGraphics, {}, colorReference, {}, &depthReference);
+  vk::SubpassDescription subpass(vk::SubpassDescriptionFlags{}, vk::PipelineBindPoint::eGraphics, {}, colorReference, {}, nullptr);
   vk::raii::RenderPass renderPass{ device, vk::RenderPassCreateInfo{vk::RenderPassCreateFlags(), attachmentDescriptions, subpass} };
 
+  //---- Pipeline
   const std::string vertexShaderStr = R"(
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
@@ -176,17 +193,17 @@ void main () { outColor = vec4 (fragColor, 1.0); }
 
   vk::PipelineMultisampleStateCreateInfo multisampleStateCreateInfo({}, vk::SampleCountFlagBits::e1);
 
-  // Not used in vk-bootstrap example actually. But lack of it was generating a validation error.
-  vk::StencilOpState stencilOpState(vk::StencilOp::eKeep, vk::StencilOp::eKeep, vk::StencilOp::eKeep, vk::CompareOp::eAlways);
-  vk::PipelineDepthStencilStateCreateInfo depthStencilStateCreateInfo({},                           // flags
-    true,                         // depthTestEnable
-    true,                         // depthWriteEnable
-    vk::CompareOp::eLessOrEqual,  // depthCompareOp
-    false,                        // depthBoundTestEnable
-    false,                        // stencilTestEnable
-    stencilOpState,               // front
-    stencilOpState                // back
-  );
+  // Not used in vk-bootstrap example actually.
+  //vk::StencilOpState stencilOpState(vk::StencilOp::eKeep, vk::StencilOp::eKeep, vk::StencilOp::eKeep, vk::CompareOp::eAlways);
+  //vk::PipelineDepthStencilStateCreateInfo depthStencilStateCreateInfo({},                           // flags
+  //  true,                         // depthTestEnable
+  //  true,                         // depthWriteEnable
+  //  vk::CompareOp::eLessOrEqual,  // depthCompareOp
+  //  false,                        // depthBoundTestEnable
+  //  false,                        // stencilTestEnable
+  //  stencilOpState,               // front
+  //  stencilOpState                // back
+  //);
 
   vk::ColorComponentFlags colorComponentFlags(vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA);
   vk::PipelineColorBlendAttachmentState colorBlendAttachmentState(false, // blendEnable
@@ -219,7 +236,7 @@ void main () { outColor = vec4 (fragColor, 1.0); }
     &viewportStateCreateInfo,
     &rasterizationStateCreateInfo,
     &multisampleStateCreateInfo,
-    &depthStencilStateCreateInfo, // *vk::PipelineDepthStencilStateCreateInfo
+    nullptr, // *vk::PipelineDepthStencilStateCreateInfo
     &colorBlendStateCreateInfo,
     &dynamicStateCreateInfo, // *vk::PipelineDynamicStateCreateInfo
     *pipelineLayout, // vk::PipelineLayout
@@ -241,6 +258,24 @@ void main () { outColor = vec4 (fragColor, 1.0); }
   default: std::unreachable();
   }
 
+  //---- Framebuffer
+  const std::vector<VkImage>& swapchainImages = swapChain.getImages();
+
+  // vkbSwapchain.get_image_views() is actually not a getter but creator. Instead let's create imageViews ourselves
+  std::vector<vk::raii::ImageView> swapchainImageViews;
+  for (const VkImage& img : swapchainImages) {
+    const vk::ComponentMapping components = { vk::ComponentSwizzle::eIdentity, vk::ComponentSwizzle::eIdentity , vk::ComponentSwizzle::eIdentity , vk::ComponentSwizzle::eIdentity };
+    const vk::ImageSubresourceRange imageSubresourceRange = { vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 };
+    vk::ImageViewCreateInfo imageViewCreateInfo({}, img, vk::ImageViewType::e2D, desiredColorFormat, components, imageSubresourceRange);
+    swapchainImageViews.emplace_back(device, imageViewCreateInfo);
+  }
+    
+  std::vector<vk::raii::Framebuffer> framebuffers;
+  for (size_t i = 0; i < swapchainImageViews.size(); i++) {
+    std::array<vk::ImageView, 1> attachments = { *swapchainImageViews[i] };
+    vk::FramebufferCreateInfo framebufferCreateInfo({}, *renderPass, attachments, vkbSwapchain.extent.width, vkbSwapchain.extent.height, 1);
+    framebuffers.push_back(vk::raii::Framebuffer(device, framebufferCreateInfo));
+  }
 
   // END
   glfwDestroyWindow(window);
