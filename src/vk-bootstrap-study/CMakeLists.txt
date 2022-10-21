@@ -2,7 +2,7 @@ set(APP VkBootstrapStudy)
 
 add_executable(${APP}
   main.cpp
-)
+  SpirvHelper.hpp SpirvHelper.cpp)
 
 # CMake can find VulkanSDK if it was first installed from https://www.lunarg.com/vulkan-sdk/ 
 # using FindVulkan module. `include(FindVulkan)` not needed
