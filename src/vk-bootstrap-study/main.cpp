@@ -4,7 +4,6 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 #include <glslang/SPIRV/GlslangToSpv.h>
-//#include <glslang/Include/ResourceLimits.h>
 #include <vulkan/vulkan_raii.hpp>
 #include <VkBootstrap.h>
 
@@ -148,17 +147,22 @@ void main () { outColor = vec4 (fragColor, 1.0); }
   vku::spirv::init();
   vk::raii::ShaderModule vertexShader = vku::spirv::makeShaderModule(device, vk::ShaderStageFlagBits::eVertex, vertexShaderStr);
   vk::raii::ShaderModule fragmentShader = vku::spirv::makeShaderModule(device, vk::ShaderStageFlagBits::eVertex, fragmentShaderStr);
-  std::array<vk::PipelineShaderStageCreateInfo, 2> pipelineShaderStageCreateInfos = {
+  std::array<vk::PipelineShaderStageCreateInfo, 2> shaderStageCreateInfos = {
     vk::PipelineShaderStageCreateInfo({}, vk::ShaderStageFlagBits::eVertex, *vertexShader, "main"),
     vk::PipelineShaderStageCreateInfo({}, vk::ShaderStageFlagBits::eFragment, *fragmentShader, "main")
   };
 
+  // No vertexBindingDescription and no vertexAttributeDescriptions for this example
+  vk::PipelineVertexInputStateCreateInfo vertexInputStateCreateInfo({}, {}, {});
+
+  vk::PipelineInputAssemblyStateCreateInfo inputAssemblyStateCreateInfo({}, vk::PrimitiveTopology::eTriangleList, false);
+
   vk::GraphicsPipelineCreateInfo(
     {},
-    pipelineShaderStageCreateInfos,
-    {}, // *vk::PipelineVertexInputStateCreateInfo,
-    {}, // *vk::PipelineInputAssemblyStateCreateInfo
-    {}, // *vk::PipelineTessellationStateCreateInfo
+    shaderStageCreateInfos,
+    &vertexInputStateCreateInfo,
+    &inputAssemblyStateCreateInfo,
+    nullptr, // *vk::PipelineTessellationStateCreateInfo
     {}, // *vk::PipelineViewportStateCreateInfo
     {}, // *vk::PipelineRasterizationStateCreateInfo
     {}, // *vk::PipelineMultisampleStateCreateInfo
