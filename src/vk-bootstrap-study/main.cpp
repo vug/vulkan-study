@@ -157,18 +157,68 @@ void main () { outColor = vec4 (fragColor, 1.0); }
 
   vk::PipelineInputAssemblyStateCreateInfo inputAssemblyStateCreateInfo({}, vk::PrimitiveTopology::eTriangleList, false);
 
+  std::array<vk::Viewport, 1> viewports = { vk::Viewport{0.f, 0.f, static_cast<float>(vkbSwapchain.extent.width), static_cast<float>(vkbSwapchain.extent.height), 0.f, 1.f} };
+  std::array<vk::Rect2D, 1> scissors = { vk::Rect2D{vk::Offset2D{0, 0}, vkbSwapchain.extent} };
+  vk::PipelineViewportStateCreateInfo viewportStateCreateInfo({}, viewports, scissors);
+
+  vk::PipelineRasterizationStateCreateInfo rasterizationStateCreateInfo({}, // flags
+    false,                        // depthClampEnable
+    false,                        // rasterizerDiscardEnable
+    vk::PolygonMode::eFill,       // polygonMode
+    vk::CullModeFlagBits::eBack,  // cullMode
+    vk::FrontFace::eClockwise,    // frontFace
+    false,                        // depthBiasEnable
+    0.0f,                         // depthBiasConstantFactor
+    0.0f,                         // depthBiasClamp
+    0.0f,                         // depthBiasSlopeFactor
+    1.0f                          // lineWidth
+  );
+
+  vk::PipelineMultisampleStateCreateInfo multisampleStateCreateInfo({}, vk::SampleCountFlagBits::e1);
+
+  vk::StencilOpState stencilOpState(vk::StencilOp::eKeep, vk::StencilOp::eKeep, vk::StencilOp::eKeep, vk::CompareOp::eAlways);
+  vk::PipelineDepthStencilStateCreateInfo depthStencilStateCreateInfo({},                           // flags
+    true,                         // depthTestEnable
+    true,                         // depthWriteEnable
+    vk::CompareOp::eLessOrEqual,  // depthCompareOp
+    false,                        // depthBoundTestEnable
+    false,                        // stencilTestEnable
+    stencilOpState,               // front
+    stencilOpState                // back
+  );
+
+  vk::ColorComponentFlags colorComponentFlags(vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA);
+  vk::PipelineColorBlendAttachmentState colorBlendAttachmentState(false, // blendEnable
+    vk::BlendFactor::eZero,  // srcColorBlendFactor, defaults...
+    vk::BlendFactor::eZero,  // dstColorBlendFactor
+    vk::BlendOp::eAdd,       // colorBlendOp
+    vk::BlendFactor::eZero,  // srcAlphaBlendFactor
+    vk::BlendFactor::eZero,  // dstAlphaBlendFactor
+    vk::BlendOp::eAdd,       // alphaBlendOp
+    colorComponentFlags      // colorWriteMask
+  );
+  vk::PipelineColorBlendStateCreateInfo colorBlendStateCreateInfo({},                                 // flags
+    false,                              // logicOpEnable
+    vk::LogicOp::eNoOp,                 // logicOp
+    colorBlendAttachmentState,  // attachments
+    { { 0.f, 0.f, 0.f, 0.f } }      // blendConstants
+  );
+
+  std::array<vk::DynamicState, 2> dynamicStates = { vk::DynamicState::eViewport, vk::DynamicState::eScissor };
+  vk::PipelineDynamicStateCreateInfo dynamicStateCreateInfo({}, dynamicStates);
+
   vk::GraphicsPipelineCreateInfo(
     {},
     shaderStageCreateInfos,
     &vertexInputStateCreateInfo,
     &inputAssemblyStateCreateInfo,
     nullptr, // *vk::PipelineTessellationStateCreateInfo
-    {}, // *vk::PipelineViewportStateCreateInfo
-    {}, // *vk::PipelineRasterizationStateCreateInfo
-    {}, // *vk::PipelineMultisampleStateCreateInfo
-    {}, // *vk::PipelineDepthStencilStateCreateInfo
-    {}, // *vk::PipelineColorBlendStateCreateInfo
-    {}, // *vk::PipelineDynamicStateCreateInfo
+    &viewportStateCreateInfo,
+    &rasterizationStateCreateInfo, 
+    &multisampleStateCreateInfo,
+    nullptr, // *vk::PipelineDepthStencilStateCreateInfo
+    &colorBlendStateCreateInfo,
+    &dynamicStateCreateInfo, // *vk::PipelineDynamicStateCreateInfo
     {}, // vk::PipelineLayout
     {}, // vk::RenderPass
     {}, // uint32_t subpass_ = {},
