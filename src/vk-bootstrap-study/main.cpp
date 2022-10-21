@@ -309,14 +309,62 @@ void main () { outColor = vec4 (fragColor, 1.0); }
     cmdBuf.setScissor(0, vk::Rect2D{ vk::Offset2D{0, 0}, vkbSwapchain.extent });
     cmdBuf.beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
     cmdBuf.bindPipeline(vk::PipelineBindPoint::eGraphics, *pipeline);
-    cmdBuf.draw(3, 1, 0, 0); // 3 vertices
+    cmdBuf.draw(3, 1, 0, 0); // 3 vertices. their positions and colors are hard-coded in the vertex shader code.
     cmdBuf.endRenderPass();
     cmdBuf.end();
   }
 
+  //---- Synchronization
+  const int MAX_FRAMES_IN_FLIGHT = 2;
+  std::vector<vk::raii::Semaphore> availableSemaphores;
+  std::vector<vk::raii::Semaphore> finishedSemaphores;
+  std::vector<vk::raii::Fence> inFlightFences;
+  std::vector<vk::raii::Fence*> imageInFlight;
+  imageInFlight.resize(swapchainImages.size(), nullptr);
 
+  for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
+    availableSemaphores.emplace_back(device, vk::SemaphoreCreateInfo());
+    finishedSemaphores.emplace_back(device, vk::SemaphoreCreateInfo());
+    inFlightFences.emplace_back(device, vk::FenceCreateInfo(vk::FenceCreateFlagBits::eSignaled));
+  }
+
+  //---- Main Loop
+  size_t currentFrame = 0;
+  while (!glfwWindowShouldClose(window)) {
+    glfwPollEvents();
+
+    // Draw Frame
+    vk::Result result;
+    uint32_t imageIndex = 0;
+
+    result = device.waitForFences(*inFlightFences[currentFrame], true, UINT64_MAX);
+    assert(result == vk::Result::eSuccess);
+    std::tie(result, imageIndex) = swapChain.acquireNextImage(UINT64_MAX, *availableSemaphores[currentFrame]);
+    assert(result == vk::Result::eSuccess || result == vk::Result::eErrorOutOfDateKHR);
+    assert(imageIndex < swapChain.getImages().size());
+    //if (result == vk::Result::eErrorOutOfDateKHR) recreate_swapchain(...);
+
+    if (imageInFlight[imageIndex]) {
+      result = device.waitForFences(**imageInFlight[imageIndex], true, UINT64_MAX);
+      assert(result == vk::Result::eSuccess);
+    }
+    imageInFlight[imageIndex] = &inFlightFences[currentFrame];
+
+    vk::PipelineStageFlags waitStages(vk::PipelineStageFlagBits::eColorAttachmentOutput);
+    vk::SubmitInfo submitInfo(*availableSemaphores[currentFrame], waitStages, *commandBuffers[imageIndex], *finishedSemaphores[currentFrame]);
+    device.resetFences(*inFlightFences[currentFrame]);
+    graphicsQueue.submit(submitInfo, *inFlightFences[currentFrame]);
+
+    vk::PresentInfoKHR presentInfo(*finishedSemaphores[currentFrame], *swapChain, imageIndex);
+    result = presentQueue.presentKHR(presentInfo);
+    //if (result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR) recreateSwapChain();
+    //else assert(result == vk::Result::eSuccess);
+
+    currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+  }
 
   // END
+  device.waitIdle();
   glfwDestroyWindow(window);
   glfwTerminate();
 
