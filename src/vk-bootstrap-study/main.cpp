@@ -146,7 +146,7 @@ void main () { outColor = vec4 (fragColor, 1.0); }
 
   vku::spirv::init();
   vk::raii::ShaderModule vertexShader = vku::spirv::makeShaderModule(device, vk::ShaderStageFlagBits::eVertex, vertexShaderStr);
-  vk::raii::ShaderModule fragmentShader = vku::spirv::makeShaderModule(device, vk::ShaderStageFlagBits::eVertex, fragmentShaderStr);
+  vk::raii::ShaderModule fragmentShader = vku::spirv::makeShaderModule(device, vk::ShaderStageFlagBits::eFragment, fragmentShaderStr);
   std::array<vk::PipelineShaderStageCreateInfo, 2> shaderStageCreateInfos = {
     vk::PipelineShaderStageCreateInfo({}, vk::ShaderStageFlagBits::eVertex, *vertexShader, "main"),
     vk::PipelineShaderStageCreateInfo({}, vk::ShaderStageFlagBits::eFragment, *fragmentShader, "main")
@@ -176,6 +176,7 @@ void main () { outColor = vec4 (fragColor, 1.0); }
 
   vk::PipelineMultisampleStateCreateInfo multisampleStateCreateInfo({}, vk::SampleCountFlagBits::e1);
 
+  // Not used in vk-bootstrap example actually. But lack of it was generating a validation error.
   vk::StencilOpState stencilOpState(vk::StencilOp::eKeep, vk::StencilOp::eKeep, vk::StencilOp::eKeep, vk::CompareOp::eAlways);
   vk::PipelineDepthStencilStateCreateInfo depthStencilStateCreateInfo({},                           // flags
     true,                         // depthTestEnable
@@ -207,25 +208,38 @@ void main () { outColor = vec4 (fragColor, 1.0); }
   std::array<vk::DynamicState, 2> dynamicStates = { vk::DynamicState::eViewport, vk::DynamicState::eScissor };
   vk::PipelineDynamicStateCreateInfo dynamicStateCreateInfo({}, dynamicStates);
 
-  vk::GraphicsPipelineCreateInfo(
+  vk::raii::PipelineLayout pipelineLayout(device, { {}, {} }); // { flags, descriptorSetLayout }
+
+  vk::GraphicsPipelineCreateInfo graphicsPipelineCreateInfo(
     {},
     shaderStageCreateInfos,
     &vertexInputStateCreateInfo,
     &inputAssemblyStateCreateInfo,
     nullptr, // *vk::PipelineTessellationStateCreateInfo
     &viewportStateCreateInfo,
-    &rasterizationStateCreateInfo, 
+    &rasterizationStateCreateInfo,
     &multisampleStateCreateInfo,
-    nullptr, // *vk::PipelineDepthStencilStateCreateInfo
+    &depthStencilStateCreateInfo, // *vk::PipelineDepthStencilStateCreateInfo
     &colorBlendStateCreateInfo,
     &dynamicStateCreateInfo, // *vk::PipelineDynamicStateCreateInfo
-    {}, // vk::PipelineLayout
-    {}, // vk::RenderPass
-    {}, // uint32_t subpass_ = {},
-    {}, // VULKAN_HPP_NAMESPACE::Pipeline basePipelineHandle_ = {},
-    {}, // int32_t basePipelineIndex_ = {},
-    nullptr // const void* pNext
+    *pipelineLayout, // vk::PipelineLayout
+    *renderPass // vk::RenderPass
+    //{}, // uint32_t subpass_ = {},
+    //{}, // VULKAN_HPP_NAMESPACE::Pipeline basePipelineHandle_ = {},
+    //{}, // int32_t basePipelineIndex_ = {},
+    //nullptr // const void* pNext
   );
+  vk::raii::Pipeline pipeline(device, nullptr, graphicsPipelineCreateInfo);
+  switch (pipeline.getConstructorSuccessCode())
+  {
+  case vk::Result::eSuccess:
+    std::cout << "Pipeline compilation successful\n";
+    break;
+  case vk::Result::ePipelineCompileRequiredEXT:
+    std::cerr << "Pipeline compilation failed(?)";
+    break;
+  default: std::unreachable();
+  }
 
 
   // END
@@ -235,7 +249,7 @@ void main () { outColor = vec4 (fragColor, 1.0); }
   vku::spirv::finalize();
   // Need to be destroyed explicitly becomes raii instance does not own it apparently.
   vkb::destroy_debug_utils_messenger(vkbInstance.instance, vkbInstance.debug_messenger, vkbInstance.allocation_callbacks);
-  
+
   std::cout << "Bye, Vulkan!\n";
   return 0;
 }
