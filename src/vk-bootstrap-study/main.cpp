@@ -144,22 +144,45 @@ layout (location = 0) out vec4 outColor;
 
 void main () { outColor = vec4 (fragColor, 1.0); }
 )";
-  
+
   vku::spirv::init();
-  std::vector<unsigned int> vertexShaderSpv;
-  std::vector<unsigned int> fragmentShaderSpv;
-  const bool vertexShaderCompilationSuccessful = vku::spirv::GLSLtoSPV(vk::ShaderStageFlagBits::eVertex, vertexShaderStr, vertexShaderSpv);
-  const bool fragmentShaderCompilationSuccessful = vku::spirv::GLSLtoSPV(vk::ShaderStageFlagBits::eFragment, fragmentShaderStr, fragmentShaderSpv);
-  std::cout << "vert successful: " << vertexShaderCompilationSuccessful << ", frag succesful: " << fragmentShaderCompilationSuccessful << '\n';
-  vku::spirv::finalize();
+  vk::raii::ShaderModule vertexShader = vku::spirv::makeShaderModule(device, vk::ShaderStageFlagBits::eVertex, vertexShaderStr);
+  vk::raii::ShaderModule fragmentShader = vku::spirv::makeShaderModule(device, vk::ShaderStageFlagBits::eVertex, fragmentShaderStr);
+  std::array<vk::PipelineShaderStageCreateInfo, 2> pipelineShaderStageCreateInfos = {
+    vk::PipelineShaderStageCreateInfo({}, vk::ShaderStageFlagBits::eVertex, *vertexShader, "main"),
+    vk::PipelineShaderStageCreateInfo({}, vk::ShaderStageFlagBits::eFragment, *fragmentShader, "main")
+  };
+
+  vk::GraphicsPipelineCreateInfo(
+    {},
+    pipelineShaderStageCreateInfos,
+    {}, // *vk::PipelineVertexInputStateCreateInfo,
+    {}, // *vk::PipelineInputAssemblyStateCreateInfo
+    {}, // *vk::PipelineTessellationStateCreateInfo
+    {}, // *vk::PipelineViewportStateCreateInfo
+    {}, // *vk::PipelineRasterizationStateCreateInfo
+    {}, // *vk::PipelineMultisampleStateCreateInfo
+    {}, // *vk::PipelineDepthStencilStateCreateInfo
+    {}, // *vk::PipelineColorBlendStateCreateInfo
+    {}, // *vk::PipelineDynamicStateCreateInfo
+    {}, // vk::PipelineLayout
+    {}, // vk::RenderPass
+    {}, // uint32_t subpass_ = {},
+    {}, // VULKAN_HPP_NAMESPACE::Pipeline basePipelineHandle_ = {},
+    {}, // int32_t basePipelineIndex_ = {},
+    nullptr // const void* pNext
+  );
+
 
   // END
   glfwDestroyWindow(window);
   glfwTerminate();
 
+  vku::spirv::finalize();
   // Need to be destroyed explicitly becomes raii instance does not own it apparently.
   vkb::destroy_debug_utils_messenger(vkbInstance.instance, vkbInstance.debug_messenger, vkbInstance.allocation_callbacks);
-
+  
   std::cout << "Bye, Vulkan!\n";
   return 0;
 }
+

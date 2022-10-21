@@ -3,6 +3,13 @@
 namespace vku {
   namespace spirv
   {
+    vk::raii::ShaderModule makeShaderModule(vk::raii::Device const& device, vk::ShaderStageFlagBits shaderStage, std::string const& glsl) {
+      std::vector<unsigned int> spv;
+      bool hasTranslated = GLSLtoSPV(shaderStage, glsl, spv);
+      assert(hasTranslated);
+
+      return vk::raii::ShaderModule(device, vk::ShaderModuleCreateInfo(vk::ShaderModuleCreateFlags(), spv));
+    }
 
     bool GLSLtoSPV(const vk::ShaderStageFlagBits shaderType, std::string const& glsl, std::vector<unsigned int>& spv) {
       const char* shaderStrings[1];
