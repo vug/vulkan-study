@@ -10,6 +10,9 @@ namespace vku {
   struct Image;
 
   class VulkanContext {
+  public:
+    const uint32_t NUM_IMAGES = 3;
+    const int MAX_FRAMES_IN_FLIGHT = 2;
   private:
     vku::Window& window;
     vk::raii::Context context;
@@ -42,6 +45,8 @@ namespace vku {
     std::vector<vku::Image> depthImages;
     std::vector<vk::raii::ImageView> swapchainImageViews;
     std::vector<vk::raii::Framebuffer> framebuffers;
+    vk::raii::CommandPool commandPool;
+    vk::raii::CommandBuffers commandBuffers;
 
   private:
     vk::raii::Instance constructInstance();

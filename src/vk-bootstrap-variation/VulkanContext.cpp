@@ -56,7 +56,9 @@ namespace vku {
     presentQueue{ device, vkbDevice.get_queue(vkb::QueueType::present).value() },
     graphicsQueueFamilyIndex(vkbDevice.get_queue_index(vkb::QueueType::graphics).value()),
     renderPass(constructRenderPass()),
-    framebuffers(constructFramebuffers())
+    framebuffers(constructFramebuffers()),
+    commandPool(device, vk::CommandPoolCreateInfo(vk::CommandPoolCreateFlagBits::eResetCommandBuffer, graphicsQueueFamilyIndex)),
+    commandBuffers(device, vk::CommandBufferAllocateInfo(*commandPool, vk::CommandBufferLevel::ePrimary, MAX_FRAMES_IN_FLIGHT))
   { }
 
   VulkanContext::~VulkanContext() {
@@ -105,7 +107,6 @@ namespace vku {
   }
 
   vk::raii::SwapchainKHR VulkanContext::constructSwapchain() {
-    const uint32_t NUM_IMAGES = 3;
     vkb::Swapchain vkbSwapchain = vkb::SwapchainBuilder{ vkbDevice }
       .set_desired_format({ static_cast<VkFormat>(swapchainColorFormat), static_cast<VkColorSpaceKHR>(swapchainColorSpace) }) // default
       .set_desired_present_mode(VK_PRESENT_MODE_MAILBOX_KHR) // default. other: VK_PRESENT_MODE_FIFO_KHR

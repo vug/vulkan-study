@@ -16,7 +16,7 @@ int main() {
   std::cout << "Hello, Vulkan!\n";
 
   vku::Window window; // Window (GLFW)
-  // Instance, Surface, Physical Device, Logical Device, Swapchain, Queues, RenderPass, Framebuffer
+  // Instance, Surface, Physical Device, Logical Device, Swapchain, Queues, RenderPass, Framebuffer, CommandBuffer
   vku::VulkanContext vc(window);
 
   //---- Pipeline
@@ -141,15 +141,6 @@ void main () { outColor = vec4 (fragColor, 1.0); }
   default: std::unreachable();
   }
 
-  //---- CommandBuffer
-  const int MAX_FRAMES_IN_FLIGHT = 2;
-
-  vk::CommandPoolCreateInfo commandPoolCreateInfo(vk::CommandPoolCreateFlagBits::eResetCommandBuffer, vc.graphicsQueueFamilyIndex);
-  vk::raii::CommandPool commandPool(vc.device, commandPoolCreateInfo);
-
-  vk::CommandBufferAllocateInfo commandBufferAllocateInfo(*commandPool, vk::CommandBufferLevel::ePrimary, MAX_FRAMES_IN_FLIGHT);
-  vk::raii::CommandBuffers commandBuffers(vc.device, commandBufferAllocateInfo);
-
   //---- Synchronization
   std::vector<vk::raii::Semaphore> availableSemaphores;
   std::vector<vk::raii::Semaphore> finishedSemaphores;
@@ -157,7 +148,7 @@ void main () { outColor = vec4 (fragColor, 1.0); }
   std::vector<vk::raii::Fence*> imageInFlight;
   imageInFlight.resize(vc.swapchain.getImages().size(), nullptr);
 
-  for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
+  for (int i = 0; i < vc.MAX_FRAMES_IN_FLIGHT; ++i) {
     availableSemaphores.emplace_back(vc.device, vk::SemaphoreCreateInfo());
     finishedSemaphores.emplace_back(vc.device, vk::SemaphoreCreateInfo());
     inFlightFences.emplace_back(vc.device, vk::FenceCreateInfo(vk::FenceCreateFlagBits::eSignaled));
@@ -179,7 +170,7 @@ void main () { outColor = vec4 (fragColor, 1.0); }
     assert(imageIndex < vc.swapchain.getImages().size());
     //if (result == vk::Result::eErrorOutOfDateKHR) recreate_swapchain(...);
 
-    vk::raii::CommandBuffer& cmdBuf = commandBuffers[currentFrame];
+    vk::raii::CommandBuffer& cmdBuf = vc.commandBuffers[currentFrame];
     {
       vk::CommandBufferBeginInfo cmdBufBeginInfo{};
       vk::raii::Framebuffer& framebuffer = vc.framebuffers[imageIndex];
@@ -219,7 +210,7 @@ void main () { outColor = vec4 (fragColor, 1.0); }
     //if (result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR) recreateSwapChain();
     //else assert(result == vk::Result::eSuccess);
 
-    currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+    currentFrame = (currentFrame + 1) % vc.MAX_FRAMES_IN_FLIGHT;
   }
 
   // END
