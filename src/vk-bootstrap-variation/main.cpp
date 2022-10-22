@@ -16,34 +16,8 @@ int main() {
   std::cout << "Hello, Vulkan!\n";
 
   vku::Window window; // Window (GLFW)
-  // Instance, Surface, Physical Device, Logical Device, Swapchain, Queues
+  // Instance, Surface, Physical Device, Logical Device, Swapchain, Queues, RenderPass
   vku::VulkanContext vc(window);
-
-  //---- RenderPass
-  std::array<vk::AttachmentDescription, 2> attachmentDescriptions;
-  attachmentDescriptions[0] = vk::AttachmentDescription(vk::AttachmentDescriptionFlags(),
-    vc.swapchainColorFormat,
-    vc.swapchainSamples,
-    vk::AttachmentLoadOp::eClear,
-    vk::AttachmentStoreOp::eStore,
-    vk::AttachmentLoadOp::eDontCare,
-    vk::AttachmentStoreOp::eDontCare,
-    vk::ImageLayout::eUndefined,
-    vk::ImageLayout::ePresentSrcKHR);
-  attachmentDescriptions[1] = vk::AttachmentDescription(vk::AttachmentDescriptionFlags(),
-    vc.swapchainDepthFormat,
-    vc.swapchainSamples,
-    vk::AttachmentLoadOp::eClear,
-    vk::AttachmentStoreOp::eDontCare,
-    vk::AttachmentLoadOp::eDontCare,
-    vk::AttachmentStoreOp::eDontCare,
-    vk::ImageLayout::eUndefined,
-    vk::ImageLayout::eDepthStencilAttachmentOptimal);
-  vk::AttachmentReference colorReference(0, vk::ImageLayout::eColorAttachmentOptimal);
-  vk::AttachmentReference depthReference(1, vk::ImageLayout::eDepthStencilAttachmentOptimal);
-  vk::SubpassDescription subpass(vk::SubpassDescriptionFlags{}, vk::PipelineBindPoint::eGraphics, {}, colorReference, {}, &depthReference);
-  vk::raii::RenderPass renderPass{ vc.device, vk::RenderPassCreateInfo{vk::RenderPassCreateFlags(), attachmentDescriptions, subpass} };
-
 
   //---- Framebuffer
   // Note that Swapchain comes with images for color attachment but by default no images for depth attachment
@@ -64,7 +38,7 @@ int main() {
   std::vector<vk::raii::Framebuffer> framebuffers;
   for (size_t i = 0; i < swapchainImageViews.size(); i++) {
     std::array<vk::ImageView, 2> attachments = { *swapchainImageViews[i], *depthImages[i].imageView };
-    vk::FramebufferCreateInfo framebufferCreateInfo({}, *renderPass, attachments, vc.swapchainExtent.width, vc.swapchainExtent.height, 1);
+    vk::FramebufferCreateInfo framebufferCreateInfo({}, *vc.renderPass, attachments, vc.swapchainExtent.width, vc.swapchainExtent.height, 1);
     framebuffers.push_back(vk::raii::Framebuffer(vc.device, framebufferCreateInfo));
   }
 
@@ -175,7 +149,7 @@ void main () { outColor = vec4 (fragColor, 1.0); }
     &colorBlendStateCreateInfo,
     &dynamicStateCreateInfo, // *vk::PipelineDynamicStateCreateInfo
     *pipelineLayout, // vk::PipelineLayout
-    *renderPass // vk::RenderPass
+    *vc.renderPass // vk::RenderPass
     //{}, // uint32_t subpass_ = {},
   );
   vk::raii::Pipeline pipeline(vc.device, nullptr, graphicsPipelineCreateInfo);
@@ -235,7 +209,7 @@ void main () { outColor = vec4 (fragColor, 1.0); }
       vk::Rect2D renderArea = { {0,0}, vc.swapchainExtent };
       vk::ClearColorValue clearColorValue = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 1.0f };
       std::array<vk::ClearValue, 2> clearValues = { clearColorValue, vk::ClearDepthStencilValue(1.f, 0.f)};
-      vk::RenderPassBeginInfo renderPassBeginInfo(*renderPass, *framebuffer, renderArea, clearValues);
+      vk::RenderPassBeginInfo renderPassBeginInfo(*vc.renderPass, *framebuffer, renderArea, clearValues);
 
       cmdBuf.reset();
       cmdBuf.begin(cmdBufBeginInfo);

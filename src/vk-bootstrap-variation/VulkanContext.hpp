@@ -34,12 +34,14 @@ namespace vku {
     vk::raii::Queue graphicsQueue;
     vk::raii::Queue presentQueue;
     uint32_t graphicsQueueFamilyIndex;
+    vk::raii::RenderPass renderPass;
 
   private:
     vk::raii::Instance constructInstance();
     vk::raii::PhysicalDevice constructPhysicalDevice();
     vk::raii::Device constructDevice();
     vk::raii::SwapchainKHR constructSwapchain();
+    vk::raii::RenderPass constructRenderPass();
 
   public:
     VulkanContext(Window& window);

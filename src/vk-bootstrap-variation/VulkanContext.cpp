@@ -54,7 +54,8 @@ namespace vku {
     swapchain(constructSwapchain()),
     graphicsQueue{ device, vkbDevice.get_queue(vkb::QueueType::graphics).value() },
     presentQueue{ device, vkbDevice.get_queue(vkb::QueueType::present).value() },
-    graphicsQueueFamilyIndex(vkbDevice.get_queue_index(vkb::QueueType::graphics).value())
+    graphicsQueueFamilyIndex(vkbDevice.get_queue_index(vkb::QueueType::graphics).value()),
+    renderPass(constructRenderPass())
   { }
 
   VulkanContext::~VulkanContext() {
@@ -114,5 +115,31 @@ namespace vku {
     swapchainExtent = vkbSwapchain.extent;
     return vk::raii::SwapchainKHR{ device, vkbSwapchain.swapchain };
     // TODO: implement recreateSwapchain which recreates FrameBuffers, CommandPools, and CommandBuffers with it    
+  }
+
+  vk::raii::RenderPass VulkanContext::constructRenderPass() {
+    std::array<vk::AttachmentDescription, 2> attachmentDescriptions;
+    attachmentDescriptions[0] = vk::AttachmentDescription(vk::AttachmentDescriptionFlags(),
+      swapchainColorFormat,
+      swapchainSamples,
+      vk::AttachmentLoadOp::eClear,
+      vk::AttachmentStoreOp::eStore,
+      vk::AttachmentLoadOp::eDontCare,
+      vk::AttachmentStoreOp::eDontCare,
+      vk::ImageLayout::eUndefined,
+      vk::ImageLayout::ePresentSrcKHR);
+    attachmentDescriptions[1] = vk::AttachmentDescription(vk::AttachmentDescriptionFlags(),
+      swapchainDepthFormat,
+      swapchainSamples,
+      vk::AttachmentLoadOp::eClear,
+      vk::AttachmentStoreOp::eDontCare,
+      vk::AttachmentLoadOp::eDontCare,
+      vk::AttachmentStoreOp::eDontCare,
+      vk::ImageLayout::eUndefined,
+      vk::ImageLayout::eDepthStencilAttachmentOptimal);
+    vk::AttachmentReference colorReference(0, vk::ImageLayout::eColorAttachmentOptimal);
+    vk::AttachmentReference depthReference(1, vk::ImageLayout::eDepthStencilAttachmentOptimal);
+    vk::SubpassDescription subpass(vk::SubpassDescriptionFlags{}, vk::PipelineBindPoint::eGraphics, {}, colorReference, {}, &depthReference);
+    return vk::raii::RenderPass { device, vk::RenderPassCreateInfo{vk::RenderPassCreateFlags(), attachmentDescriptions, subpass} };
   }
 }
