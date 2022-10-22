@@ -27,6 +27,8 @@ namespace vku {
     vk::raii::Device device;
     vk::Format swapchainColorFormat;
     vk::ColorSpaceKHR swapchainColorSpace;
+    vk::Format swapchainDepthFormat;
+    vk::SampleCountFlagBits swapchainSamples;
     vk::Extent2D swapchainExtent;
     vk::raii::SwapchainKHR swapchain;
     vk::raii::Queue graphicsQueue;

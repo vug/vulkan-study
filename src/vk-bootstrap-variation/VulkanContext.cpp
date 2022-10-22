@@ -46,6 +46,11 @@ namespace vku {
     surface(window.createSurface(instance)),
     physicalDevice(constructPhysicalDevice()),
     device(constructDevice()),
+    // TODO: find a better format picking scheme // can get available formats via: auto surfaceFormats = physicalDevice.getSurfaceFormatsKHR(*surface);
+    swapchainColorFormat(vk::Format::eB8G8R8A8Unorm), // or vk::Format::eB8G8R8A8Srgb;
+    swapchainColorSpace(vk::ColorSpaceKHR::eSrgbNonlinear),
+    swapchainDepthFormat(vk::Format::eD16Unorm),
+    swapchainSamples(vk::SampleCountFlagBits::e1),
     swapchain(constructSwapchain()),
     graphicsQueue{ device, vkbDevice.get_queue(vkb::QueueType::graphics).value() },
     presentQueue{ device, vkbDevice.get_queue(vkb::QueueType::present).value() },
@@ -99,9 +104,6 @@ namespace vku {
 
   vk::raii::SwapchainKHR VulkanContext::constructSwapchain() {
     const uint32_t NUM_IMAGES = 3;
-    // TODO: find a better format picking scheme // can get available formats via: auto surfaceFormats = physicalDevice.getSurfaceFormatsKHR(*surface);
-    swapchainColorFormat = vk::Format::eB8G8R8A8Unorm; // or vk::Format::eB8G8R8A8Srgb;
-    swapchainColorSpace = vk::ColorSpaceKHR::eSrgbNonlinear;
     vkb::Swapchain vkbSwapchain = vkb::SwapchainBuilder{ vkbDevice }
       .set_desired_format({ static_cast<VkFormat>(swapchainColorFormat), static_cast<VkColorSpaceKHR>(swapchainColorSpace) }) // default
       .set_desired_present_mode(VK_PRESENT_MODE_MAILBOX_KHR) // default. other: VK_PRESENT_MODE_FIFO_KHR

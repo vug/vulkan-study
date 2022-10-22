@@ -23,7 +23,7 @@ int main() {
   std::array<vk::AttachmentDescription, 2> attachmentDescriptions;
   attachmentDescriptions[0] = vk::AttachmentDescription(vk::AttachmentDescriptionFlags(),
     vc.swapchainColorFormat,
-    vk::SampleCountFlagBits::e1, // TODO: try MSAA
+    vc.swapchainSamples,
     vk::AttachmentLoadOp::eClear,
     vk::AttachmentStoreOp::eStore,
     vk::AttachmentLoadOp::eDontCare,
@@ -31,8 +31,8 @@ int main() {
     vk::ImageLayout::eUndefined,
     vk::ImageLayout::ePresentSrcKHR);
   attachmentDescriptions[1] = vk::AttachmentDescription(vk::AttachmentDescriptionFlags(),
-    vk::Format::eD16Unorm, // TODO: what other options are there for depth?
-    vk::SampleCountFlagBits::e1,
+    vc.swapchainDepthFormat,
+    vc.swapchainSamples,
     vk::AttachmentLoadOp::eClear,
     vk::AttachmentStoreOp::eDontCare,
     vk::AttachmentLoadOp::eDontCare,
@@ -58,7 +58,7 @@ int main() {
     vk::ImageViewCreateInfo imageViewCreateInfo({}, img, vk::ImageViewType::e2D, vc.swapchainColorFormat, components, imageSubresourceRange);
     swapchainImageViews.emplace_back(vc.device, imageViewCreateInfo);
 
-    depthImages.emplace_back(vc, vk::Format::eD16Unorm, vc.swapchainExtent, vk::SampleCountFlagBits::e1, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eDepthStencilAttachment, vk::ImageAspectFlagBits::eDepth);
+    depthImages.emplace_back(vc, vc.swapchainDepthFormat, vc.swapchainExtent, vc.swapchainSamples, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eDepthStencilAttachment, vk::ImageAspectFlagBits::eDepth);
   }
 
   std::vector<vk::raii::Framebuffer> framebuffers;
@@ -127,7 +127,7 @@ void main () { outColor = vec4 (fragColor, 1.0); }
     1.0f                          // lineWidth
   );
 
-  vk::PipelineMultisampleStateCreateInfo multisampleStateCreateInfo({}, vk::SampleCountFlagBits::e1);
+  vk::PipelineMultisampleStateCreateInfo multisampleStateCreateInfo({}, vc.swapchainSamples);
 
   vk::StencilOpState stencilOpState(vk::StencilOp::eKeep, vk::StencilOp::eKeep, vk::StencilOp::eKeep, vk::CompareOp::eAlways);
   vk::PipelineDepthStencilStateCreateInfo depthStencilStateCreateInfo({},                           // flags
