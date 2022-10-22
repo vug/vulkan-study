@@ -16,31 +16,8 @@ int main() {
   std::cout << "Hello, Vulkan!\n";
 
   vku::Window window; // Window (GLFW)
-  // Instance, Surface, Physical Device, Logical Device, Swapchain, Queues, RenderPass
+  // Instance, Surface, Physical Device, Logical Device, Swapchain, Queues, RenderPass, Framebuffer
   vku::VulkanContext vc(window);
-
-  //---- Framebuffer
-  // Note that Swapchain comes with images for color attachment but by default no images for depth attachment
-  const std::vector<VkImage>& swapchainImages = vc.swapchain.getImages();
-  std::vector<vku::Image> depthImages;
-
-  // vkbSwapchain.get_image_views() is actually not a getter but creator. Instead let's create imageViews ourselves
-  std::vector<vk::raii::ImageView> swapchainImageViews;
-  for (const VkImage& img : swapchainImages) {
-    const vk::ComponentMapping components = { vk::ComponentSwizzle::eIdentity, vk::ComponentSwizzle::eIdentity , vk::ComponentSwizzle::eIdentity , vk::ComponentSwizzle::eIdentity };
-    const vk::ImageSubresourceRange imageSubresourceRange = { vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 };
-    vk::ImageViewCreateInfo imageViewCreateInfo({}, img, vk::ImageViewType::e2D, vc.swapchainColorFormat, components, imageSubresourceRange);
-    swapchainImageViews.emplace_back(vc.device, imageViewCreateInfo);
-
-    depthImages.emplace_back(vc, vc.swapchainDepthFormat, vc.swapchainExtent, vc.swapchainSamples, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eDepthStencilAttachment, vk::ImageAspectFlagBits::eDepth);
-  }
-
-  std::vector<vk::raii::Framebuffer> framebuffers;
-  for (size_t i = 0; i < swapchainImageViews.size(); i++) {
-    std::array<vk::ImageView, 2> attachments = { *swapchainImageViews[i], *depthImages[i].imageView };
-    vk::FramebufferCreateInfo framebufferCreateInfo({}, *vc.renderPass, attachments, vc.swapchainExtent.width, vc.swapchainExtent.height, 1);
-    framebuffers.push_back(vk::raii::Framebuffer(vc.device, framebufferCreateInfo));
-  }
 
   //---- Pipeline
   const std::string vertexShaderStr = R"(
@@ -178,7 +155,7 @@ void main () { outColor = vec4 (fragColor, 1.0); }
   std::vector<vk::raii::Semaphore> finishedSemaphores;
   std::vector<vk::raii::Fence> inFlightFences;
   std::vector<vk::raii::Fence*> imageInFlight;
-  imageInFlight.resize(swapchainImages.size(), nullptr);
+  imageInFlight.resize(vc.swapchain.getImages().size(), nullptr);
 
   for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
     availableSemaphores.emplace_back(vc.device, vk::SemaphoreCreateInfo());
@@ -205,7 +182,7 @@ void main () { outColor = vec4 (fragColor, 1.0); }
     vk::raii::CommandBuffer& cmdBuf = commandBuffers[currentFrame];
     {
       vk::CommandBufferBeginInfo cmdBufBeginInfo{};
-      vk::raii::Framebuffer& framebuffer = framebuffers[imageIndex];
+      vk::raii::Framebuffer& framebuffer = vc.framebuffers[imageIndex];
       vk::Rect2D renderArea = { {0,0}, vc.swapchainExtent };
       vk::ClearColorValue clearColorValue = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 1.0f };
       std::array<vk::ClearValue, 2> clearValues = { clearColorValue, vk::ClearDepthStencilValue(1.f, 0.f)};

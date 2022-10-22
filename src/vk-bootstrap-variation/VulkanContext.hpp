@@ -4,7 +4,11 @@
 #include <VkBootstrap.h>
 #include <vulkan/vulkan_raii.hpp>
 
+#include <vector>
+
 namespace vku {
+  struct Image;
+
   class VulkanContext {
   private:
     vku::Window& window;
@@ -35,6 +39,9 @@ namespace vku {
     vk::raii::Queue presentQueue;
     uint32_t graphicsQueueFamilyIndex;
     vk::raii::RenderPass renderPass;
+    std::vector<vk::raii::Framebuffer> framebuffers;
+    std::vector<vku::Image> depthImages;
+    std::vector<vk::raii::ImageView> swapchainImageViews;
 
   private:
     vk::raii::Instance constructInstance();
