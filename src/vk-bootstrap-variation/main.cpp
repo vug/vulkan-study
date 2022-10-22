@@ -20,33 +20,7 @@ int main() {
   vku::VulkanContext vc(window);
 
   //---- RenderPass
-  if (false)
-  {
-    std::array<vk::AttachmentDescription, 2> attachmentDescriptions;
-    attachmentDescriptions[0] = vk::AttachmentDescription(vk::AttachmentDescriptionFlags(),
-      vc.swapchainColorFormat,
-      vk::SampleCountFlagBits::e1, // TODO: try MSAA
-      vk::AttachmentLoadOp::eClear,
-      vk::AttachmentStoreOp::eStore,
-      vk::AttachmentLoadOp::eDontCare,
-      vk::AttachmentStoreOp::eDontCare,
-      vk::ImageLayout::eUndefined,
-      vk::ImageLayout::ePresentSrcKHR);
-    attachmentDescriptions[1] = vk::AttachmentDescription(vk::AttachmentDescriptionFlags(),
-      vk::Format::eD16Unorm, // TODO: what other options are there for depth?
-      vk::SampleCountFlagBits::e1,
-      vk::AttachmentLoadOp::eClear,
-      vk::AttachmentStoreOp::eDontCare,
-      vk::AttachmentLoadOp::eDontCare,
-      vk::AttachmentStoreOp::eDontCare,
-      vk::ImageLayout::eUndefined,
-      vk::ImageLayout::eDepthStencilAttachmentOptimal);
-    vk::AttachmentReference colorReference(0, vk::ImageLayout::eColorAttachmentOptimal);
-    vk::AttachmentReference depthReference(1, vk::ImageLayout::eDepthStencilAttachmentOptimal);
-    vk::SubpassDescription subpass(vk::SubpassDescriptionFlags{}, vk::PipelineBindPoint::eGraphics, {}, colorReference, {}, &depthReference);
-    vk::raii::RenderPass renderPass{ vc.device, vk::RenderPassCreateInfo{vk::RenderPassCreateFlags(), attachmentDescriptions, subpass} };
-  }
-  std::array<vk::AttachmentDescription, 1> attachmentDescriptions;
+  std::array<vk::AttachmentDescription, 2> attachmentDescriptions;
   attachmentDescriptions[0] = vk::AttachmentDescription(vk::AttachmentDescriptionFlags(),
     vc.swapchainColorFormat,
     vk::SampleCountFlagBits::e1, // TODO: try MSAA
@@ -56,13 +30,25 @@ int main() {
     vk::AttachmentStoreOp::eDontCare,
     vk::ImageLayout::eUndefined,
     vk::ImageLayout::ePresentSrcKHR);
+  attachmentDescriptions[1] = vk::AttachmentDescription(vk::AttachmentDescriptionFlags(),
+    vk::Format::eD16Unorm, // TODO: what other options are there for depth?
+    vk::SampleCountFlagBits::e1,
+    vk::AttachmentLoadOp::eClear,
+    vk::AttachmentStoreOp::eDontCare,
+    vk::AttachmentLoadOp::eDontCare,
+    vk::AttachmentStoreOp::eDontCare,
+    vk::ImageLayout::eUndefined,
+    vk::ImageLayout::eDepthStencilAttachmentOptimal);
   vk::AttachmentReference colorReference(0, vk::ImageLayout::eColorAttachmentOptimal);
-  vk::SubpassDescription subpass(vk::SubpassDescriptionFlags{}, vk::PipelineBindPoint::eGraphics, {}, colorReference, {}, nullptr);
+  vk::AttachmentReference depthReference(1, vk::ImageLayout::eDepthStencilAttachmentOptimal);
+  vk::SubpassDescription subpass(vk::SubpassDescriptionFlags{}, vk::PipelineBindPoint::eGraphics, {}, colorReference, {}, &depthReference);
   vk::raii::RenderPass renderPass{ vc.device, vk::RenderPassCreateInfo{vk::RenderPassCreateFlags(), attachmentDescriptions, subpass} };
 
 
   //---- Framebuffer
+  // Note that Swapchain comes with images for color attachment but by default no images for depth attachment
   const std::vector<VkImage>& swapchainImages = vc.swapchain.getImages();
+  std::vector<vku::Image> depthImages;
 
   // vkbSwapchain.get_image_views() is actually not a getter but creator. Instead let's create imageViews ourselves
   std::vector<vk::raii::ImageView> swapchainImageViews;
@@ -71,11 +57,13 @@ int main() {
     const vk::ImageSubresourceRange imageSubresourceRange = { vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 };
     vk::ImageViewCreateInfo imageViewCreateInfo({}, img, vk::ImageViewType::e2D, vc.swapchainColorFormat, components, imageSubresourceRange);
     swapchainImageViews.emplace_back(vc.device, imageViewCreateInfo);
+
+    depthImages.emplace_back(vc, vk::Format::eD16Unorm, vc.swapchainExtent, vk::SampleCountFlagBits::e1, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eDepthStencilAttachment, vk::ImageAspectFlagBits::eDepth);
   }
 
   std::vector<vk::raii::Framebuffer> framebuffers;
   for (size_t i = 0; i < swapchainImageViews.size(); i++) {
-    std::array<vk::ImageView, 1> attachments = { *swapchainImageViews[i] };
+    std::array<vk::ImageView, 2> attachments = { *swapchainImageViews[i], *depthImages[i].imageView };
     vk::FramebufferCreateInfo framebufferCreateInfo({}, *renderPass, attachments, vc.swapchainExtent.width, vc.swapchainExtent.height, 1);
     framebuffers.push_back(vk::raii::Framebuffer(vc.device, framebufferCreateInfo));
   }
@@ -141,17 +129,16 @@ void main () { outColor = vec4 (fragColor, 1.0); }
 
   vk::PipelineMultisampleStateCreateInfo multisampleStateCreateInfo({}, vk::SampleCountFlagBits::e1);
 
-  // Not used in vk-bootstrap example actually.
-  //vk::StencilOpState stencilOpState(vk::StencilOp::eKeep, vk::StencilOp::eKeep, vk::StencilOp::eKeep, vk::CompareOp::eAlways);
-  //vk::PipelineDepthStencilStateCreateInfo depthStencilStateCreateInfo({},                           // flags
-  //  true,                         // depthTestEnable
-  //  true,                         // depthWriteEnable
-  //  vk::CompareOp::eLessOrEqual,  // depthCompareOp
-  //  false,                        // depthBoundTestEnable
-  //  false,                        // stencilTestEnable
-  //  stencilOpState,               // front
-  //  stencilOpState                // back
-  //);
+  vk::StencilOpState stencilOpState(vk::StencilOp::eKeep, vk::StencilOp::eKeep, vk::StencilOp::eKeep, vk::CompareOp::eAlways);
+  vk::PipelineDepthStencilStateCreateInfo depthStencilStateCreateInfo({},                           // flags
+    true,                         // depthTestEnable
+    true,                         // depthWriteEnable
+    vk::CompareOp::eLessOrEqual,  // depthCompareOp
+    false,                        // depthBoundTestEnable
+    false,                        // stencilTestEnable
+    stencilOpState,               // front
+    stencilOpState                // back
+  );
 
   vk::ColorComponentFlags colorComponentFlags(vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA);
   vk::PipelineColorBlendAttachmentState colorBlendAttachmentState(false, // blendEnable
@@ -184,15 +171,12 @@ void main () { outColor = vec4 (fragColor, 1.0); }
     &viewportStateCreateInfo,
     &rasterizationStateCreateInfo,
     &multisampleStateCreateInfo,
-    nullptr, // *vk::PipelineDepthStencilStateCreateInfo
+    &depthStencilStateCreateInfo,
     &colorBlendStateCreateInfo,
     &dynamicStateCreateInfo, // *vk::PipelineDynamicStateCreateInfo
     *pipelineLayout, // vk::PipelineLayout
     *renderPass // vk::RenderPass
     //{}, // uint32_t subpass_ = {},
-    //{}, // VULKAN_HPP_NAMESPACE::Pipeline basePipelineHandle_ = {},
-    //{}, // int32_t basePipelineIndex_ = {},
-    //nullptr // const void* pNext
   );
   vk::raii::Pipeline pipeline(vc.device, nullptr, graphicsPipelineCreateInfo);
   switch (pipeline.getConstructorSuccessCode())
@@ -211,7 +195,7 @@ void main () { outColor = vec4 (fragColor, 1.0); }
 
   vk::CommandPoolCreateInfo commandPoolCreateInfo(vk::CommandPoolCreateFlagBits::eResetCommandBuffer, vc.graphicsQueueFamilyIndex);
   vk::raii::CommandPool commandPool(vc.device, commandPoolCreateInfo);
- 
+
   vk::CommandBufferAllocateInfo commandBufferAllocateInfo(*commandPool, vk::CommandBufferLevel::ePrimary, MAX_FRAMES_IN_FLIGHT);
   vk::raii::CommandBuffers commandBuffers(vc.device, commandBufferAllocateInfo);
 
@@ -250,8 +234,8 @@ void main () { outColor = vec4 (fragColor, 1.0); }
       vk::raii::Framebuffer& framebuffer = framebuffers[imageIndex];
       vk::Rect2D renderArea = { {0,0}, vc.swapchainExtent };
       vk::ClearColorValue clearColorValue = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 1.0f };
-      std::array<vk::ClearValue, 1> clearColor = { clearColorValue };
-      vk::RenderPassBeginInfo renderPassBeginInfo(*renderPass, *framebuffer, renderArea, clearColor);
+      std::array<vk::ClearValue, 2> clearValues = { clearColorValue, vk::ClearDepthStencilValue(1.f, 0.f)};
+      vk::RenderPassBeginInfo renderPassBeginInfo(*renderPass, *framebuffer, renderArea, clearValues);
 
       cmdBuf.reset();
       cmdBuf.begin(cmdBufBeginInfo);
