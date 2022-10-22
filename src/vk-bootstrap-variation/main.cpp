@@ -16,13 +16,8 @@ int main() {
   std::cout << "Hello, Vulkan!\n";
 
   vku::Window window; // Window (GLFW)
-  // Instance, Surface, Physical Device, Logical Device, Swapchain
+  // Instance, Surface, Physical Device, Logical Device, Swapchain, Queues
   vku::VulkanContext vc(window);
-
-  //---- Queues
-  vk::raii::Queue graphicsQueue{ vc.device, vc.vkbDevice.get_queue(vkb::QueueType::graphics).value() };
-  vk::raii::Queue presentQueue{ vc.device, vc.vkbDevice.get_queue(vkb::QueueType::present).value() };
-  uint32_t graphicsQueueFamilyIndex = vc.vkbDevice.get_queue_index(vkb::QueueType::graphics).value();
 
   //---- RenderPass
   if (false)
@@ -211,7 +206,7 @@ void main () { outColor = vec4 (fragColor, 1.0); }
   }
 
   //---- CommandBuffer
-  vk::CommandPoolCreateInfo commandPoolCreateInfo({}, graphicsQueueFamilyIndex);
+  vk::CommandPoolCreateInfo commandPoolCreateInfo({}, vc.graphicsQueueFamilyIndex);
   vk::raii::CommandPool commandPool(vc.device, commandPoolCreateInfo);
  
   vk::CommandBufferAllocateInfo commandBufferAllocateInfo(*commandPool, vk::CommandBufferLevel::ePrimary, 3);
@@ -280,10 +275,10 @@ void main () { outColor = vec4 (fragColor, 1.0); }
     vk::PipelineStageFlags waitStages(vk::PipelineStageFlagBits::eColorAttachmentOutput);
     vk::SubmitInfo submitInfo(*availableSemaphores[currentFrame], waitStages, *commandBuffers[imageIndex], *finishedSemaphores[currentFrame]);
     vc.device.resetFences(*inFlightFences[currentFrame]);
-    graphicsQueue.submit(submitInfo, *inFlightFences[currentFrame]);
+    vc.graphicsQueue.submit(submitInfo, *inFlightFences[currentFrame]);
 
     vk::PresentInfoKHR presentInfo(*finishedSemaphores[currentFrame], *vc.swapchain, imageIndex);
-    result = presentQueue.presentKHR(presentInfo);
+    result = vc.presentQueue.presentKHR(presentInfo);
     //if (result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR) recreateSwapChain();
     //else assert(result == vk::Result::eSuccess);
 

@@ -4,13 +4,16 @@
 #include <VkBootstrap.h>
 
 namespace vku {
-  VulkanContext::VulkanContext(vku::Window& window) : 
-    window(window), 
+  VulkanContext::VulkanContext(vku::Window& window) :
+    window(window),
     instance(constructInstance()),
     surface(window.createSurface(instance)),
     physicalDevice(constructPhysicalDevice()),
     device(constructDevice()),
-    swapchain(constructSwapchain())
+    swapchain(constructSwapchain()),
+    graphicsQueue{ device, vkbDevice.get_queue(vkb::QueueType::graphics).value() },
+    presentQueue{ device, vkbDevice.get_queue(vkb::QueueType::present).value() },
+    graphicsQueueFamilyIndex(vkbDevice.get_queue_index(vkb::QueueType::graphics).value())
   { }
 
   VulkanContext::~VulkanContext() {
@@ -41,7 +44,7 @@ namespace vku {
       .value();
 
     vk::raii::Context context;
-    return vk::raii::Instance { context, vkbInstance->instance };
+    return vk::raii::Instance{ context, vkbInstance->instance };
   }
 
   vk::raii::PhysicalDevice VulkanContext::constructPhysicalDevice() {
@@ -50,12 +53,12 @@ namespace vku {
       .set_surface(*surface)
       .select()
       .value();
-    return vk::raii::PhysicalDevice { instance, vkbPhysicalDevice.physical_device };
+    return vk::raii::PhysicalDevice{ instance, vkbPhysicalDevice.physical_device };
   }
 
   vk::raii::Device VulkanContext::constructDevice() {
     vkbDevice = vkb::DeviceBuilder{ vkbPhysicalDevice }.build().value();
-    return vk::raii::Device { physicalDevice, vkbDevice.device };
+    return vk::raii::Device{ physicalDevice, vkbDevice.device };
   }
 
   vk::raii::SwapchainKHR VulkanContext::constructSwapchain() {
@@ -71,7 +74,7 @@ namespace vku {
     assert(vkbSwapchain.image_format == static_cast<VkFormat>(swapchainColorFormat));
     assert(vkbSwapchain.color_space == static_cast<VkColorSpaceKHR>(swapchainColorSpace));
     swapchainExtent = vkbSwapchain.extent;
-    return vk::raii::SwapchainKHR { device, vkbSwapchain.swapchain };
+    return vk::raii::SwapchainKHR{ device, vkbSwapchain.swapchain };
     // TODO: implement recreateSwapchain which recreates FrameBuffers, CommandPools, and CommandBuffers with it    
   }
 }

@@ -21,7 +21,7 @@ namespace vku {
     vkb::PhysicalDevice vkbPhysicalDevice;
   public:
     vk::raii::PhysicalDevice physicalDevice;
-  public:
+  private:
     vkb::Device vkbDevice;
   public:
     vk::raii::Device device;
@@ -29,6 +29,9 @@ namespace vku {
     vk::ColorSpaceKHR swapchainColorSpace;
     vk::Extent2D swapchainExtent;
     vk::raii::SwapchainKHR swapchain;
+    vk::raii::Queue graphicsQueue;
+    vk::raii::Queue presentQueue;
+    uint32_t graphicsQueueFamilyIndex;
 
   private:
     vk::raii::Instance constructInstance();
