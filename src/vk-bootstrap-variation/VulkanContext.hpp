@@ -39,9 +39,9 @@ namespace vku {
     vk::raii::Queue presentQueue;
     uint32_t graphicsQueueFamilyIndex;
     vk::raii::RenderPass renderPass;
-    std::vector<vk::raii::Framebuffer> framebuffers;
     std::vector<vku::Image> depthImages;
     std::vector<vk::raii::ImageView> swapchainImageViews;
+    std::vector<vk::raii::Framebuffer> framebuffers;
 
   private:
     vk::raii::Instance constructInstance();
@@ -49,6 +49,7 @@ namespace vku {
     vk::raii::Device constructDevice();
     vk::raii::SwapchainKHR constructSwapchain();
     vk::raii::RenderPass constructRenderPass();
+    std::vector<vk::raii::Framebuffer> constructFramebuffers();
 
   public:
     VulkanContext(Window& window);

@@ -55,27 +55,9 @@ namespace vku {
     graphicsQueue{ device, vkbDevice.get_queue(vkb::QueueType::graphics).value() },
     presentQueue{ device, vkbDevice.get_queue(vkb::QueueType::present).value() },
     graphicsQueueFamilyIndex(vkbDevice.get_queue_index(vkb::QueueType::graphics).value()),
-    renderPass(constructRenderPass())
-  { 
-    const std::vector<VkImage>& swapchainImages = swapchain.getImages();
-
-    // vkbSwapchain.get_image_views() is actually not a getter but creator. Instead let's create imageViews ourselves
-    for (const VkImage& img : swapchainImages) {
-      const vk::ComponentMapping components = { vk::ComponentSwizzle::eIdentity, vk::ComponentSwizzle::eIdentity , vk::ComponentSwizzle::eIdentity , vk::ComponentSwizzle::eIdentity };
-      const vk::ImageSubresourceRange imageSubresourceRange = { vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 };
-      vk::ImageViewCreateInfo imageViewCreateInfo({}, img, vk::ImageViewType::e2D, swapchainColorFormat, components, imageSubresourceRange);
-      swapchainImageViews.emplace_back(device, imageViewCreateInfo);
-
-      // Note that Swapchain comes with images for color attachment but by default no images for depth attachment
-      depthImages.emplace_back(*this, swapchainDepthFormat, swapchainExtent, swapchainSamples, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eDepthStencilAttachment, vk::ImageAspectFlagBits::eDepth);
-    }
-
-    for (size_t i = 0; i < swapchainImageViews.size(); i++) {
-      std::array<vk::ImageView, 2> attachments = { *swapchainImageViews[i], *depthImages[i].imageView };
-      vk::FramebufferCreateInfo framebufferCreateInfo({}, *renderPass, attachments, swapchainExtent.width, swapchainExtent.height, 1);
-      framebuffers.push_back(vk::raii::Framebuffer(device, framebufferCreateInfo));
-    }
-  }
+    renderPass(constructRenderPass()),
+    framebuffers(constructFramebuffers())
+  { }
 
   VulkanContext::~VulkanContext() {
     vkb::destroy_debug_utils_messenger(vkbInstance->instance, vkbInstance->debug_messenger, vkbInstance->allocation_callbacks);
@@ -160,5 +142,28 @@ namespace vku {
     vk::AttachmentReference depthReference(1, vk::ImageLayout::eDepthStencilAttachmentOptimal);
     vk::SubpassDescription subpass(vk::SubpassDescriptionFlags{}, vk::PipelineBindPoint::eGraphics, {}, colorReference, {}, &depthReference);
     return vk::raii::RenderPass { device, vk::RenderPassCreateInfo{vk::RenderPassCreateFlags(), attachmentDescriptions, subpass} };
+  }
+
+  std::vector<vk::raii::Framebuffer> VulkanContext::constructFramebuffers() {
+    const std::vector<VkImage>& swapchainImages = swapchain.getImages();
+
+    // vkbSwapchain.get_image_views() is actually not a getter but creator. Instead let's create imageViews ourselves
+    for (const VkImage& img : swapchainImages) {
+      const vk::ComponentMapping components = { vk::ComponentSwizzle::eIdentity, vk::ComponentSwizzle::eIdentity , vk::ComponentSwizzle::eIdentity , vk::ComponentSwizzle::eIdentity };
+      const vk::ImageSubresourceRange imageSubresourceRange = { vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 };
+      vk::ImageViewCreateInfo imageViewCreateInfo({}, img, vk::ImageViewType::e2D, swapchainColorFormat, components, imageSubresourceRange);
+      swapchainImageViews.emplace_back(device, imageViewCreateInfo);
+
+      // Note that Swapchain comes with images for color attachment but by default no images for depth attachment
+      depthImages.emplace_back(*this, swapchainDepthFormat, swapchainExtent, swapchainSamples, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eDepthStencilAttachment, vk::ImageAspectFlagBits::eDepth);
+    }
+
+    std::vector<vk::raii::Framebuffer> fbs;
+    for (size_t i = 0; i < swapchainImageViews.size(); i++) {
+      std::array<vk::ImageView, 2> attachments = { *swapchainImageViews[i], *depthImages[i].imageView };
+      vk::FramebufferCreateInfo framebufferCreateInfo({}, *renderPass, attachments, swapchainExtent.width, swapchainExtent.height, 1);
+      fbs.push_back(vk::raii::Framebuffer(device, framebufferCreateInfo));
+    }
+    return fbs; // probably unneccessary copy
   }
 }
