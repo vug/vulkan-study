@@ -1,5 +1,6 @@
 #include "SpirvHelper.hpp"
 #include "utils.hpp"
+#include "VulkanContext.hpp"
 #include "Window.hpp"
 
 
@@ -14,67 +15,30 @@
 int main() {
   std::cout << "Hello, Vulkan!\n";
 
-  //---- Window (GLFW) init
-  vku::Window window;
-  std::vector<std::string> vulkanInstanceExtensions = window.getRequiredInstanceExtensions();
-
-  //---- Instance
-  vkb::SystemInfo systemInfo = vkb::SystemInfo::get_system_info().value(); // has methods about available layers and extensions
-  for (const auto& ext : vulkanInstanceExtensions)
-    assert(systemInfo.is_extension_available(ext.c_str()));
-
-  vkb::InstanceBuilder vkbInstanceBuilder = vkb::InstanceBuilder{}
-    .set_app_name("Example Vulkan Application")
-    .require_api_version(1, 3, 0)
-    .enable_validation_layers(vku::isDebugBuild) // == .enable_layer("VK_LAYER_KHRONOS_validation")
-    // TODO: can create my own callback function and set it via set_debug_callback()
-    // See debugUtilsMessengerCallback in utils.cpp
-    .use_default_debug_messenger();
-  for (const auto& ext : vulkanInstanceExtensions)
-    vkbInstanceBuilder.enable_extension(ext.c_str());
-
-  vkb::Instance vkbInstance = vkbInstanceBuilder
-    .build()
-    .value();
-
-  vk::raii::Context context;
-  vk::raii::Instance instance{ context, vkbInstance.instance };
-
-  //---- Surface
-  vk::raii::SurfaceKHR surface = window.createSurface(instance);
-
-  //---- Physical Device
-  vkb::PhysicalDeviceSelector phys_device_selector(vkbInstance);
-  vkb::PhysicalDevice vkbPhysicalDevice = phys_device_selector
-    .set_surface(*surface)
-    .select()
-    .value();
-  vk::raii::PhysicalDevice physicalDevice{ instance, vkbPhysicalDevice.physical_device };
-
-  //---- Logical Device
-  vkb::Device vkbDevice = vkb::DeviceBuilder{ vkbPhysicalDevice }.build().value();
-  vk::raii::Device device{ physicalDevice, vkbDevice.device };
+  vku::Window window; // Window (GLFW)
+  // Instance, Surface, Physical Device, Logical Device
+  vku::VulkanContext vc(window);
 
   //---- Swapchain
   const uint32_t NUM_IMAGES = 3;
   // TODO: find a better format picking scheme // can get available formats via: auto surfaceFormats = physicalDevice.getSurfaceFormatsKHR(*surface);
   auto desiredColorFormat = vk::Format::eB8G8R8A8Unorm; // or vk::Format::eB8G8R8A8Srgb;
   auto desiredColorSpace = vk::ColorSpaceKHR::eSrgbNonlinear;
-  vkb::Swapchain vkbSwapchain = vkb::SwapchainBuilder{ vkbDevice }
+  vkb::Swapchain vkbSwapchain = vkb::SwapchainBuilder{ vc.vkbDevice }
     .set_desired_format({ static_cast<VkFormat>(desiredColorFormat), static_cast<VkColorSpaceKHR>(desiredColorSpace) }) // default
     .set_desired_present_mode(VK_PRESENT_MODE_MAILBOX_KHR) // default. other: VK_PRESENT_MODE_FIFO_KHR
     .set_required_min_image_count(NUM_IMAGES)
     .build().value();
   assert(vkbSwapchain.image_format == static_cast<VkFormat>(desiredColorFormat));
   assert(vkbSwapchain.color_space == static_cast<VkColorSpaceKHR>(desiredColorSpace));
-  vk::raii::SwapchainKHR swapChain{ device, vkbSwapchain.swapchain };
+  vk::raii::SwapchainKHR swapChain{ vc.device, vkbSwapchain.swapchain };
   // TODO: implement recreateSwapchain which recreates FrameBuffers, CommandPools, and CommandBuffers with it
 
   //---- Queues
 
-  vk::raii::Queue graphicsQueue{ device, vkbDevice.get_queue(vkb::QueueType::graphics).value() };
-  vk::raii::Queue presentQueue{ device, vkbDevice.get_queue(vkb::QueueType::present).value() };
-  uint32_t graphicsQueueFamilyIndex = vkbDevice.get_queue_index(vkb::QueueType::graphics).value();
+  vk::raii::Queue graphicsQueue{ vc.device, vc.vkbDevice.get_queue(vkb::QueueType::graphics).value() };
+  vk::raii::Queue presentQueue{ vc.device, vc.vkbDevice.get_queue(vkb::QueueType::present).value() };
+  uint32_t graphicsQueueFamilyIndex = vc.vkbDevice.get_queue_index(vkb::QueueType::graphics).value();
 
   //---- RenderPass
   if (false)
@@ -101,7 +65,7 @@ int main() {
     vk::AttachmentReference colorReference(0, vk::ImageLayout::eColorAttachmentOptimal);
     vk::AttachmentReference depthReference(1, vk::ImageLayout::eDepthStencilAttachmentOptimal);
     vk::SubpassDescription subpass(vk::SubpassDescriptionFlags{}, vk::PipelineBindPoint::eGraphics, {}, colorReference, {}, &depthReference);
-    vk::raii::RenderPass renderPass{ device, vk::RenderPassCreateInfo{vk::RenderPassCreateFlags(), attachmentDescriptions, subpass} };
+    vk::raii::RenderPass renderPass{ vc.device, vk::RenderPassCreateInfo{vk::RenderPassCreateFlags(), attachmentDescriptions, subpass} };
   }
   std::array<vk::AttachmentDescription, 1> attachmentDescriptions;
   attachmentDescriptions[0] = vk::AttachmentDescription(vk::AttachmentDescriptionFlags(),
@@ -115,7 +79,7 @@ int main() {
     vk::ImageLayout::ePresentSrcKHR);
   vk::AttachmentReference colorReference(0, vk::ImageLayout::eColorAttachmentOptimal);
   vk::SubpassDescription subpass(vk::SubpassDescriptionFlags{}, vk::PipelineBindPoint::eGraphics, {}, colorReference, {}, nullptr);
-  vk::raii::RenderPass renderPass{ device, vk::RenderPassCreateInfo{vk::RenderPassCreateFlags(), attachmentDescriptions, subpass} };
+  vk::raii::RenderPass renderPass{ vc.device, vk::RenderPassCreateInfo{vk::RenderPassCreateFlags(), attachmentDescriptions, subpass} };
 
   //---- Pipeline
   const std::string vertexShaderStr = R"(
@@ -147,8 +111,8 @@ void main () { outColor = vec4 (fragColor, 1.0); }
 )";
 
   vku::spirv::init();
-  vk::raii::ShaderModule vertexShader = vku::spirv::makeShaderModule(device, vk::ShaderStageFlagBits::eVertex, vertexShaderStr);
-  vk::raii::ShaderModule fragmentShader = vku::spirv::makeShaderModule(device, vk::ShaderStageFlagBits::eFragment, fragmentShaderStr);
+  vk::raii::ShaderModule vertexShader = vku::spirv::makeShaderModule(vc.device, vk::ShaderStageFlagBits::eVertex, vertexShaderStr);
+  vk::raii::ShaderModule fragmentShader = vku::spirv::makeShaderModule(vc.device, vk::ShaderStageFlagBits::eFragment, fragmentShaderStr);
   std::array<vk::PipelineShaderStageCreateInfo, 2> shaderStageCreateInfos = {
     vk::PipelineShaderStageCreateInfo({}, vk::ShaderStageFlagBits::eVertex, *vertexShader, "main"),
     vk::PipelineShaderStageCreateInfo({}, vk::ShaderStageFlagBits::eFragment, *fragmentShader, "main")
@@ -210,7 +174,7 @@ void main () { outColor = vec4 (fragColor, 1.0); }
   std::array<vk::DynamicState, 2> dynamicStates = { vk::DynamicState::eViewport, vk::DynamicState::eScissor };
   vk::PipelineDynamicStateCreateInfo dynamicStateCreateInfo({}, dynamicStates);
 
-  vk::raii::PipelineLayout pipelineLayout(device, { {}, {} }); // { flags, descriptorSetLayout }
+  vk::raii::PipelineLayout pipelineLayout(vc.device, { {}, {} }); // { flags, descriptorSetLayout }
 
   vk::GraphicsPipelineCreateInfo graphicsPipelineCreateInfo(
     {},
@@ -231,7 +195,7 @@ void main () { outColor = vec4 (fragColor, 1.0); }
     //{}, // int32_t basePipelineIndex_ = {},
     //nullptr // const void* pNext
   );
-  vk::raii::Pipeline pipeline(device, nullptr, graphicsPipelineCreateInfo);
+  vk::raii::Pipeline pipeline(vc.device, nullptr, graphicsPipelineCreateInfo);
   switch (pipeline.getConstructorSuccessCode())
   {
   case vk::Result::eSuccess:
@@ -252,22 +216,22 @@ void main () { outColor = vec4 (fragColor, 1.0); }
     const vk::ComponentMapping components = { vk::ComponentSwizzle::eIdentity, vk::ComponentSwizzle::eIdentity , vk::ComponentSwizzle::eIdentity , vk::ComponentSwizzle::eIdentity };
     const vk::ImageSubresourceRange imageSubresourceRange = { vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 };
     vk::ImageViewCreateInfo imageViewCreateInfo({}, img, vk::ImageViewType::e2D, desiredColorFormat, components, imageSubresourceRange);
-    swapchainImageViews.emplace_back(device, imageViewCreateInfo);
+    swapchainImageViews.emplace_back(vc.device, imageViewCreateInfo);
   }
     
   std::vector<vk::raii::Framebuffer> framebuffers;
   for (size_t i = 0; i < swapchainImageViews.size(); i++) {
     std::array<vk::ImageView, 1> attachments = { *swapchainImageViews[i] };
     vk::FramebufferCreateInfo framebufferCreateInfo({}, *renderPass, attachments, vkbSwapchain.extent.width, vkbSwapchain.extent.height, 1);
-    framebuffers.push_back(vk::raii::Framebuffer(device, framebufferCreateInfo));
+    framebuffers.push_back(vk::raii::Framebuffer(vc.device, framebufferCreateInfo));
   }
 
   //---- CommandBuffer
   vk::CommandPoolCreateInfo commandPoolCreateInfo({}, graphicsQueueFamilyIndex);
-  vk::raii::CommandPool commandPool(device, commandPoolCreateInfo);
+  vk::raii::CommandPool commandPool(vc.device, commandPoolCreateInfo);
  
   vk::CommandBufferAllocateInfo commandBufferAllocateInfo(*commandPool, vk::CommandBufferLevel::ePrimary, 3);
-  vk::raii::CommandBuffers commandBuffers(device, commandBufferAllocateInfo);
+  vk::raii::CommandBuffers commandBuffers(vc.device, commandBufferAllocateInfo);
 
   for (size_t i = 0; i < commandBuffers.size(); ++i) {
     vk::raii::CommandBuffer& cmdBuf = commandBuffers[i];
@@ -302,9 +266,9 @@ void main () { outColor = vec4 (fragColor, 1.0); }
   imageInFlight.resize(swapchainImages.size(), nullptr);
 
   for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
-    availableSemaphores.emplace_back(device, vk::SemaphoreCreateInfo());
-    finishedSemaphores.emplace_back(device, vk::SemaphoreCreateInfo());
-    inFlightFences.emplace_back(device, vk::FenceCreateInfo(vk::FenceCreateFlagBits::eSignaled));
+    availableSemaphores.emplace_back(vc.device, vk::SemaphoreCreateInfo());
+    finishedSemaphores.emplace_back(vc.device, vk::SemaphoreCreateInfo());
+    inFlightFences.emplace_back(vc.device, vk::FenceCreateInfo(vk::FenceCreateFlagBits::eSignaled));
   }
 
   //---- Main Loop
@@ -316,7 +280,7 @@ void main () { outColor = vec4 (fragColor, 1.0); }
     vk::Result result;
     uint32_t imageIndex = 0;
 
-    result = device.waitForFences(*inFlightFences[currentFrame], true, UINT64_MAX);
+    result = vc.device.waitForFences(*inFlightFences[currentFrame], true, UINT64_MAX);
     assert(result == vk::Result::eSuccess);
     std::tie(result, imageIndex) = swapChain.acquireNextImage(UINT64_MAX, *availableSemaphores[currentFrame]);
     assert(result == vk::Result::eSuccess || result == vk::Result::eErrorOutOfDateKHR);
@@ -324,14 +288,14 @@ void main () { outColor = vec4 (fragColor, 1.0); }
     //if (result == vk::Result::eErrorOutOfDateKHR) recreate_swapchain(...);
 
     if (imageInFlight[imageIndex]) {
-      result = device.waitForFences(**imageInFlight[imageIndex], true, UINT64_MAX);
+      result = vc.device.waitForFences(**imageInFlight[imageIndex], true, UINT64_MAX);
       assert(result == vk::Result::eSuccess);
     }
     imageInFlight[imageIndex] = &inFlightFences[currentFrame];
 
     vk::PipelineStageFlags waitStages(vk::PipelineStageFlagBits::eColorAttachmentOutput);
     vk::SubmitInfo submitInfo(*availableSemaphores[currentFrame], waitStages, *commandBuffers[imageIndex], *finishedSemaphores[currentFrame]);
-    device.resetFences(*inFlightFences[currentFrame]);
+    vc.device.resetFences(*inFlightFences[currentFrame]);
     graphicsQueue.submit(submitInfo, *inFlightFences[currentFrame]);
 
     vk::PresentInfoKHR presentInfo(*finishedSemaphores[currentFrame], *swapChain, imageIndex);
@@ -343,11 +307,10 @@ void main () { outColor = vec4 (fragColor, 1.0); }
   }
 
   // END
-  device.waitIdle();
+  vc.device.waitIdle();
 
   vku::spirv::finalize();
   // Need to be destroyed explicitly becomes raii instance does not own it apparently.
-  vkb::destroy_debug_utils_messenger(vkbInstance.instance, vkbInstance.debug_messenger, vkbInstance.allocation_callbacks);
 
   std::cout << "Bye, Vulkan!\n";
   return 0;
