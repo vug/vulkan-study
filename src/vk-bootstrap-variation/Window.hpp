@@ -1,4 +1,6 @@
 #pragma once
+#include "AppSettings.hpp"
+
 //#define GLFW_INCLUDE_NONE
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
@@ -13,7 +15,7 @@ namespace vku {
   private:
     std::unique_ptr < GLFWwindow, decltype([](GLFWwindow* win) { glfwDestroyWindow(win); }) > window;
   public:
-    Window();
+    Window(const AppSettings& appSettings = {});
     ~Window();
     vk::raii::SurfaceKHR createSurface(const vk::raii::Instance& instance) const;
     std::vector<std::string> getRequiredInstanceExtensions() const;

@@ -3,11 +3,11 @@
 #include <iostream>
 
 namespace vku {
-  Window::Window() {
+  Window::Window(const AppSettings& appSettings) {
     glfwInit();
     glfwSetErrorCallback([](int error, const char* msg) { std::cerr << "GLFW ERROR: " << "(" << error << ") " << msg << std::endl; });
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    window.reset(glfwCreateWindow(800, 800, "Example Vulkan Application", nullptr, nullptr));
+    window.reset(glfwCreateWindow(appSettings.width, appSettings.height, appSettings.name.c_str(), nullptr, nullptr));
   }
 
   Window::~Window() {

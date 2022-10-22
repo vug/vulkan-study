@@ -15,6 +15,11 @@
 int main() {
   std::cout << "Hello, Vulkan!\n";
 
+  vku::AppSettings appSettings = {
+    .name = "vk-bootstrap variation study",
+    .hasPresentDepth = true,
+  };
+
   vku::Window window; // Window (GLFW)
   // Instance, Surface, Physical Device, Logical Device, Swapchain, Queues, RenderPass, Framebuffer, CommandBuffer
   vku::VulkanContext vc(window);

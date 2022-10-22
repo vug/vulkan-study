@@ -2,6 +2,7 @@ set(APP VkBootstrapVariation)
 
 add_executable(${APP}
   main.cpp
+  AppSettings.hpp
   SpirvHelper.hpp SpirvHelper.cpp
   utils.hpp utils.cpp
   Window.hpp Window.cpp
