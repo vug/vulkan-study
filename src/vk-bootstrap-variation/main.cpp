@@ -60,6 +60,26 @@ int main() {
   vk::SubpassDescription subpass(vk::SubpassDescriptionFlags{}, vk::PipelineBindPoint::eGraphics, {}, colorReference, {}, nullptr);
   vk::raii::RenderPass renderPass{ vc.device, vk::RenderPassCreateInfo{vk::RenderPassCreateFlags(), attachmentDescriptions, subpass} };
 
+
+  //---- Framebuffer
+  const std::vector<VkImage>& swapchainImages = vc.swapchain.getImages();
+
+  // vkbSwapchain.get_image_views() is actually not a getter but creator. Instead let's create imageViews ourselves
+  std::vector<vk::raii::ImageView> swapchainImageViews;
+  for (const VkImage& img : swapchainImages) {
+    const vk::ComponentMapping components = { vk::ComponentSwizzle::eIdentity, vk::ComponentSwizzle::eIdentity , vk::ComponentSwizzle::eIdentity , vk::ComponentSwizzle::eIdentity };
+    const vk::ImageSubresourceRange imageSubresourceRange = { vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 };
+    vk::ImageViewCreateInfo imageViewCreateInfo({}, img, vk::ImageViewType::e2D, vc.swapchainColorFormat, components, imageSubresourceRange);
+    swapchainImageViews.emplace_back(vc.device, imageViewCreateInfo);
+  }
+
+  std::vector<vk::raii::Framebuffer> framebuffers;
+  for (size_t i = 0; i < swapchainImageViews.size(); i++) {
+    std::array<vk::ImageView, 1> attachments = { *swapchainImageViews[i] };
+    vk::FramebufferCreateInfo framebufferCreateInfo({}, *renderPass, attachments, vc.swapchainExtent.width, vc.swapchainExtent.height, 1);
+    framebuffers.push_back(vk::raii::Framebuffer(vc.device, framebufferCreateInfo));
+  }
+
   //---- Pipeline
   const std::string vertexShaderStr = R"(
 #version 450
@@ -186,58 +206,16 @@ void main () { outColor = vec4 (fragColor, 1.0); }
   default: std::unreachable();
   }
 
-  //---- Framebuffer
-  const std::vector<VkImage>& swapchainImages = vc.swapchain.getImages();
-
-  // vkbSwapchain.get_image_views() is actually not a getter but creator. Instead let's create imageViews ourselves
-  std::vector<vk::raii::ImageView> swapchainImageViews;
-  for (const VkImage& img : swapchainImages) {
-    const vk::ComponentMapping components = { vk::ComponentSwizzle::eIdentity, vk::ComponentSwizzle::eIdentity , vk::ComponentSwizzle::eIdentity , vk::ComponentSwizzle::eIdentity };
-    const vk::ImageSubresourceRange imageSubresourceRange = { vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 };
-    vk::ImageViewCreateInfo imageViewCreateInfo({}, img, vk::ImageViewType::e2D, vc.swapchainColorFormat, components, imageSubresourceRange);
-    swapchainImageViews.emplace_back(vc.device, imageViewCreateInfo);
-  }
-    
-  std::vector<vk::raii::Framebuffer> framebuffers;
-  for (size_t i = 0; i < swapchainImageViews.size(); i++) {
-    std::array<vk::ImageView, 1> attachments = { *swapchainImageViews[i] };
-    vk::FramebufferCreateInfo framebufferCreateInfo({}, *renderPass, attachments, vc.swapchainExtent.width, vc.swapchainExtent.height, 1);
-    framebuffers.push_back(vk::raii::Framebuffer(vc.device, framebufferCreateInfo));
-  }
-
   //---- CommandBuffer
-  vk::CommandPoolCreateInfo commandPoolCreateInfo({}, vc.graphicsQueueFamilyIndex);
+  const int MAX_FRAMES_IN_FLIGHT = 2;
+
+  vk::CommandPoolCreateInfo commandPoolCreateInfo(vk::CommandPoolCreateFlagBits::eResetCommandBuffer, vc.graphicsQueueFamilyIndex);
   vk::raii::CommandPool commandPool(vc.device, commandPoolCreateInfo);
  
-  vk::CommandBufferAllocateInfo commandBufferAllocateInfo(*commandPool, vk::CommandBufferLevel::ePrimary, 3);
+  vk::CommandBufferAllocateInfo commandBufferAllocateInfo(*commandPool, vk::CommandBufferLevel::ePrimary, MAX_FRAMES_IN_FLIGHT);
   vk::raii::CommandBuffers commandBuffers(vc.device, commandBufferAllocateInfo);
 
-  for (size_t i = 0; i < commandBuffers.size(); ++i) {
-    vk::raii::CommandBuffer& cmdBuf = commandBuffers[i];
-
-    vk::CommandBufferBeginInfo cmdBufBeginInfo{};
-    vk::raii::Framebuffer& framebuffer = framebuffers[i];
-    vk::Rect2D renderArea = { {0,0}, vc.swapchainExtent };
-    vk::ClearColorValue clearColorValue = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 1.0f };
-    std::array<vk::ClearValue, 1> clearColor = { clearColorValue };
-    vk::RenderPassBeginInfo renderPassBeginInfo(*renderPass, *framebuffer, renderArea, clearColor);
-
-    cmdBuf.begin(cmdBufBeginInfo);
-    //std::array<vk::Viewport, 1> viewports = { vk::Viewport{ 0.f, 0.f, static_cast<float>(vkbSwapchain.extent.width), static_cast<float>(vkbSwapchain.extent.height), 0.f, 1.f } };
-    //std::array<vk::Rect2D, 1> scissors = { vk::Rect2D{ vk::Offset2D{0, 0}, vkbSwapchain.extent } };
-    //cmdBuf.setViewport(0, viewports);
-    //cmdBuf.setScissor(0, scissors);
-    cmdBuf.setViewport(0, vk::Viewport{ 0.f, 0.f, static_cast<float>(vc.swapchainExtent.width), static_cast<float>(vc.swapchainExtent.height), 0.f, 1.f });
-    cmdBuf.setScissor(0, vk::Rect2D{ vk::Offset2D{0, 0}, vc.swapchainExtent });
-    cmdBuf.beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
-    cmdBuf.bindPipeline(vk::PipelineBindPoint::eGraphics, *pipeline);
-    cmdBuf.draw(3, 1, 0, 0); // 3 vertices. their positions and colors are hard-coded in the vertex shader code.
-    cmdBuf.endRenderPass();
-    cmdBuf.end();
-  }
-
   //---- Synchronization
-  const int MAX_FRAMES_IN_FLIGHT = 2;
   std::vector<vk::raii::Semaphore> availableSemaphores;
   std::vector<vk::raii::Semaphore> finishedSemaphores;
   std::vector<vk::raii::Fence> inFlightFences;
@@ -266,6 +244,30 @@ void main () { outColor = vec4 (fragColor, 1.0); }
     assert(imageIndex < vc.swapchain.getImages().size());
     //if (result == vk::Result::eErrorOutOfDateKHR) recreate_swapchain(...);
 
+    vk::raii::CommandBuffer& cmdBuf = commandBuffers[currentFrame];
+    {
+      vk::CommandBufferBeginInfo cmdBufBeginInfo{};
+      vk::raii::Framebuffer& framebuffer = framebuffers[imageIndex];
+      vk::Rect2D renderArea = { {0,0}, vc.swapchainExtent };
+      vk::ClearColorValue clearColorValue = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 1.0f };
+      std::array<vk::ClearValue, 1> clearColor = { clearColorValue };
+      vk::RenderPassBeginInfo renderPassBeginInfo(*renderPass, *framebuffer, renderArea, clearColor);
+
+      cmdBuf.reset();
+      cmdBuf.begin(cmdBufBeginInfo);
+      //std::array<vk::Viewport, 1> viewports = { vk::Viewport{ 0.f, 0.f, static_cast<float>(vkbSwapchain.extent.width), static_cast<float>(vkbSwapchain.extent.height), 0.f, 1.f } };
+      //std::array<vk::Rect2D, 1> scissors = { vk::Rect2D{ vk::Offset2D{0, 0}, vkbSwapchain.extent } };
+      //cmdBuf.setViewport(0, viewports);
+      //cmdBuf.setScissor(0, scissors);
+      cmdBuf.setViewport(0, vk::Viewport{ 0.f, 0.f, static_cast<float>(vc.swapchainExtent.width), static_cast<float>(vc.swapchainExtent.height), 0.f, 1.f });
+      cmdBuf.setScissor(0, vk::Rect2D{ vk::Offset2D{0, 0}, vc.swapchainExtent });
+      cmdBuf.beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
+      cmdBuf.bindPipeline(vk::PipelineBindPoint::eGraphics, *pipeline);
+      cmdBuf.draw(3, 1, 0, 0); // 3 vertices. their positions and colors are hard-coded in the vertex shader code.
+      cmdBuf.endRenderPass();
+      cmdBuf.end();
+    }
+
     if (imageInFlight[imageIndex]) {
       result = vc.device.waitForFences(**imageInFlight[imageIndex], true, UINT64_MAX);
       assert(result == vk::Result::eSuccess);
@@ -273,7 +275,7 @@ void main () { outColor = vec4 (fragColor, 1.0); }
     imageInFlight[imageIndex] = &inFlightFences[currentFrame];
 
     vk::PipelineStageFlags waitStages(vk::PipelineStageFlagBits::eColorAttachmentOutput);
-    vk::SubmitInfo submitInfo(*availableSemaphores[currentFrame], waitStages, *commandBuffers[imageIndex], *finishedSemaphores[currentFrame]);
+    vk::SubmitInfo submitInfo(*availableSemaphores[currentFrame], waitStages, *cmdBuf, *finishedSemaphores[currentFrame]);
     vc.device.resetFences(*inFlightFences[currentFrame]);
     vc.graphicsQueue.submit(submitInfo, *inFlightFences[currentFrame]);
 
