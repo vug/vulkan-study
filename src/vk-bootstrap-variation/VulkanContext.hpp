@@ -25,11 +25,16 @@ namespace vku {
     vkb::Device vkbDevice;
   public:
     vk::raii::Device device;
+    vk::Format swapchainColorFormat;
+    vk::ColorSpaceKHR swapchainColorSpace;
+    vk::Extent2D swapchainExtent;
+    vk::raii::SwapchainKHR swapchain;
 
   private:
     vk::raii::Instance constructInstance();
     vk::raii::PhysicalDevice constructPhysicalDevice();
     vk::raii::Device constructDevice();
+    vk::raii::SwapchainKHR constructSwapchain();
 
   public:
     VulkanContext(Window& window);

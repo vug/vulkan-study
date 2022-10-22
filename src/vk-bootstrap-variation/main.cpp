@@ -16,26 +16,10 @@ int main() {
   std::cout << "Hello, Vulkan!\n";
 
   vku::Window window; // Window (GLFW)
-  // Instance, Surface, Physical Device, Logical Device
+  // Instance, Surface, Physical Device, Logical Device, Swapchain
   vku::VulkanContext vc(window);
 
-  //---- Swapchain
-  const uint32_t NUM_IMAGES = 3;
-  // TODO: find a better format picking scheme // can get available formats via: auto surfaceFormats = physicalDevice.getSurfaceFormatsKHR(*surface);
-  auto desiredColorFormat = vk::Format::eB8G8R8A8Unorm; // or vk::Format::eB8G8R8A8Srgb;
-  auto desiredColorSpace = vk::ColorSpaceKHR::eSrgbNonlinear;
-  vkb::Swapchain vkbSwapchain = vkb::SwapchainBuilder{ vc.vkbDevice }
-    .set_desired_format({ static_cast<VkFormat>(desiredColorFormat), static_cast<VkColorSpaceKHR>(desiredColorSpace) }) // default
-    .set_desired_present_mode(VK_PRESENT_MODE_MAILBOX_KHR) // default. other: VK_PRESENT_MODE_FIFO_KHR
-    .set_required_min_image_count(NUM_IMAGES)
-    .build().value();
-  assert(vkbSwapchain.image_format == static_cast<VkFormat>(desiredColorFormat));
-  assert(vkbSwapchain.color_space == static_cast<VkColorSpaceKHR>(desiredColorSpace));
-  vk::raii::SwapchainKHR swapChain{ vc.device, vkbSwapchain.swapchain };
-  // TODO: implement recreateSwapchain which recreates FrameBuffers, CommandPools, and CommandBuffers with it
-
   //---- Queues
-
   vk::raii::Queue graphicsQueue{ vc.device, vc.vkbDevice.get_queue(vkb::QueueType::graphics).value() };
   vk::raii::Queue presentQueue{ vc.device, vc.vkbDevice.get_queue(vkb::QueueType::present).value() };
   uint32_t graphicsQueueFamilyIndex = vc.vkbDevice.get_queue_index(vkb::QueueType::graphics).value();
@@ -45,7 +29,7 @@ int main() {
   {
     std::array<vk::AttachmentDescription, 2> attachmentDescriptions;
     attachmentDescriptions[0] = vk::AttachmentDescription(vk::AttachmentDescriptionFlags(),
-      desiredColorFormat,
+      vc.swapchainColorFormat,
       vk::SampleCountFlagBits::e1, // TODO: try MSAA
       vk::AttachmentLoadOp::eClear,
       vk::AttachmentStoreOp::eStore,
@@ -69,7 +53,7 @@ int main() {
   }
   std::array<vk::AttachmentDescription, 1> attachmentDescriptions;
   attachmentDescriptions[0] = vk::AttachmentDescription(vk::AttachmentDescriptionFlags(),
-    desiredColorFormat,
+    vc.swapchainColorFormat,
     vk::SampleCountFlagBits::e1, // TODO: try MSAA
     vk::AttachmentLoadOp::eClear,
     vk::AttachmentStoreOp::eStore,
@@ -123,8 +107,8 @@ void main () { outColor = vec4 (fragColor, 1.0); }
 
   vk::PipelineInputAssemblyStateCreateInfo inputAssemblyStateCreateInfo({}, vk::PrimitiveTopology::eTriangleList, false);
 
-  std::array<vk::Viewport, 1> viewports = { vk::Viewport{0.f, 0.f, static_cast<float>(vkbSwapchain.extent.width), static_cast<float>(vkbSwapchain.extent.height), 0.f, 1.f} };
-  std::array<vk::Rect2D, 1> scissors = { vk::Rect2D{vk::Offset2D{0, 0}, vkbSwapchain.extent} };
+  std::array<vk::Viewport, 1> viewports = { vk::Viewport{0.f, 0.f, static_cast<float>(vc.swapchainExtent.width), static_cast<float>(vc.swapchainExtent.height), 0.f, 1.f} };
+  std::array<vk::Rect2D, 1> scissors = { vk::Rect2D{vk::Offset2D{0, 0}, vc.swapchainExtent} };
   vk::PipelineViewportStateCreateInfo viewportStateCreateInfo({}, viewports, scissors);
 
   vk::PipelineRasterizationStateCreateInfo rasterizationStateCreateInfo({}, // flags
@@ -208,21 +192,21 @@ void main () { outColor = vec4 (fragColor, 1.0); }
   }
 
   //---- Framebuffer
-  const std::vector<VkImage>& swapchainImages = swapChain.getImages();
+  const std::vector<VkImage>& swapchainImages = vc.swapchain.getImages();
 
   // vkbSwapchain.get_image_views() is actually not a getter but creator. Instead let's create imageViews ourselves
   std::vector<vk::raii::ImageView> swapchainImageViews;
   for (const VkImage& img : swapchainImages) {
     const vk::ComponentMapping components = { vk::ComponentSwizzle::eIdentity, vk::ComponentSwizzle::eIdentity , vk::ComponentSwizzle::eIdentity , vk::ComponentSwizzle::eIdentity };
     const vk::ImageSubresourceRange imageSubresourceRange = { vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 };
-    vk::ImageViewCreateInfo imageViewCreateInfo({}, img, vk::ImageViewType::e2D, desiredColorFormat, components, imageSubresourceRange);
+    vk::ImageViewCreateInfo imageViewCreateInfo({}, img, vk::ImageViewType::e2D, vc.swapchainColorFormat, components, imageSubresourceRange);
     swapchainImageViews.emplace_back(vc.device, imageViewCreateInfo);
   }
     
   std::vector<vk::raii::Framebuffer> framebuffers;
   for (size_t i = 0; i < swapchainImageViews.size(); i++) {
     std::array<vk::ImageView, 1> attachments = { *swapchainImageViews[i] };
-    vk::FramebufferCreateInfo framebufferCreateInfo({}, *renderPass, attachments, vkbSwapchain.extent.width, vkbSwapchain.extent.height, 1);
+    vk::FramebufferCreateInfo framebufferCreateInfo({}, *renderPass, attachments, vc.swapchainExtent.width, vc.swapchainExtent.height, 1);
     framebuffers.push_back(vk::raii::Framebuffer(vc.device, framebufferCreateInfo));
   }
 
@@ -238,7 +222,7 @@ void main () { outColor = vec4 (fragColor, 1.0); }
 
     vk::CommandBufferBeginInfo cmdBufBeginInfo{};
     vk::raii::Framebuffer& framebuffer = framebuffers[i];
-    vk::Rect2D renderArea = { {0,0}, vkbSwapchain.extent };
+    vk::Rect2D renderArea = { {0,0}, vc.swapchainExtent };
     vk::ClearColorValue clearColorValue = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 1.0f };
     std::array<vk::ClearValue, 1> clearColor = { clearColorValue };
     vk::RenderPassBeginInfo renderPassBeginInfo(*renderPass, *framebuffer, renderArea, clearColor);
@@ -248,8 +232,8 @@ void main () { outColor = vec4 (fragColor, 1.0); }
     //std::array<vk::Rect2D, 1> scissors = { vk::Rect2D{ vk::Offset2D{0, 0}, vkbSwapchain.extent } };
     //cmdBuf.setViewport(0, viewports);
     //cmdBuf.setScissor(0, scissors);
-    cmdBuf.setViewport(0, vk::Viewport{ 0.f, 0.f, static_cast<float>(vkbSwapchain.extent.width), static_cast<float>(vkbSwapchain.extent.height), 0.f, 1.f });
-    cmdBuf.setScissor(0, vk::Rect2D{ vk::Offset2D{0, 0}, vkbSwapchain.extent });
+    cmdBuf.setViewport(0, vk::Viewport{ 0.f, 0.f, static_cast<float>(vc.swapchainExtent.width), static_cast<float>(vc.swapchainExtent.height), 0.f, 1.f });
+    cmdBuf.setScissor(0, vk::Rect2D{ vk::Offset2D{0, 0}, vc.swapchainExtent });
     cmdBuf.beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
     cmdBuf.bindPipeline(vk::PipelineBindPoint::eGraphics, *pipeline);
     cmdBuf.draw(3, 1, 0, 0); // 3 vertices. their positions and colors are hard-coded in the vertex shader code.
@@ -282,9 +266,9 @@ void main () { outColor = vec4 (fragColor, 1.0); }
 
     result = vc.device.waitForFences(*inFlightFences[currentFrame], true, UINT64_MAX);
     assert(result == vk::Result::eSuccess);
-    std::tie(result, imageIndex) = swapChain.acquireNextImage(UINT64_MAX, *availableSemaphores[currentFrame]);
+    std::tie(result, imageIndex) = vc.swapchain.acquireNextImage(UINT64_MAX, *availableSemaphores[currentFrame]);
     assert(result == vk::Result::eSuccess || result == vk::Result::eErrorOutOfDateKHR);
-    assert(imageIndex < swapChain.getImages().size());
+    assert(imageIndex < vc.swapchain.getImages().size());
     //if (result == vk::Result::eErrorOutOfDateKHR) recreate_swapchain(...);
 
     if (imageInFlight[imageIndex]) {
@@ -298,7 +282,7 @@ void main () { outColor = vec4 (fragColor, 1.0); }
     vc.device.resetFences(*inFlightFences[currentFrame]);
     graphicsQueue.submit(submitInfo, *inFlightFences[currentFrame]);
 
-    vk::PresentInfoKHR presentInfo(*finishedSemaphores[currentFrame], *swapChain, imageIndex);
+    vk::PresentInfoKHR presentInfo(*finishedSemaphores[currentFrame], *vc.swapchain, imageIndex);
     result = presentQueue.presentKHR(presentInfo);
     //if (result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR) recreateSwapChain();
     //else assert(result == vk::Result::eSuccess);

@@ -9,7 +9,8 @@ namespace vku {
     instance(constructInstance()),
     surface(window.createSurface(instance)),
     physicalDevice(constructPhysicalDevice()),
-    device(constructDevice())
+    device(constructDevice()),
+    swapchain(constructSwapchain())
   { }
 
   VulkanContext::~VulkanContext() {
@@ -55,5 +56,22 @@ namespace vku {
   vk::raii::Device VulkanContext::constructDevice() {
     vkbDevice = vkb::DeviceBuilder{ vkbPhysicalDevice }.build().value();
     return vk::raii::Device { physicalDevice, vkbDevice.device };
+  }
+
+  vk::raii::SwapchainKHR VulkanContext::constructSwapchain() {
+    const uint32_t NUM_IMAGES = 3;
+    // TODO: find a better format picking scheme // can get available formats via: auto surfaceFormats = physicalDevice.getSurfaceFormatsKHR(*surface);
+    swapchainColorFormat = vk::Format::eB8G8R8A8Unorm; // or vk::Format::eB8G8R8A8Srgb;
+    swapchainColorSpace = vk::ColorSpaceKHR::eSrgbNonlinear;
+    vkb::Swapchain vkbSwapchain = vkb::SwapchainBuilder{ vkbDevice }
+      .set_desired_format({ static_cast<VkFormat>(swapchainColorFormat), static_cast<VkColorSpaceKHR>(swapchainColorSpace) }) // default
+      .set_desired_present_mode(VK_PRESENT_MODE_MAILBOX_KHR) // default. other: VK_PRESENT_MODE_FIFO_KHR
+      .set_required_min_image_count(NUM_IMAGES)
+      .build().value();
+    assert(vkbSwapchain.image_format == static_cast<VkFormat>(swapchainColorFormat));
+    assert(vkbSwapchain.color_space == static_cast<VkColorSpaceKHR>(swapchainColorSpace));
+    swapchainExtent = vkbSwapchain.extent;
+    return vk::raii::SwapchainKHR { device, vkbSwapchain.swapchain };
+    // TODO: implement recreateSwapchain which recreates FrameBuffers, CommandPools, and CommandBuffers with it    
   }
 }
