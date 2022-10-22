@@ -40,7 +40,8 @@ namespace vku {
     }())
   {
   }
-  VulkanContext::VulkanContext(vku::Window& window) :
+  VulkanContext::VulkanContext(vku::Window& window, const AppSettings& appSettings) :
+    appSettings(appSettings),
     window(window),
     instance(constructInstance()),
     surface(window.createSurface(instance)),
@@ -120,8 +121,9 @@ namespace vku {
   }
 
   vk::raii::RenderPass VulkanContext::constructRenderPass() {
-    std::array<vk::AttachmentDescription, 2> attachmentDescriptions;
-    attachmentDescriptions[0] = vk::AttachmentDescription(vk::AttachmentDescriptionFlags(),
+    std::vector<vk::AttachmentDescription> attachmentDescriptions;
+
+    attachmentDescriptions.emplace_back(vk::AttachmentDescriptionFlags(),
       swapchainColorFormat,
       swapchainSamples,
       vk::AttachmentLoadOp::eClear,
@@ -130,7 +132,14 @@ namespace vku {
       vk::AttachmentStoreOp::eDontCare,
       vk::ImageLayout::eUndefined,
       vk::ImageLayout::ePresentSrcKHR);
-    attachmentDescriptions[1] = vk::AttachmentDescription(vk::AttachmentDescriptionFlags(),
+    vk::AttachmentReference colorReference(0, vk::ImageLayout::eColorAttachmentOptimal);
+
+    if (!appSettings.hasPresentDepth) {
+      vk::SubpassDescription subpass(vk::SubpassDescriptionFlags{}, vk::PipelineBindPoint::eGraphics, {}, colorReference, {});
+      return vk::raii::RenderPass{ device, vk::RenderPassCreateInfo{vk::RenderPassCreateFlags(), attachmentDescriptions, subpass} };
+    }
+
+    attachmentDescriptions.emplace_back(vk::AttachmentDescriptionFlags(),
       swapchainDepthFormat,
       swapchainSamples,
       vk::AttachmentLoadOp::eClear,
@@ -139,10 +148,9 @@ namespace vku {
       vk::AttachmentStoreOp::eDontCare,
       vk::ImageLayout::eUndefined,
       vk::ImageLayout::eDepthStencilAttachmentOptimal);
-    vk::AttachmentReference colorReference(0, vk::ImageLayout::eColorAttachmentOptimal);
     vk::AttachmentReference depthReference(1, vk::ImageLayout::eDepthStencilAttachmentOptimal);
     vk::SubpassDescription subpass(vk::SubpassDescriptionFlags{}, vk::PipelineBindPoint::eGraphics, {}, colorReference, {}, &depthReference);
-    return vk::raii::RenderPass { device, vk::RenderPassCreateInfo{vk::RenderPassCreateFlags(), attachmentDescriptions, subpass} };
+    return vk::raii::RenderPass{ device, vk::RenderPassCreateInfo{vk::RenderPassCreateFlags(), attachmentDescriptions, subpass} };
   }
 
   std::vector<vk::raii::Framebuffer> VulkanContext::constructFramebuffers() {
@@ -156,12 +164,15 @@ namespace vku {
       swapchainImageViews.emplace_back(device, imageViewCreateInfo);
 
       // Note that Swapchain comes with images for color attachment but by default no images for depth attachment
-      depthImages.emplace_back(*this, swapchainDepthFormat, swapchainExtent, swapchainSamples, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eDepthStencilAttachment, vk::ImageAspectFlagBits::eDepth);
+      if (appSettings.hasPresentDepth)
+        depthImages.emplace_back(*this, swapchainDepthFormat, swapchainExtent, swapchainSamples, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eDepthStencilAttachment, vk::ImageAspectFlagBits::eDepth);
     }
 
     std::vector<vk::raii::Framebuffer> fbs;
     for (size_t i = 0; i < swapchainImageViews.size(); i++) {
-      std::array<vk::ImageView, 2> attachments = { *swapchainImageViews[i], *depthImages[i].imageView };
+      std::vector<vk::ImageView> attachments = { *swapchainImageViews[i] };
+      if (appSettings.hasPresentDepth)
+        attachments.push_back(*depthImages[i].imageView);
       vk::FramebufferCreateInfo framebufferCreateInfo({}, *renderPass, attachments, swapchainExtent.width, swapchainExtent.height, 1);
       fbs.push_back(vk::raii::Framebuffer(device, framebufferCreateInfo));
     }

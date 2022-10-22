@@ -1,4 +1,5 @@
 #pragma once
+#include "AppSettings.hpp"
 #include "Window.hpp"
 
 #include <VkBootstrap.h>
@@ -14,6 +15,7 @@ namespace vku {
     const uint32_t NUM_IMAGES = 3;
     const int MAX_FRAMES_IN_FLIGHT = 2;
   private:
+    AppSettings appSettings;
     vku::Window& window;
     vk::raii::Context context;
   public:
@@ -57,7 +59,7 @@ namespace vku {
     std::vector<vk::raii::Framebuffer> constructFramebuffers();
 
   public:
-    VulkanContext(Window& window);
+    VulkanContext(Window& window, const AppSettings& appSettings = {});
     ~VulkanContext();
   };
 

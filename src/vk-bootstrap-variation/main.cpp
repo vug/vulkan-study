@@ -17,12 +17,12 @@ int main() {
 
   vku::AppSettings appSettings = {
     .name = "vk-bootstrap variation study",
-    .hasPresentDepth = true,
+    .hasPresentDepth = false,
   };
 
   vku::Window window; // Window (GLFW)
   // Instance, Surface, Physical Device, Logical Device, Swapchain, Queues, RenderPass, Framebuffer, CommandBuffer
-  vku::VulkanContext vc(window);
+  vku::VulkanContext vc(window, appSettings);
 
   //---- Pipeline
   const std::string vertexShaderStr = R"(
@@ -127,7 +127,7 @@ void main () { outColor = vec4 (fragColor, 1.0); }
     &viewportStateCreateInfo,
     &rasterizationStateCreateInfo,
     &multisampleStateCreateInfo,
-    &depthStencilStateCreateInfo,
+    appSettings.hasPresentDepth ? &depthStencilStateCreateInfo : nullptr,
     &colorBlendStateCreateInfo,
     &dynamicStateCreateInfo, // *vk::PipelineDynamicStateCreateInfo
     *pipelineLayout, // vk::PipelineLayout
@@ -181,7 +181,9 @@ void main () { outColor = vec4 (fragColor, 1.0); }
       vk::raii::Framebuffer& framebuffer = vc.framebuffers[imageIndex];
       vk::Rect2D renderArea = { {0,0}, vc.swapchainExtent };
       vk::ClearColorValue clearColorValue = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 1.0f };
-      std::array<vk::ClearValue, 2> clearValues = { clearColorValue, vk::ClearDepthStencilValue(1.f, 0.f)};
+      std::vector<vk::ClearValue> clearValues = { clearColorValue }; 
+      if (appSettings.hasPresentDepth)
+        clearValues.push_back(vk::ClearDepthStencilValue(1.f, 0.f));
       vk::RenderPassBeginInfo renderPassBeginInfo(*vc.renderPass, *framebuffer, renderArea, clearValues);
 
       cmdBuf.reset();
