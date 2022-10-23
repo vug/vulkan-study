@@ -7,7 +7,7 @@ add_executable(${APP}
   utils.hpp utils.cpp
   Window.hpp Window.cpp
   VulkanContext.hpp VulkanContext.cpp
-)
+ "Image.cpp")
 
 # CMake can find VulkanSDK if it was first installed from https://www.lunarg.com/vulkan-sdk/ 
 # using FindVulkan module. `include(FindVulkan)` not needed
