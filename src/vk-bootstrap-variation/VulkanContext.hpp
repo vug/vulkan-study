@@ -12,6 +12,7 @@ namespace vku {
 
   class VulkanContext {
   public:
+    // TODO: make it tunable with its default being "surface capabilities -> minimum image count + 1
     const uint32_t NUM_IMAGES = 3;
     const int MAX_FRAMES_IN_FLIGHT = 2;
   private:
