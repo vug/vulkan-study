@@ -40,12 +40,12 @@ namespace vku {
     vk::SampleCountFlagBits swapchainSamples;
     vk::Extent2D swapchainExtent;
     vk::raii::SwapchainKHR swapchain;
+    std::vector<vk::raii::ImageView> swapchainImageViews;
     vk::raii::Queue graphicsQueue;
     vk::raii::Queue presentQueue;
     uint32_t graphicsQueueFamilyIndex;
     vk::raii::RenderPass renderPass;
     std::vector<vku::Image> depthImages;
-    std::vector<vk::raii::ImageView> swapchainImageViews;
     std::vector<vk::raii::Framebuffer> framebuffers;
     vk::raii::CommandPool commandPool;
     vk::raii::CommandBuffers commandBuffers;
@@ -55,6 +55,7 @@ namespace vku {
     vk::raii::PhysicalDevice constructPhysicalDevice();
     vk::raii::Device constructDevice();
     vk::raii::SwapchainKHR constructSwapchain();
+    std::vector<vk::raii::ImageView> constructSwapchainImageViews();
     vk::raii::RenderPass constructRenderPass();
     std::vector<vk::raii::Framebuffer> constructFramebuffers();
 

@@ -53,6 +53,7 @@ namespace vku {
     swapchainDepthFormat(vk::Format::eD16Unorm),
     swapchainSamples(vk::SampleCountFlagBits::e1),
     swapchain(constructSwapchain()),
+    swapchainImageViews(constructSwapchainImageViews()),
     graphicsQueue{ device, vkbDevice.get_queue(vkb::QueueType::graphics).value() },
     presentQueue{ device, vkbDevice.get_queue(vkb::QueueType::present).value() },
     graphicsQueueFamilyIndex(vkbDevice.get_queue_index(vkb::QueueType::graphics).value()),
@@ -119,6 +120,24 @@ namespace vku {
     return vk::raii::SwapchainKHR{ device, vkbSwapchain.swapchain };  
   }
 
+  std::vector<vk::raii::ImageView> VulkanContext::constructSwapchainImageViews() {
+    const std::vector<VkImage>& swapchainImages = swapchain.getImages();
+
+    std::vector<vk::raii::ImageView> imgViews;
+    // vkbSwapchain.get_image_views() is actually not a getter but creator. Instead let's create imageViews ourselves
+    for (const VkImage& img : swapchainImages) {
+      const vk::ComponentMapping components = { vk::ComponentSwizzle::eIdentity, vk::ComponentSwizzle::eIdentity , vk::ComponentSwizzle::eIdentity , vk::ComponentSwizzle::eIdentity };
+      const vk::ImageSubresourceRange imageSubresourceRange = { vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 };
+      vk::ImageViewCreateInfo imageViewCreateInfo({}, img, vk::ImageViewType::e2D, swapchainColorFormat, components, imageSubresourceRange);
+      imgViews.emplace_back(device, imageViewCreateInfo);
+
+      // Note that Swapchain comes with images for color attachment but by default no images for depth attachment
+      if (appSettings.hasPresentDepth)
+        depthImages.emplace_back(*this, swapchainDepthFormat, swapchainExtent, swapchainSamples, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eDepthStencilAttachment, vk::ImageAspectFlagBits::eDepth);
+    }
+    return imgViews;
+  }
+
   vk::raii::RenderPass VulkanContext::constructRenderPass() {
     std::vector<vk::AttachmentDescription> attachmentDescriptions;
 
@@ -153,20 +172,6 @@ namespace vku {
   }
 
   std::vector<vk::raii::Framebuffer> VulkanContext::constructFramebuffers() {
-    const std::vector<VkImage>& swapchainImages = swapchain.getImages();
-
-    // vkbSwapchain.get_image_views() is actually not a getter but creator. Instead let's create imageViews ourselves
-    for (const VkImage& img : swapchainImages) {
-      const vk::ComponentMapping components = { vk::ComponentSwizzle::eIdentity, vk::ComponentSwizzle::eIdentity , vk::ComponentSwizzle::eIdentity , vk::ComponentSwizzle::eIdentity };
-      const vk::ImageSubresourceRange imageSubresourceRange = { vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 };
-      vk::ImageViewCreateInfo imageViewCreateInfo({}, img, vk::ImageViewType::e2D, swapchainColorFormat, components, imageSubresourceRange);
-      swapchainImageViews.emplace_back(device, imageViewCreateInfo);
-
-      // Note that Swapchain comes with images for color attachment but by default no images for depth attachment
-      if (appSettings.hasPresentDepth)
-        depthImages.emplace_back(*this, swapchainDepthFormat, swapchainExtent, swapchainSamples, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eDepthStencilAttachment, vk::ImageAspectFlagBits::eDepth);
-    }
-
     std::vector<vk::raii::Framebuffer> fbs;
     for (size_t i = 0; i < swapchainImageViews.size(); i++) {
       std::vector<vk::ImageView> attachments = { *swapchainImageViews[i] };
@@ -186,6 +191,7 @@ namespace vku {
     swapchain.clear();
 
     swapchain = constructSwapchain();
+    swapchainImageViews = constructSwapchainImageViews();
     renderPass = constructRenderPass();
     framebuffers = constructFramebuffers();
     commandBuffers = { device, vk::CommandBufferAllocateInfo(*commandPool, vk::CommandBufferLevel::ePrimary, MAX_FRAMES_IN_FLIGHT) };
