@@ -116,8 +116,7 @@ namespace vku {
     assert(vkbSwapchain.image_format == static_cast<VkFormat>(swapchainColorFormat));
     assert(vkbSwapchain.color_space == static_cast<VkColorSpaceKHR>(swapchainColorSpace));
     swapchainExtent = vkbSwapchain.extent;
-    return vk::raii::SwapchainKHR{ device, vkbSwapchain.swapchain };
-    // TODO: implement recreateSwapchain which recreates FrameBuffers, CommandPools, and CommandBuffers with it    
+    return vk::raii::SwapchainKHR{ device, vkbSwapchain.swapchain };  
   }
 
   vk::raii::RenderPass VulkanContext::constructRenderPass() {
@@ -177,5 +176,18 @@ namespace vku {
       fbs.push_back(vk::raii::Framebuffer(device, framebufferCreateInfo));
     }
     return fbs; // probably unneccessary copy
+  }
+
+  void VulkanContext::recreateSwapchain() {
+    device.waitIdle();
+
+    framebuffers.clear();
+    swapchainImageViews.clear();
+    swapchain.clear();
+
+    swapchain = constructSwapchain();
+    renderPass = constructRenderPass();
+    framebuffers = constructFramebuffers();
+    commandBuffers = { device, vk::CommandBufferAllocateInfo(*commandPool, vk::CommandBufferLevel::ePrimary, MAX_FRAMES_IN_FLIGHT) };
   }
 }

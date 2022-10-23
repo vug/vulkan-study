@@ -9,6 +9,7 @@
 #include <VkBootstrap.h>
 
 #include <iostream>
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -168,12 +169,18 @@ void main () { outColor = vec4 (fragColor, 1.0); }
     vk::Result result;
     uint32_t imageIndex = 0;
 
-    result = vc.device.waitForFences(*inFlightFences[currentFrame], true, UINT64_MAX);
+    result = vc.device.waitForFences(*inFlightFences[currentFrame], true, std::numeric_limits<uint64_t>::max());
     assert(result == vk::Result::eSuccess);
-    std::tie(result, imageIndex) = vc.swapchain.acquireNextImage(UINT64_MAX, *availableSemaphores[currentFrame]);
-    assert(result == vk::Result::eSuccess || result == vk::Result::eErrorOutOfDateKHR);
+    try {
+      std::tie(result, imageIndex) = vc.swapchain.acquireNextImage(std::numeric_limits<uint64_t>::max(), *availableSemaphores[currentFrame]);
+    }
+    catch (vk::OutOfDateKHRError& e) {
+      assert(result == vk::Result::eErrorOutOfDateKHR); // to see whether result gets a wrong value as it happens with presentKHR
+      vc.recreateSwapchain();
+      continue;
+    }
+    assert(result == vk::Result::eSuccess);
     assert(imageIndex < vc.swapchain.getImages().size());
-    //if (result == vk::Result::eErrorOutOfDateKHR) recreate_swapchain(...);
 
     vk::raii::CommandBuffer& cmdBuf = vc.commandBuffers[currentFrame];
     {
@@ -188,10 +195,6 @@ void main () { outColor = vec4 (fragColor, 1.0); }
 
       cmdBuf.reset();
       cmdBuf.begin(cmdBufBeginInfo);
-      //std::array<vk::Viewport, 1> viewports = { vk::Viewport{ 0.f, 0.f, static_cast<float>(vkbSwapchain.extent.width), static_cast<float>(vkbSwapchain.extent.height), 0.f, 1.f } };
-      //std::array<vk::Rect2D, 1> scissors = { vk::Rect2D{ vk::Offset2D{0, 0}, vkbSwapchain.extent } };
-      //cmdBuf.setViewport(0, viewports);
-      //cmdBuf.setScissor(0, scissors);
       cmdBuf.setViewport(0, vk::Viewport{ 0.f, 0.f, static_cast<float>(vc.swapchainExtent.width), static_cast<float>(vc.swapchainExtent.height), 0.f, 1.f });
       cmdBuf.setScissor(0, vk::Rect2D{ vk::Offset2D{0, 0}, vc.swapchainExtent });
       cmdBuf.beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
@@ -202,7 +205,7 @@ void main () { outColor = vec4 (fragColor, 1.0); }
     }
 
     if (imageInFlight[imageIndex]) {
-      result = vc.device.waitForFences(**imageInFlight[imageIndex], true, UINT64_MAX);
+      result = vc.device.waitForFences(**imageInFlight[imageIndex], true, std::numeric_limits<uint64_t>::max());
       assert(result == vk::Result::eSuccess);
     }
     imageInFlight[imageIndex] = &inFlightFences[currentFrame];
@@ -213,9 +216,17 @@ void main () { outColor = vec4 (fragColor, 1.0); }
     vc.graphicsQueue.submit(submitInfo, *inFlightFences[currentFrame]);
 
     vk::PresentInfoKHR presentInfo(*finishedSemaphores[currentFrame], *vc.swapchain, imageIndex);
-    result = vc.presentQueue.presentKHR(presentInfo);
-    //if (result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR) recreateSwapChain();
-    //else assert(result == vk::Result::eSuccess);
+    try {
+      result = vc.presentQueue.presentKHR(presentInfo);
+    }
+    catch (vk::OutOfDateKHRError& e) {
+      // for some reason, even though "out of date" exception was thrown result is still vk::eSuccess.
+      // Setting it to correct value manually just in case result will be used below later.
+      result = vk::Result::eErrorOutOfDateKHR;
+      vc.recreateSwapchain();
+      continue;
+    }
+    assert(result == vk::Result::eSuccess);
 
     currentFrame = (currentFrame + 1) % vc.MAX_FRAMES_IN_FLIGHT;
   }

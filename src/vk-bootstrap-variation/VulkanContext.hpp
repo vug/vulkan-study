@@ -61,6 +61,9 @@ namespace vku {
   public:
     VulkanContext(Window& window, const AppSettings& appSettings = {});
     ~VulkanContext();
+
+    // To be called when app window is resized
+    void recreateSwapchain();
   };
 
   struct Image {
