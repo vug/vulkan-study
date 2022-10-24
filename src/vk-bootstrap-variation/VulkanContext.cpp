@@ -150,6 +150,8 @@ namespace vku {
   }
 
   void VulkanContext::recreateSwapchain() {
+    // This makes rendering stop before creating the swapchain. Actually, it's possible to create new swapchain while drawing commands on the image from the old one are still in-flight
+    // TODO: if recreating use "set old swapchain" option when creating new swapchain and delete old one once presentation is done. (Maybe give a flag to `constructSwapchain`)
     device.waitIdle();
 
     framebuffers.clear();
@@ -158,8 +160,9 @@ namespace vku {
 
     swapchain = constructSwapchain();
     swapchainImageViews = constructSwapchainImageViews();
+    // Recreation of the RenderpPass is usually not necessary. 
+    // Only needed when image format changes during application lifetime e.g. Moving app window from standard range to HDR monitor.
     renderPass = constructRenderPass();
     framebuffers = constructFramebuffers();
-    commandBuffers = { device, vk::CommandBufferAllocateInfo(*commandPool, vk::CommandBufferLevel::ePrimary, MAX_FRAMES_IN_FLIGHT) };
   }
 }

@@ -14,6 +14,7 @@ namespace vku {
   public:
     // TODO: make it tunable with its default being "surface capabilities -> minimum image count + 1
     const uint32_t NUM_IMAGES = 3;
+    // Values larger than 2 might cause latency. More frames will be recorded than being presented by GPU.
     const int MAX_FRAMES_IN_FLIGHT = 2;
   private:
     AppSettings appSettings;
