@@ -174,4 +174,80 @@ namespace vku {
     renderPass = constructRenderPass();
     framebuffers = constructFramebuffers();
   }
+
+  void VulkanContext::drawFrame(std::function<void(const vk::raii::CommandBuffer& cmdBuf, const vk::RenderPassBeginInfo& defaultFullScreenRenderPassBeginInfo)> recordCommandBuffer, std::vector<vk::ClearValue> clearValues, vk::Viewport viewport, vk::Rect2D renderArea) {
+    if (viewport == vk::Viewport())
+      viewport = vk::Viewport{ 0.f, 0.f, static_cast<float>(swapchainExtent.width), static_cast<float>(swapchainExtent.height), 0.f, 1.f };
+    if (renderArea == vk::Rect2D())
+      renderArea = vk::Rect2D{ {0,0}, swapchainExtent };
+    if (clearValues.empty()) {
+      const vk::ClearColorValue clearColorValue = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 1.0f };
+      const vk::ClearDepthStencilValue clearDepthValue{ 1.f, 0 };
+      clearValues = (appSettings.hasPresentDepth) ?
+        std::vector<vk::ClearValue>{ clearColorValue } :
+        std::vector<vk::ClearValue>{ clearColorValue, clearDepthValue };
+    }
+    
+    vk::Result result = vk::Result::eErrorUnknown;
+
+    // Wait for previous frame's CommandBuffer processing to finish, so that we don't write next image's commands into the same CommandBuffer
+    // Maximum int value "disables" timeout. 
+    result = device.waitForFences(*commandBufferAvailableFences[currentFrame], true, std::numeric_limits<uint64_t>::max());
+    assert(result == vk::Result::eSuccess);
+
+    // Acquire an image available for rendering from the Swapchain, then signal availability (i.e. readiness for executing draw calls)
+    uint32_t imageIndex = 0; // index/position of the image in Swapchain
+    try {
+      std::tie(result, imageIndex) = swapchain.acquireNextImage(std::numeric_limits<uint64_t>::max(), *imageAvailableForRenderingSemaphores[currentFrame]);
+    }
+    catch (vk::OutOfDateKHRError& e) {
+      assert(result == vk::Result::eErrorOutOfDateKHR); // to see whether result gets a wrong value as it happens with presentKHR
+      recreateSwapchain();
+      return;
+    }
+    assert(result == vk::Result::eSuccess); // or vk::Result::eSuboptimalKHR
+    assert(imageIndex < swapchain.getImages().size());
+
+    // Record a command buffer which draws the scene into acquired/available image
+    vk::raii::CommandBuffer& cmdBuf = commandBuffers[currentFrame];
+    // clean up, don't reuse existing commands
+    cmdBuf.reset();
+
+    cmdBuf.begin(vk::CommandBufferBeginInfo{});
+    cmdBuf.setViewport(0, viewport);
+    cmdBuf.setScissor(0, renderArea);
+    // Prepare a Renderpass into Swapchain Framebuffers with provided (or default) viewport, scissor and clear values
+    const vk::raii::Framebuffer& framebuffer = framebuffers[imageIndex];
+    const vk::RenderPassBeginInfo renderPassBeginInfo(*renderPass, *framebuffer, renderArea, clearValues);
+    recordCommandBuffer(cmdBuf, renderPassBeginInfo);
+    cmdBuf.end();
+
+    // Submit recorded command buffer to graphics queue
+    // Once previous fence is passed and image is available, submit commands and do graphics calculations, signal finishedSemaphore after execution
+    const vk::PipelineStageFlags waitStages(vk::PipelineStageFlagBits::eColorAttachmentOutput);
+    vk::SubmitInfo submitInfo(*imageAvailableForRenderingSemaphores[currentFrame], waitStages, *cmdBuf, *renderFinishedSemaphores[currentFrame]);
+
+    // Fences must be reset manually to go back into unsignaled state.
+    // Reset fence only just before when we are submitting the queue (not immediately after we waited for it at the beginning of the frame drawing)
+    // otherwise an early return from "Out of Date" acquired image might keep the fence in unsignaled state eternally
+    device.resetFences(*commandBufferAvailableFences[currentFrame]);
+    // Submit recorded CommanBuffer. Signal fence indicating we are done with this CommandBuffer.
+    graphicsQueue.submit(submitInfo, *commandBufferAvailableFences[currentFrame]);
+
+    // Waits for finishedSemaphore before execution, then Present the Swapchain image, no signal thereafter
+    vk::PresentInfoKHR presentInfo(*renderFinishedSemaphores[currentFrame], *swapchain, imageIndex);
+    try {
+      result = presentQueue.presentKHR(presentInfo);
+    }
+    catch (vk::OutOfDateKHRError& e) {
+      // for some reason, even though "out of date" exception was thrown result is still vk::eSuccess.
+      // Setting it to correct value manually just in case result will be used below later.
+      result = vk::Result::eErrorOutOfDateKHR;
+      recreateSwapchain();
+      return;
+    }
+    assert(result == vk::Result::eSuccess); // or vk::Result::eSuboptimalKHR
+
+    currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+  }
 }

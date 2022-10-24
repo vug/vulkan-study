@@ -148,88 +148,15 @@ void main () { outColor = vec4 (fragColor, 1.0); }
   }
 
   //---- Main Loop
-  size_t currentFrame = 0;
   while (!window.shouldClose()) {
     window.pollEvents();
 
-    // Draw Frame
-    vk::Result result = vk::Result::eErrorUnknown;
-
-    // Wait for previous frame's CommandBuffer processing to finish, so that we don't write next image's commands into the same CommandBuffer
-    // Maximum int value "disables" timeout. 
-    result = vc.device.waitForFences(*vc.commandBufferAvailableFences[currentFrame], true, std::numeric_limits<uint64_t>::max());
-    assert(result == vk::Result::eSuccess);
-
-    // Acquire an image available for rendering from the Swapchain, then signal availability (i.e. readiness for executing draw calls)
-    uint32_t imageIndex = 0; // index/position of the image in Swapchain
-    try {
-      std::tie(result, imageIndex) = vc.swapchain.acquireNextImage(std::numeric_limits<uint64_t>::max(), *vc.imageAvailableForRenderingSemaphores[currentFrame]);
-    }
-    catch (vk::OutOfDateKHRError& e) {
-      assert(result == vk::Result::eErrorOutOfDateKHR); // to see whether result gets a wrong value as it happens with presentKHR
-      vc.recreateSwapchain();
-      continue;
-    }
-    assert(result == vk::Result::eSuccess); // or vk::Result::eSuboptimalKHR
-    assert(imageIndex < vc.swapchain.getImages().size());
-
-    // Record a command buffer which draws the scene into acquired/available image
-    vk::raii::CommandBuffer& cmdBuf = vc.commandBuffers[currentFrame];
-    {
-      // clean up, don't reuse existing commands
-      cmdBuf.reset();
-
-      cmdBuf.begin(vk::CommandBufferBeginInfo{});
-
-      const vk::Viewport viewport{ 0.f, 0.f, static_cast<float>(vc.swapchainExtent.width), static_cast<float>(vc.swapchainExtent.height), 0.f, 1.f };
-      cmdBuf.setViewport(0, viewport);
-
-      vk::Rect2D renderArea{{0,0}, vc.swapchainExtent };
-      cmdBuf.setScissor(0, renderArea);
-
-      const vk::raii::Framebuffer& framebuffer = vc.framebuffers[imageIndex];
-      const vk::ClearColorValue clearColorValue = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 1.0f };
-      const vk::ClearDepthStencilValue clearDepthValue{ 1.f, 0 };
-      const std::vector<vk::ClearValue> clearValues = (appSettings.hasPresentDepth) ?
-        std::vector<vk::ClearValue>{ clearColorValue } :
-        std::vector<vk::ClearValue>{ clearColorValue, clearDepthValue };
-      const vk::RenderPassBeginInfo renderPassBeginInfo(*vc.renderPass, *framebuffer, renderArea, clearValues);
-      cmdBuf.beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
-      {
-        cmdBuf.bindPipeline(vk::PipelineBindPoint::eGraphics, *pipeline);
-        cmdBuf.draw(3, 1, 0, 0); // 3 vertices. their positions and colors are hard-coded in the vertex shader code.
-      }
+    vc.drawFrame([&](const vk::raii::CommandBuffer& cmdBuf, const vk::RenderPassBeginInfo& defaultFullScreenRenderPassBeginInfo) {
+      cmdBuf.beginRenderPass(defaultFullScreenRenderPassBeginInfo, vk::SubpassContents::eInline);
+      cmdBuf.bindPipeline(vk::PipelineBindPoint::eGraphics, *pipeline);
+      cmdBuf.draw(3, 1, 0, 0); // 3 vertices. their positions and colors are hard-coded in the vertex shader code.
       cmdBuf.endRenderPass();
-      cmdBuf.end();
-    }
-
-    // Submit recorded command buffer to graphics queue
-    // Once previous fence is passed and image is available, submit commands and do graphics calculations, signal finishedSemaphore after execution
-    const vk::PipelineStageFlags waitStages(vk::PipelineStageFlagBits::eColorAttachmentOutput);
-    vk::SubmitInfo submitInfo(*vc.imageAvailableForRenderingSemaphores[currentFrame], waitStages, *cmdBuf, *vc.renderFinishedSemaphores[currentFrame]);
-
-    // Fences must be reset manually to go back into unsignaled state.
-    // Reset fence only just before when we are submitting the queue (not immediately after we waited for it at the beginning of the frame drawing)
-    // otherwise an early return from "Out of Date" acquired image might keep the fence in unsignaled state eternally
-    vc.device.resetFences(*vc.commandBufferAvailableFences[currentFrame]);
-    // Submit recorded CommanBuffer. Signal fence indicating we are done with this CommandBuffer.
-    vc.graphicsQueue.submit(submitInfo, *vc.commandBufferAvailableFences[currentFrame]);
-
-    // Waits for finishedSemaphore before execution, then Present the Swapchain image, no signal thereafter
-    vk::PresentInfoKHR presentInfo(*vc.renderFinishedSemaphores[currentFrame], *vc.swapchain, imageIndex);
-    try {
-      result = vc.presentQueue.presentKHR(presentInfo);
-    }
-    catch (vk::OutOfDateKHRError& e) {
-      // for some reason, even though "out of date" exception was thrown result is still vk::eSuccess.
-      // Setting it to correct value manually just in case result will be used below later.
-      result = vk::Result::eErrorOutOfDateKHR;
-      vc.recreateSwapchain();
-      continue;
-    }
-    assert(result == vk::Result::eSuccess); // or vk::Result::eSuboptimalKHR
-
-    currentFrame = (currentFrame + 1) % vc.MAX_FRAMES_IN_FLIGHT;
+    });
   }
 
   // END

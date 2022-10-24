@@ -5,6 +5,7 @@
 #include <VkBootstrap.h>
 #include <vulkan/vulkan_raii.hpp>
 
+#include <functional>
 #include <vector>
 
 namespace vku {
@@ -51,7 +52,7 @@ namespace vku {
     std::vector<vk::raii::Framebuffer> framebuffers;
     vk::raii::CommandPool commandPool;
     vk::raii::CommandBuffers commandBuffers;
-    // TODO: Make sync objects private after implemneting drawFrame function
+  private:
     //---- Synchronization
     // A semaphore is used to add order between queue operations on the GPU
     // Same semaphore is a "signal" semaphors in one queue operation and a "wait" semaphors in another one.
@@ -64,6 +65,8 @@ namespace vku {
     // Fences block the host. Any CPU execution waiting for that fence will stop until the signal arrives.
     std::vector<vk::raii::Fence> commandBufferAvailableFences; // aka commandBufferAvailableFences
     // Note that, having an array of each sync object is to allow recording of one frame while next one is being recorded
+  public:
+    size_t currentFrame = 0;
 
   private:
     vk::raii::Instance constructInstance();
@@ -73,12 +76,13 @@ namespace vku {
     std::vector<vk::raii::ImageView> constructSwapchainImageViews();
     vk::raii::RenderPass constructRenderPass();
     std::vector<vk::raii::Framebuffer> constructFramebuffers();
+    // To be called when app window is resized
+    void recreateSwapchain();
 
   public:
     VulkanContext(Window& window, const AppSettings& appSettings = {});
     ~VulkanContext();
 
-    // To be called when app window is resized
-    void recreateSwapchain();
+    void drawFrame(std::function<void(const vk::raii::CommandBuffer&, const vk::RenderPassBeginInfo& defaultFullScreenRenderPassBeginInfo)> recordCommandBuffer, std::vector<vk::ClearValue> clearValues = {}, vk::Viewport viewport = {}, vk::Rect2D renderArea = {});
   };
 }
