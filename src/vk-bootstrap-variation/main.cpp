@@ -147,28 +147,6 @@ void main () { outColor = vec4 (fragColor, 1.0); }
   default: std::unreachable();
   }
 
-  //---- Synchronization
-  // A semaphore is used to add order between queue operations on the GPU
-  // Same semaphore is a "signal" semaphors in one queue operation and a "wait" semaphors in another one.
-  // Queue Ops-A will signal Semaphore-S when it finishes executing and Queue Ops-B will wait on Semaphore-S before executing
-  // Once B starts S returns to "unsignaled" state to be reused again
-  std::vector<vk::raii::Semaphore> imageAvailableForRenderingSemaphores;
-  std::vector<vk::raii::Semaphore> renderFinishedSemaphores;
-  // A fense is used to introduce order on CPU execution. It's usually used for CPU to wait a GPU operation to complete. 
-  // A GPU work is submitted with a fence. When GPU work is done fence is signaled. 
-  // Fences block the host. Any CPU execution waiting for that fence will stop until the signal arrives.
-  std::vector<vk::raii::Fence> commandBufferAvailableFences; // aka commandBufferAvailableFences
-  // Note that, having an array of each sync object is to allow recording of one frame while next one is being recorded
-
-  for (int i = 0; i < vc.MAX_FRAMES_IN_FLIGHT; ++i) {
-    // (Semaphores begin their lifetime at "unsignaled" state)
-    // Image Available -> Semaphore -> Submit Draw Calls for rendering
-    imageAvailableForRenderingSemaphores.emplace_back(vc.device, vk::SemaphoreCreateInfo());
-    renderFinishedSemaphores.emplace_back(vc.device, vk::SemaphoreCreateInfo());
-    // Start the fence in signaled state, so that we won't wait indefinitely for frame=-1 CommandBuffer to be done
-    commandBufferAvailableFences.emplace_back(vc.device, vk::FenceCreateInfo(vk::FenceCreateFlagBits::eSignaled));
-  }
-
   //---- Main Loop
   size_t currentFrame = 0;
   while (!window.shouldClose()) {
@@ -179,13 +157,13 @@ void main () { outColor = vec4 (fragColor, 1.0); }
 
     // Wait for previous frame's CommandBuffer processing to finish, so that we don't write next image's commands into the same CommandBuffer
     // Maximum int value "disables" timeout. 
-    result = vc.device.waitForFences(*commandBufferAvailableFences[currentFrame], true, std::numeric_limits<uint64_t>::max());
+    result = vc.device.waitForFences(*vc.commandBufferAvailableFences[currentFrame], true, std::numeric_limits<uint64_t>::max());
     assert(result == vk::Result::eSuccess);
 
     // Acquire an image available for rendering from the Swapchain, then signal availability (i.e. readiness for executing draw calls)
     uint32_t imageIndex = 0; // index/position of the image in Swapchain
     try {
-      std::tie(result, imageIndex) = vc.swapchain.acquireNextImage(std::numeric_limits<uint64_t>::max(), *imageAvailableForRenderingSemaphores[currentFrame]);
+      std::tie(result, imageIndex) = vc.swapchain.acquireNextImage(std::numeric_limits<uint64_t>::max(), *vc.imageAvailableForRenderingSemaphores[currentFrame]);
     }
     catch (vk::OutOfDateKHRError& e) {
       assert(result == vk::Result::eErrorOutOfDateKHR); // to see whether result gets a wrong value as it happens with presentKHR
@@ -228,17 +206,17 @@ void main () { outColor = vec4 (fragColor, 1.0); }
     // Submit recorded command buffer to graphics queue
     // Once previous fence is passed and image is available, submit commands and do graphics calculations, signal finishedSemaphore after execution
     const vk::PipelineStageFlags waitStages(vk::PipelineStageFlagBits::eColorAttachmentOutput);
-    vk::SubmitInfo submitInfo(*imageAvailableForRenderingSemaphores[currentFrame], waitStages, *cmdBuf, *renderFinishedSemaphores[currentFrame]);
+    vk::SubmitInfo submitInfo(*vc.imageAvailableForRenderingSemaphores[currentFrame], waitStages, *cmdBuf, *vc.renderFinishedSemaphores[currentFrame]);
 
     // Fences must be reset manually to go back into unsignaled state.
     // Reset fence only just before when we are submitting the queue (not immediately after we waited for it at the beginning of the frame drawing)
     // otherwise an early return from "Out of Date" acquired image might keep the fence in unsignaled state eternally
-    vc.device.resetFences(*commandBufferAvailableFences[currentFrame]);
+    vc.device.resetFences(*vc.commandBufferAvailableFences[currentFrame]);
     // Submit recorded CommanBuffer. Signal fence indicating we are done with this CommandBuffer.
-    vc.graphicsQueue.submit(submitInfo, *commandBufferAvailableFences[currentFrame]);
+    vc.graphicsQueue.submit(submitInfo, *vc.commandBufferAvailableFences[currentFrame]);
 
     // Waits for finishedSemaphore before execution, then Present the Swapchain image, no signal thereafter
-    vk::PresentInfoKHR presentInfo(*renderFinishedSemaphores[currentFrame], *vc.swapchain, imageIndex);
+    vk::PresentInfoKHR presentInfo(*vc.renderFinishedSemaphores[currentFrame], *vc.swapchain, imageIndex);
     try {
       result = vc.presentQueue.presentKHR(presentInfo);
     }

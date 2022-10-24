@@ -27,7 +27,16 @@ namespace vku {
     framebuffers(constructFramebuffers()),
     commandPool(device, vk::CommandPoolCreateInfo(vk::CommandPoolCreateFlagBits::eResetCommandBuffer, graphicsQueueFamilyIndex)),
     commandBuffers(device, vk::CommandBufferAllocateInfo(*commandPool, vk::CommandBufferLevel::ePrimary, MAX_FRAMES_IN_FLIGHT))
-  { }
+  { 
+    for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
+      // (Semaphores begin their lifetime at "unsignaled" state)
+      // Image Available -> Semaphore -> Submit Draw Calls for rendering
+      imageAvailableForRenderingSemaphores.emplace_back(device, vk::SemaphoreCreateInfo());
+      renderFinishedSemaphores.emplace_back(device, vk::SemaphoreCreateInfo());
+      // Start the fence in signaled state, so that we won't wait indefinitely for frame=-1 CommandBuffer to be done
+      commandBufferAvailableFences.emplace_back(device, vk::FenceCreateInfo(vk::FenceCreateFlagBits::eSignaled));
+    }
+  }
 
   VulkanContext::~VulkanContext() {
     vkb::destroy_debug_utils_messenger(vkbInstance->instance, vkbInstance->debug_messenger, vkbInstance->allocation_callbacks);
