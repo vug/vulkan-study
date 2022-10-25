@@ -15,4 +15,5 @@ add_subdirectory(dependencies/vk-bootstrap)
 
 # projects
 #add_subdirectory(src/vk-bootstrap-study)
-add_subdirectory(src/vk-bootstrap-variation)
+#add_subdirectory(src/vk-bootstrap-variation)
+add_subdirectory(src/studies)
