@@ -14,6 +14,5 @@ add_subdirectory(dependencies/glfw)
 add_subdirectory(dependencies/vk-bootstrap)
 
 # projects
-#add_subdirectory(src/vulkan-hpp-study) # temporarily turned off for faster builds
 #add_subdirectory(src/vk-bootstrap-study)
 add_subdirectory(src/vk-bootstrap-variation)
