@@ -21,22 +21,24 @@ namespace vku {
     std::cout << "Hello, Vulkan!\n";
 
     vku::spirv::init();
-
-    studies.front()->onInit(vc, appSettings);
+    for (auto& study : studies)
+      study->onInit(vc, appSettings);
 
     //---- Main Loop
     while (!window.shouldClose()) {
       window.pollEvents();
 
-      auto func = [&](const vk::raii::CommandBuffer& c, const vk::RenderPassBeginInfo& r) {studies.front()->recordCommandBuffer(c, r); };
+      auto func = [&](const vk::raii::CommandBuffer& c, const vk::RenderPassBeginInfo& r) 
+        // TODO: for now just render the last study/layer. Later, either render whole stack or render chosen one
+        { studies.back()->recordCommandBuffer(c, r); };
       vc.drawFrame(func);
     }
 
     // END
     vc.device.waitIdle();
 
-    studies.front()->onDeinit();
-
+    for (auto& study : studies)
+      studies.back()->onDeinit();
     vku::spirv::finalize();
     // Need to be destroyed explicitly becomes raii instance does not own it apparently.
 
