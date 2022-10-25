@@ -9,7 +9,7 @@ namespace vku {
 
     virtual void onInit(const VulkanContext& vc, const vku::AppSettings appSettings) = 0;
     //virtual void onRender(const VulkanContext& vc = 0;
-    virtual void recordCommandBuffer(const vk::raii::CommandBuffer& cmdBuf, const vk::RenderPassBeginInfo& defaultFullScreenRenderPassBeginInfo) = 0;
+    virtual void recordCommandBuffer(const vk::raii::CommandBuffer& cmdBuf) = 0;
     virtual void onDeinit() = 0;
     // on ImGuiRender, OnUpdate
   };

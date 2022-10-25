@@ -1,4 +1,4 @@
-#include "FirstStudy.hpp"
+#include "SecondStudy.hpp"
 
 #include "AppSettings.hpp"
 #include "SpirvHelper.hpp"
@@ -8,7 +8,7 @@
 #include <iostream>
 #include <string>
 
-void FirstStudy::onInit(const vku::VulkanContext& vc, const vku::AppSettings appSettings) {
+void SecondStudy::onInit(const vku::VulkanContext& vc, const vku::AppSettings appSettings) {
   //---- Pipeline
   const std::string vertexShaderStr = R"(
 #version 450
@@ -16,7 +16,7 @@ void FirstStudy::onInit(const vku::VulkanContext& vc, const vku::AppSettings app
 
 layout (location = 0) out vec3 fragColor;
 
-vec2 positions[3] = vec2[](vec2 (0.0, -0.5), vec2 (0.5, 0.5), vec2 (-0.5, 0.5));
+vec2 positions[3] = vec2[](vec2 (-0.5, -0.5), vec2 (0.0, 0.5), vec2 (-1.0, 0.5));
 
 vec3 colors[3] = vec3[](vec3 (1.0, 0.0, 0.0), vec3 (0.0, 1.0, 0.0), vec3 (0.0, 0.0, 1.0));
 
@@ -132,9 +132,9 @@ void main () { outColor = vec4 (fragColor, 1.0); }
   }
 }
 
-void FirstStudy::recordCommandBuffer(const vk::raii::CommandBuffer& cmdBuf) {
+void SecondStudy::recordCommandBuffer(const vk::raii::CommandBuffer& cmdBuf) {
   cmdBuf.bindPipeline(vk::PipelineBindPoint::eGraphics, **pipeline);
   cmdBuf.draw(3, 1, 0, 0); // 3 vertices. their positions and colors are hard-coded in the vertex shader code.
 }
 
-void FirstStudy::onDeinit() { }
+void SecondStudy::onDeinit() { }

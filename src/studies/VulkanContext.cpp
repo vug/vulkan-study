@@ -27,7 +27,7 @@ namespace vku {
     framebuffers(constructFramebuffers()),
     commandPool(device, vk::CommandPoolCreateInfo(vk::CommandPoolCreateFlagBits::eResetCommandBuffer, graphicsQueueFamilyIndex)),
     commandBuffers(device, vk::CommandBufferAllocateInfo(*commandPool, vk::CommandBufferLevel::ePrimary, MAX_FRAMES_IN_FLIGHT))
-  { 
+  {
     for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
       // (Semaphores begin their lifetime at "unsignaled" state)
       // Image Available -> Semaphore -> Submit Draw Calls for rendering
@@ -92,7 +92,7 @@ namespace vku {
     assert(vkbSwapchain.image_format == static_cast<VkFormat>(swapchainColorFormat));
     assert(vkbSwapchain.color_space == static_cast<VkColorSpaceKHR>(swapchainColorSpace));
     swapchainExtent = vkbSwapchain.extent;
-    return vk::raii::SwapchainKHR{ device, vkbSwapchain.swapchain };  
+    return vk::raii::SwapchainKHR{ device, vkbSwapchain.swapchain };
   }
 
   std::vector<vk::raii::ImageView> VulkanContext::constructSwapchainImageViews() {
@@ -175,7 +175,7 @@ namespace vku {
     framebuffers = constructFramebuffers();
   }
 
-  void VulkanContext::drawFrame(std::function<void(const vk::raii::CommandBuffer& cmdBuf, const vk::RenderPassBeginInfo& defaultFullScreenRenderPassBeginInfo)> recordCommandBuffer, std::vector<vk::ClearValue> clearValues, vk::Viewport viewport, vk::Rect2D renderArea) {
+  void VulkanContext::drawFrame(std::function<void(const vk::raii::CommandBuffer& cmdBuf)> recordCommandBuffer, std::vector<vk::ClearValue> clearValues, vk::Viewport viewport, vk::Rect2D renderArea) {
     if (viewport == vk::Viewport())
       viewport = vk::Viewport{ 0.f, 0.f, static_cast<float>(swapchainExtent.width), static_cast<float>(swapchainExtent.height), 0.f, 1.f };
     if (renderArea == vk::Rect2D())
@@ -187,7 +187,7 @@ namespace vku {
         std::vector<vk::ClearValue>{ clearColorValue } :
         std::vector<vk::ClearValue>{ clearColorValue, clearDepthValue };
     }
-    
+
     vk::Result result = vk::Result::eErrorUnknown;
 
     // Wait for previous frame's CommandBuffer processing to finish, so that we don't write next image's commands into the same CommandBuffer
@@ -219,7 +219,9 @@ namespace vku {
     // Prepare a Renderpass into Swapchain Framebuffers with provided (or default) viewport, scissor and clear values
     const vk::raii::Framebuffer& framebuffer = framebuffers[imageIndex];
     const vk::RenderPassBeginInfo renderPassBeginInfo(*renderPass, *framebuffer, renderArea, clearValues);
-    recordCommandBuffer(cmdBuf, renderPassBeginInfo);
+    cmdBuf.beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
+    recordCommandBuffer(cmdBuf);
+    cmdBuf.endRenderPass();
     cmdBuf.end();
 
     // Submit recorded command buffer to graphics queue
