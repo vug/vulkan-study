@@ -43,4 +43,14 @@ namespace vku {
     std::cout << "Bye, Vulkan!\n";
     return 0;
   }
+
+  std::unique_ptr<vku::Study>& StudyRunner::pushStudy(std::unique_ptr<vku::Study> study) {
+    studies.push_back(std::move(study));
+    return studies.back();
+  }
+
+  void StudyRunner::popStudy(const std::unique_ptr<vku::Study>& study) {
+    studies.remove(study);
+  }
+
 }

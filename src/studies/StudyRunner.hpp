@@ -2,8 +2,8 @@
 
 #include "Study.hpp"
 
+#include <list>
 #include <memory>
-#include <vector>
 
 namespace vku {
   class StudyRunner {
@@ -11,15 +11,14 @@ namespace vku {
     vku::AppSettings appSettings;
     vku::Window window;
     vku::VulkanContext vc;
-  public: // TODO: temporary
-    std::vector<std::unique_ptr<vku::Study>> studies;
+    std::list<std::unique_ptr<vku::Study>> studies;
+  public:
 
   public:
     StudyRunner();
 
-    // TODO: implement
-    void pushStudy(std::unique_ptr<vku::Study> study);
-    void popStudy(std::unique_ptr<vku::Study>& study);
+    std::unique_ptr<vku::Study>& pushStudy(std::unique_ptr<vku::Study> study);
+    void popStudy(const std::unique_ptr<vku::Study>& study);
 
     int run();
   };
