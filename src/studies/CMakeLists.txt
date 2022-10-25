@@ -8,6 +8,9 @@ add_executable(${APP}
   VulkanContext.hpp VulkanContext.cpp
   SpirvHelper.hpp SpirvHelper.cpp
   Image.hpp Image.cpp
+  StudyRunner.hpp StudyRunner.cpp
+  Study.hpp
+  FirstStudy.hpp FirstStudy.cpp
 )
 
 # CMake can find VulkanSDK if it was first installed from https://www.lunarg.com/vulkan-sdk/ 
