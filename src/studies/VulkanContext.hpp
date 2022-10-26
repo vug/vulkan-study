@@ -47,6 +47,7 @@ namespace vku {
     vk::raii::Queue graphicsQueue;
     vk::raii::Queue presentQueue;
     uint32_t graphicsQueueFamilyIndex;
+    uint32_t presentQueueFamilyIndex;
     vk::raii::RenderPass renderPass;
     std::vector<vku::Image> depthImages;
     std::vector<vk::raii::Framebuffer> framebuffers;

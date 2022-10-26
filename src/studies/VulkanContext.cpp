@@ -23,6 +23,7 @@ namespace vku {
     graphicsQueue{ device, vkbDevice.get_queue(vkb::QueueType::graphics).value() },
     presentQueue{ device, vkbDevice.get_queue(vkb::QueueType::present).value() },
     graphicsQueueFamilyIndex(vkbDevice.get_queue_index(vkb::QueueType::graphics).value()),
+    presentQueueFamilyIndex(vkbDevice.get_queue_index(vkb::QueueType::present).value()),
     renderPass(constructRenderPass()),
     framebuffers(constructFramebuffers()),
     commandPool(device, vk::CommandPoolCreateInfo(vk::CommandPoolCreateFlagBits::eResetCommandBuffer, graphicsQueueFamilyIndex)),
@@ -87,6 +88,8 @@ namespace vku {
     vkb::Swapchain vkbSwapchain = vkb::SwapchainBuilder{ vkbDevice }
       .set_desired_format({ static_cast<VkFormat>(swapchainColorFormat), static_cast<VkColorSpaceKHR>(swapchainColorSpace) }) // default
       .set_desired_present_mode(VK_PRESENT_MODE_MAILBOX_KHR) // default. other: VK_PRESENT_MODE_FIFO_KHR
+       // Transfer Bit needed to enable clearing via vkCmdClearColorImage
+      .set_image_usage_flags(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT )
       .set_required_min_image_count(NUM_IMAGES)
       .build().value();
     assert(vkbSwapchain.image_format == static_cast<VkFormat>(swapchainColorFormat));
@@ -116,15 +119,38 @@ namespace vku {
   vk::raii::RenderPass VulkanContext::constructRenderPass() {
     std::vector<vk::AttachmentDescription> attachmentDescriptions;
 
-    attachmentDescriptions.emplace_back(vk::AttachmentDescriptionFlags(),
+    // For a setup where there is a single RenderPass and each Layer/Study adds draw commands btw RenderPass begin and end
+    // Clearing of the attachment is done at single RenderPass' beginning
+    const vk::AttachmentDescription singleRenderPassColorAttachment = vk::AttachmentDescription(vk::AttachmentDescriptionFlags(),
       swapchainColorFormat,
       swapchainSamples,
-      vk::AttachmentLoadOp::eClear,
+      vk::AttachmentLoadOp::eClear, // will be cleared at render pass begin
       vk::AttachmentStoreOp::eStore,
       vk::AttachmentLoadOp::eDontCare,
       vk::AttachmentStoreOp::eDontCare,
       vk::ImageLayout::eUndefined,
-      vk::ImageLayout::ePresentSrcKHR);
+      vk::ImageLayout::ePresentSrcKHR // directly present after render pass
+    );
+
+    // For a setup where each Layer/Setup has their own RenderPass
+    // Neither of them does clearing nor presenting. 
+    // If wanted, clearing should be done before all RenderPass' via 
+    // 1) First transition swapchain image from undefined to transfer (via pipelineBarrier). clear. then transition to color attachment
+    // 2,3,4,...) RenderPasses
+    // 2) Final transition to vk::ImageLayout::ePresentSrcKHR should be done via an ImageBarrier
+    const vk::AttachmentDescription chainedRenderPassesColorAttachment = vk::AttachmentDescription(
+      vk::AttachmentDescriptionFlags(),
+      swapchainColorFormat,
+      swapchainSamples,
+      vk::AttachmentLoadOp::eLoad, // could eDontCare be more efficient? 
+      vk::AttachmentStoreOp::eStore,
+      vk::AttachmentLoadOp::eDontCare,
+      vk::AttachmentStoreOp::eDontCare,
+      vk::ImageLayout::eColorAttachmentOptimal,
+      vk::ImageLayout::eColorAttachmentOptimal
+    );
+
+    attachmentDescriptions.push_back(chainedRenderPassesColorAttachment);
     vk::AttachmentReference colorReference(0, vk::ImageLayout::eColorAttachmentOptimal);
 
     if (!appSettings.hasPresentDepth) {
@@ -135,7 +161,7 @@ namespace vku {
     attachmentDescriptions.emplace_back(vk::AttachmentDescriptionFlags(),
       swapchainDepthFormat,
       swapchainSamples,
-      vk::AttachmentLoadOp::eClear,
+      vk::AttachmentLoadOp::eDontCare, //eClear,
       vk::AttachmentStoreOp::eDontCare,
       vk::AttachmentLoadOp::eDontCare,
       vk::AttachmentStoreOp::eDontCare,
@@ -181,7 +207,7 @@ namespace vku {
     if (renderArea == vk::Rect2D())
       renderArea = vk::Rect2D{ {0,0}, swapchainExtent };
     if (clearValues.empty()) {
-      const vk::ClearColorValue clearColorValue = std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 1.0f };
+      const vk::ClearColorValue clearColorValue = std::array<float, 4>{ 1.0f, 1.0f, 0.5f, 1.0f };
       const vk::ClearDepthStencilValue clearDepthValue{ 1.f, 0 };
       clearValues = (appSettings.hasPresentDepth) ?
         std::vector<vk::ClearValue>{ clearColorValue } :
@@ -210,18 +236,43 @@ namespace vku {
 
     // Record a command buffer which draws the scene into acquired/available image
     vk::raii::CommandBuffer& cmdBuf = commandBuffers[currentFrame];
-    // clean up, don't reuse existing commands
-    cmdBuf.reset();
-
+    cmdBuf.reset(); // clean up, don't reuse existing commands
+    
     cmdBuf.begin(vk::CommandBufferBeginInfo{});
     cmdBuf.setViewport(0, viewport);
     cmdBuf.setScissor(0, renderArea);
+
+    // Transition swapchain image layout from eUndefined -> eTransferDstOptimal (required for vkCmdClearColorImage)
+    const vk::Image& img = swapchain.getImages()[imageIndex];
+    const auto subresourceRanges = vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 };
+    vku::setImageLayout(cmdBuf, img, swapchainColorFormat, vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal);
+
+    const std::array<float, 4> col = { 1.f, 0.5f, 1.0f, 1.0f };
+    cmdBuf.clearColorImage(
+      img,
+      vk::ImageLayout::eTransferDstOptimal, // specs say eSharedPresentKHR is OK. But gives a validation error.
+      vk::ClearColorValue{ col },
+      subresourceRanges);
+
+    // Transition swapchain image layout from eTransferDstOptimal -> eColorAttachmentOptimal
+    vku::setImageLayout(cmdBuf, img, swapchainColorFormat, vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eColorAttachmentOptimal);
+
     // Prepare a Renderpass into Swapchain Framebuffers with provided (or default) viewport, scissor and clear values
     const vk::raii::Framebuffer& framebuffer = framebuffers[imageIndex];
-    const vk::RenderPassBeginInfo renderPassBeginInfo(*renderPass, *framebuffer, renderArea, clearValues);
+    const vk::RenderPassBeginInfo renderPassBeginInfo(*renderPass, *framebuffer, renderArea, {} /* OR clearValues */);
     cmdBuf.beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
+
+    //// Clearing inside a RenderPass via a vkCmdClearAttachments
+    //vk::ClearAttachment clearAttachment = vk::ClearAttachment(vk::ImageAspectFlagBits::eColor, 0, vk::ClearColorValue{ std::array<float, 4>{ 0.5f, 0.5f, 1.0f, 1.0f } });
+    //vk::ClearRect clearRect = vk::ClearRect(renderArea, 0, 1);
+    //cmdBuf.clearAttachments(clearAttachment, clearRect);
+
     recordCommandBuffer(cmdBuf);
     cmdBuf.endRenderPass();
+
+    // Transition to ePresentSrcKHR for presentKHR
+    vku::setImageLayout(cmdBuf, img, swapchainColorFormat, vk::ImageLayout::eColorAttachmentOptimal, vk::ImageLayout::ePresentSrcKHR);
+
     cmdBuf.end();
 
     // Submit recorded command buffer to graphics queue
