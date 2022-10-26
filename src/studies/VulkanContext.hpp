@@ -84,6 +84,6 @@ namespace vku {
     VulkanContext(Window& window, const AppSettings& appSettings = {});
     ~VulkanContext();
 
-    void drawFrame(std::function<void(const vk::raii::CommandBuffer&)> recordCommandBuffer, std::vector<vk::ClearValue> clearValues = {}, vk::Viewport viewport = {}, vk::Rect2D renderArea = {});
+    void drawFrame(std::function<void(const vk::raii::CommandBuffer&, const vk::raii::Framebuffer&)> recordCommandBuffer);
   };
 }

@@ -201,19 +201,7 @@ namespace vku {
     framebuffers = constructFramebuffers();
   }
 
-  void VulkanContext::drawFrame(std::function<void(const vk::raii::CommandBuffer& cmdBuf)> recordCommandBuffer, std::vector<vk::ClearValue> clearValues, vk::Viewport viewport, vk::Rect2D renderArea) {
-    if (viewport == vk::Viewport())
-      viewport = vk::Viewport{ 0.f, 0.f, static_cast<float>(swapchainExtent.width), static_cast<float>(swapchainExtent.height), 0.f, 1.f };
-    if (renderArea == vk::Rect2D())
-      renderArea = vk::Rect2D{ {0,0}, swapchainExtent };
-    if (clearValues.empty()) {
-      const vk::ClearColorValue clearColorValue = std::array<float, 4>{ 1.0f, 1.0f, 0.5f, 1.0f };
-      const vk::ClearDepthStencilValue clearDepthValue{ 1.f, 0 };
-      clearValues = (appSettings.hasPresentDepth) ?
-        std::vector<vk::ClearValue>{ clearColorValue } :
-        std::vector<vk::ClearValue>{ clearColorValue, clearDepthValue };
-    }
-
+  void VulkanContext::drawFrame(std::function<void(const vk::raii::CommandBuffer& cmdBuf, const vk::raii::Framebuffer& frameBuf)> recordCommandBuffer) {
     vk::Result result = vk::Result::eErrorUnknown;
 
     // Wait for previous frame's CommandBuffer processing to finish, so that we don't write next image's commands into the same CommandBuffer
@@ -239,7 +227,9 @@ namespace vku {
     cmdBuf.reset(); // clean up, don't reuse existing commands
     
     cmdBuf.begin(vk::CommandBufferBeginInfo{});
+    const auto viewport = vk::Viewport{ 0.f, 0.f, static_cast<float>(swapchainExtent.width), static_cast<float>(swapchainExtent.height), 0.f, 1.f };
     cmdBuf.setViewport(0, viewport);
+    const auto renderArea = vk::Rect2D{ {0,0}, swapchainExtent };
     cmdBuf.setScissor(0, renderArea);
 
     // Transition swapchain image layout from eUndefined -> eTransferDstOptimal (required for vkCmdClearColorImage)
@@ -258,17 +248,14 @@ namespace vku {
     vku::setImageLayout(cmdBuf, img, swapchainColorFormat, vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eColorAttachmentOptimal);
 
     // Prepare a Renderpass into Swapchain Framebuffers with provided (or default) viewport, scissor and clear values
-    const vk::raii::Framebuffer& framebuffer = framebuffers[imageIndex];
-    const vk::RenderPassBeginInfo renderPassBeginInfo(*renderPass, *framebuffer, renderArea, {} /* OR clearValues */);
-    cmdBuf.beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
 
     //// Clearing inside a RenderPass via a vkCmdClearAttachments
     //vk::ClearAttachment clearAttachment = vk::ClearAttachment(vk::ImageAspectFlagBits::eColor, 0, vk::ClearColorValue{ std::array<float, 4>{ 0.5f, 0.5f, 1.0f, 1.0f } });
     //vk::ClearRect clearRect = vk::ClearRect(renderArea, 0, 1);
     //cmdBuf.clearAttachments(clearAttachment, clearRect);
 
-    recordCommandBuffer(cmdBuf);
-    cmdBuf.endRenderPass();
+    recordCommandBuffer(cmdBuf, framebuffers[imageIndex]);
+    //vku::setImageLayout(cmdBuf, img, swapchainColorFormat, vk::ImageLayout::eColorAttachmentOptimal, vk::ImageLayout::eColorAttachmentOptimal);
 
     // Transition to ePresentSrcKHR for presentKHR
     vku::setImageLayout(cmdBuf, img, swapchainColorFormat, vk::ImageLayout::eColorAttachmentOptimal, vk::ImageLayout::ePresentSrcKHR);

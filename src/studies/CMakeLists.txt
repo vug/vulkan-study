@@ -9,7 +9,7 @@ add_executable(${APP}
   SpirvHelper.hpp SpirvHelper.cpp
   Image.hpp Image.cpp
   StudyRunner.hpp StudyRunner.cpp
-  Study.hpp
+  Study.hpp Study.cpp
   FirstStudy.hpp FirstStudy.cpp
   SecondStudy.hpp SecondStudy.cpp
 )

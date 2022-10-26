@@ -7,12 +7,12 @@
 
 namespace vku {
   class StudyRunner {
-  private:
+  public:
     vku::AppSettings appSettings;
     vku::Window window;
     vku::VulkanContext vc;
+  private:
     std::list<std::unique_ptr<vku::Study>> studies;
-  public:
 
   public:
     StudyRunner();

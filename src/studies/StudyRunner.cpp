@@ -4,6 +4,7 @@
 #include "SpirvHelper.hpp"
 #include "VulkanContext.hpp"
 #include "Window.hpp"
+#include "utils.hpp"
 
 #include <iostream>
 
@@ -22,19 +23,16 @@ namespace vku {
 
     vku::spirv::init();
     for (auto& study : studies)
-      study->onInit(vc, appSettings);
+      study->onInit();
 
     //---- Main Loop
     while (!window.shouldClose()) {
       window.pollEvents();
 
-      auto func = [&](const vk::raii::CommandBuffer& c) 
-        // TODO: For now each study adds commands into the same command buffer under default renderass
-        // Later let each Study to add commands into the same command buffer but using different RenderPasses.
-        // I guess layers shouldn't clear and successive RenderPasses need to be synchronized via pipeline barriers
-        // Also it could be the case that first Study and the rest might be given different RenderPasses
-        // first one clears and does not care about load whereas the rest don't clear and "have loadOp"
-        { for (auto& study : studies) study->recordCommandBuffer(c); };
+      auto func = [&](const vk::raii::CommandBuffer& cmdBuf, const vk::raii::Framebuffer& framebuffer) {
+        for (auto& study : studies)
+          study->recordCommandBuffer(cmdBuf, framebuffer);
+      };
       vc.drawFrame(func);
     }
 

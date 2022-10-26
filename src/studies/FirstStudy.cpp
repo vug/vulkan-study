@@ -8,7 +8,9 @@
 #include <iostream>
 #include <string>
 
-void FirstStudy::onInit(const vku::VulkanContext& vc, const vku::AppSettings appSettings) {
+FirstStudy::FirstStudy(const vku::StudyRunner& studyRunner) : Study(studyRunner) {}
+
+void FirstStudy::onInit() {
   //---- Pipeline
   const std::string vertexShaderStr = R"(
 #version 450
@@ -132,9 +134,14 @@ void main () { outColor = vec4 (fragColor, 1.0); }
   }
 }
 
-void FirstStudy::recordCommandBuffer(const vk::raii::CommandBuffer& cmdBuf) {
+void FirstStudy::recordCommandBuffer(const vk::raii::CommandBuffer& cmdBuf, const vk::raii::Framebuffer& framebuffer) {
+  const vk::RenderPassBeginInfo renderPassBeginInfo(*vc.renderPass, *framebuffer, vk::Rect2D{ {0,0}, vc.swapchainExtent }, {} /* OR clearValues */);
+  cmdBuf.beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
+
   cmdBuf.bindPipeline(vk::PipelineBindPoint::eGraphics, **pipeline);
   cmdBuf.draw(3, 1, 0, 0); // 3 vertices. their positions and colors are hard-coded in the vertex shader code.
+
+  cmdBuf.endRenderPass();
 }
 
 void FirstStudy::onDeinit() { }
