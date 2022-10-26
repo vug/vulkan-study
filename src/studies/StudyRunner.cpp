@@ -23,17 +23,19 @@ namespace vku {
 
     vku::spirv::init();
     for (auto& study : studies)
-      study->onInit();
+      study->onInit(appSettings, vc);
 
     //---- Main Loop
     while (!window.shouldClose()) {
       window.pollEvents();
 
-      auto func = [&](const vk::raii::CommandBuffer& cmdBuf, const vk::raii::Framebuffer& framebuffer) {
-        for (auto& study : studies)
-          study->recordCommandBuffer(cmdBuf, framebuffer);
-      };
-      vc.drawFrame(func);
+      const vku::FrameDrawer frameDrawer = vc.drawFrameBegin();
+      for (auto& study : studies) {
+        study->recordCommandBuffer(vc, frameDrawer);
+        // TODO: might need to add some synchronization here. If layer order does not look correct uncomment below line.
+        //vku::setImageLayout(frameDrawer.commandBuffer, frameDrawer.image, vc.swapchainColorFormat, vk::ImageLayout::eColorAttachmentOptimal, vk::ImageLayout::eColorAttachmentOptimal);
+      }
+      vc.drawFrameEnd(frameDrawer);
     }
 
     // END

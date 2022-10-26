@@ -201,8 +201,9 @@ namespace vku {
     framebuffers = constructFramebuffers();
   }
 
-  void VulkanContext::drawFrame(std::function<void(const vk::raii::CommandBuffer& cmdBuf, const vk::raii::Framebuffer& frameBuf)> recordCommandBuffer) {
+  FrameDrawer VulkanContext::drawFrameBegin() {
     vk::Result result = vk::Result::eErrorUnknown;
+    vk::raii::CommandBuffer& cmdBuf = commandBuffers[currentFrame];
 
     // Wait for previous frame's CommandBuffer processing to finish, so that we don't write next image's commands into the same CommandBuffer
     // Maximum int value "disables" timeout. 
@@ -217,15 +218,14 @@ namespace vku {
     catch (vk::OutOfDateKHRError& e) {
       assert(result == vk::Result::eErrorOutOfDateKHR); // to see whether result gets a wrong value as it happens with presentKHR
       recreateSwapchain();
-      return;
+      return FrameDrawer{ cmdBuf, imageIndex, swapchain.getImages()[imageIndex], framebuffers[imageIndex] };
     }
     assert(result == vk::Result::eSuccess); // or vk::Result::eSuboptimalKHR
     assert(imageIndex < swapchain.getImages().size());
 
     // Record a command buffer which draws the scene into acquired/available image
-    vk::raii::CommandBuffer& cmdBuf = commandBuffers[currentFrame];
     cmdBuf.reset(); // clean up, don't reuse existing commands
-    
+
     cmdBuf.begin(vk::CommandBufferBeginInfo{});
     const auto viewport = vk::Viewport{ 0.f, 0.f, static_cast<float>(swapchainExtent.width), static_cast<float>(swapchainExtent.height), 0.f, 1.f };
     cmdBuf.setViewport(0, viewport);
@@ -233,39 +233,35 @@ namespace vku {
     cmdBuf.setScissor(0, renderArea);
 
     // Transition swapchain image layout from eUndefined -> eTransferDstOptimal (required for vkCmdClearColorImage)
-    const vk::Image& img = swapchain.getImages()[imageIndex];
+    const vk::Image& image = swapchain.getImages()[imageIndex];
     const auto subresourceRanges = vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 };
-    vku::setImageLayout(cmdBuf, img, swapchainColorFormat, vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal);
+    vku::setImageLayout(cmdBuf, image, swapchainColorFormat, vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal);
 
-    const std::array<float, 4> col = { 1.f, 0.5f, 1.0f, 1.0f };
+    const std::array<float, 4> col = { 1.f, 1.0f, 1.0f, 1.0f };
     cmdBuf.clearColorImage(
-      img,
+      image,
       vk::ImageLayout::eTransferDstOptimal, // specs say eSharedPresentKHR is OK. But gives a validation error.
       vk::ClearColorValue{ col },
       subresourceRanges);
 
     // Transition swapchain image layout from eTransferDstOptimal -> eColorAttachmentOptimal
-    vku::setImageLayout(cmdBuf, img, swapchainColorFormat, vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eColorAttachmentOptimal);
+    vku::setImageLayout(cmdBuf, image, swapchainColorFormat, vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eColorAttachmentOptimal);
 
-    // Prepare a Renderpass into Swapchain Framebuffers with provided (or default) viewport, scissor and clear values
+    return FrameDrawer{ cmdBuf, imageIndex, image, framebuffers[imageIndex] };
+  }
 
-    //// Clearing inside a RenderPass via a vkCmdClearAttachments
-    //vk::ClearAttachment clearAttachment = vk::ClearAttachment(vk::ImageAspectFlagBits::eColor, 0, vk::ClearColorValue{ std::array<float, 4>{ 0.5f, 0.5f, 1.0f, 1.0f } });
-    //vk::ClearRect clearRect = vk::ClearRect(renderArea, 0, 1);
-    //cmdBuf.clearAttachments(clearAttachment, clearRect);
-
-    recordCommandBuffer(cmdBuf, framebuffers[imageIndex]);
-    //vku::setImageLayout(cmdBuf, img, swapchainColorFormat, vk::ImageLayout::eColorAttachmentOptimal, vk::ImageLayout::eColorAttachmentOptimal);
+  void VulkanContext::drawFrameEnd(const FrameDrawer& frameDrawer) {
+    vk::Result result = vk::Result::eErrorUnknown;
 
     // Transition to ePresentSrcKHR for presentKHR
-    vku::setImageLayout(cmdBuf, img, swapchainColorFormat, vk::ImageLayout::eColorAttachmentOptimal, vk::ImageLayout::ePresentSrcKHR);
+    vku::setImageLayout(frameDrawer.commandBuffer, frameDrawer.image, swapchainColorFormat, vk::ImageLayout::eColorAttachmentOptimal, vk::ImageLayout::ePresentSrcKHR);
 
-    cmdBuf.end();
+    frameDrawer.commandBuffer.end();
 
     // Submit recorded command buffer to graphics queue
     // Once previous fence is passed and image is available, submit commands and do graphics calculations, signal finishedSemaphore after execution
     const vk::PipelineStageFlags waitStages(vk::PipelineStageFlagBits::eColorAttachmentOutput);
-    vk::SubmitInfo submitInfo(*imageAvailableForRenderingSemaphores[currentFrame], waitStages, *cmdBuf, *renderFinishedSemaphores[currentFrame]);
+    vk::SubmitInfo submitInfo(*imageAvailableForRenderingSemaphores[currentFrame], waitStages, *frameDrawer.commandBuffer, *renderFinishedSemaphores[currentFrame]);
 
     // Fences must be reset manually to go back into unsignaled state.
     // Reset fence only just before when we are submitting the queue (not immediately after we waited for it at the beginning of the frame drawing)
@@ -275,7 +271,7 @@ namespace vku {
     graphicsQueue.submit(submitInfo, *commandBufferAvailableFences[currentFrame]);
 
     // Waits for finishedSemaphore before execution, then Present the Swapchain image, no signal thereafter
-    vk::PresentInfoKHR presentInfo(*renderFinishedSemaphores[currentFrame], *swapchain, imageIndex);
+    vk::PresentInfoKHR presentInfo(*renderFinishedSemaphores[currentFrame], *swapchain, frameDrawer.imageIndex);
     try {
       result = presentQueue.presentKHR(presentInfo);
     }

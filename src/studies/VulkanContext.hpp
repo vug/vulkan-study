@@ -11,6 +11,13 @@
 namespace vku {
   struct Image;
 
+  struct FrameDrawer {
+    const vk::raii::CommandBuffer& commandBuffer;
+    const uint32_t imageIndex; // if kept as a reference (i.e. uint32_t&) its value changes when command buffer methods are called
+    const vk::Image image;     // same as above
+    const vk::raii::Framebuffer& framebuffer;
+  };
+
   class VulkanContext {
   public:
     // TODO: make it tunable with its default being "surface capabilities -> minimum image count + 1
@@ -84,6 +91,7 @@ namespace vku {
     VulkanContext(Window& window, const AppSettings& appSettings = {});
     ~VulkanContext();
 
-    void drawFrame(std::function<void(const vk::raii::CommandBuffer&, const vk::raii::Framebuffer&)> recordCommandBuffer);
+    FrameDrawer drawFrameBegin();
+    void drawFrameEnd(const FrameDrawer& frameDrawer);
   };
 }

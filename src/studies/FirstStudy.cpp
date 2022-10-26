@@ -8,9 +8,7 @@
 #include <iostream>
 #include <string>
 
-FirstStudy::FirstStudy(const vku::StudyRunner& studyRunner) : Study(studyRunner) {}
-
-void FirstStudy::onInit() {
+void FirstStudy::onInit(const vku::AppSettings appSettings, const vku::VulkanContext& vc) {
   //---- Pipeline
   const std::string vertexShaderStr = R"(
 #version 450
@@ -133,9 +131,10 @@ void main () { outColor = vec4 (fragColor, 1.0); }
   default: std::unreachable();
   }
 }
+void FirstStudy::recordCommandBuffer(const vku::VulkanContext& vc, const vku::FrameDrawer& frameDrawer) {
+  const vk::RenderPassBeginInfo renderPassBeginInfo(*vc.renderPass, *frameDrawer.framebuffer, vk::Rect2D{ {0,0}, vc.swapchainExtent }, {});
 
-void FirstStudy::recordCommandBuffer(const vk::raii::CommandBuffer& cmdBuf, const vk::raii::Framebuffer& framebuffer) {
-  const vk::RenderPassBeginInfo renderPassBeginInfo(*vc.renderPass, *framebuffer, vk::Rect2D{ {0,0}, vc.swapchainExtent }, {} /* OR clearValues */);
+  const vk::raii::CommandBuffer& cmdBuf = frameDrawer.commandBuffer;
   cmdBuf.beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
 
   cmdBuf.bindPipeline(vk::PipelineBindPoint::eGraphics, **pipeline);
