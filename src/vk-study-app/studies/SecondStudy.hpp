@@ -1,7 +1,6 @@
 #pragma once
 
-#include "Study.hpp"
-#include "VulkanContext.hpp"
+#include "../StudyApp/Study.hpp"
 
 #include <memory>
 

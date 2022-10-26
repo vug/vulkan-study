@@ -2,16 +2,16 @@ set(APP Studies)
 
 add_executable(${APP}
   main.cpp
-  utils.hpp utils.cpp
-  AppSettings.hpp
-  Window.hpp Window.cpp
-  VulkanContext.hpp VulkanContext.cpp
-  SpirvHelper.hpp SpirvHelper.cpp
-  Image.hpp Image.cpp
-  StudyRunner.hpp StudyRunner.cpp
-  Study.hpp 
-  FirstStudy.hpp FirstStudy.cpp
-  SecondStudy.hpp SecondStudy.cpp
+  vku/SpirvHelper.hpp vku/SpirvHelper.cpp
+  vku/utils.hpp vku/utils.cpp
+  vku/VulkanContext.hpp vku/VulkanContext.cpp
+  vku/Window.hpp vku/Window.cpp
+  vku/Image.hpp vku/Image.cpp
+  StudyApp/AppSettings.hpp
+  StudyApp/StudyRunner.hpp StudyApp/StudyRunner.cpp
+  StudyApp/Study.hpp 
+  studies/FirstStudy.hpp studies/FirstStudy.cpp
+  studies/SecondStudy.hpp studies/SecondStudy.cpp
 )
 
 # CMake can find VulkanSDK if it was first installed from https://www.lunarg.com/vulkan-sdk/ 

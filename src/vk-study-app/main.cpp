@@ -1,6 +1,6 @@
-#include "FirstStudy.hpp"
-#include "SecondStudy.hpp"
-#include "StudyRunner.hpp"
+#include "studies/FirstStudy.hpp"
+#include "studies/SecondStudy.hpp"
+#include "StudyApp/StudyRunner.hpp"
 
 #include <string>
 

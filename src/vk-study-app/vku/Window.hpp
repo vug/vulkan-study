@@ -1,5 +1,5 @@
 #pragma once
-#include "AppSettings.hpp"
+#include "../StudyApp/AppSettings.hpp"
 
 //#define GLFW_INCLUDE_NONE
 #define GLFW_INCLUDE_VULKAN

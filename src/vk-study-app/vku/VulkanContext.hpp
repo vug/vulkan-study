@@ -1,6 +1,6 @@
 #pragma once
-#include "AppSettings.hpp"
-#include "Window.hpp"
+#include "../StudyApp/AppSettings.hpp"
+#include "../vku/Window.hpp"
 
 #include <VkBootstrap.h>
 #include <vulkan/vulkan_raii.hpp>

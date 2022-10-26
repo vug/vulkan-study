@@ -1,10 +1,8 @@
 #include "StudyRunner.hpp"
 
-#include "AppSettings.hpp"
-#include "SpirvHelper.hpp"
-#include "VulkanContext.hpp"
-#include "Window.hpp"
-#include "utils.hpp"
+#include "../vku/SpirvHelper.hpp"
+#include "../vku/Window.hpp"
+#include "../vku/utils.hpp"
 
 #include <iostream>
 

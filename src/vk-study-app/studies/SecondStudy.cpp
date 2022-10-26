@@ -1,14 +1,13 @@
-#include "FirstStudy.hpp"
+#include "SecondStudy.hpp"
 
-#include "AppSettings.hpp"
-#include "SpirvHelper.hpp"
+#include "../vku/SpirvHelper.hpp"
 
 #include <vulkan/vulkan_raii.hpp>
 
 #include <iostream>
 #include <string>
 
-void FirstStudy::onInit(const vku::AppSettings appSettings, const vku::VulkanContext& vc) {
+void SecondStudy::onInit(const vku::AppSettings appSettings, const vku::VulkanContext& vc) {
   //---- Pipeline
   const std::string vertexShaderStr = R"(
 #version 450
@@ -16,7 +15,7 @@ void FirstStudy::onInit(const vku::AppSettings appSettings, const vku::VulkanCon
 
 layout (location = 0) out vec3 fragColor;
 
-vec2 positions[3] = vec2[](vec2 (0.0, -0.5), vec2 (0.5, 0.5), vec2 (-0.5, 0.5));
+vec2 positions[3] = vec2[](vec2 (-0.5, -0.5), vec2 (0.0, 0.5), vec2 (-1.0, 0.5));
 
 vec3 colors[3] = vec3[](vec3 (1.0, 0.0, 0.0), vec3 (0.0, 1.0, 0.0), vec3 (0.0, 0.0, 1.0));
 
@@ -131,8 +130,9 @@ void main () { outColor = vec4 (fragColor, 1.0); }
   default: std::unreachable();
   }
 }
-void FirstStudy::recordCommandBuffer(const vku::VulkanContext& vc, const vku::FrameDrawer& frameDrawer) {
-  const vk::RenderPassBeginInfo renderPassBeginInfo(*vc.renderPass, *frameDrawer.framebuffer, vk::Rect2D{ {0,0}, vc.swapchainExtent }, {});
+
+void SecondStudy::recordCommandBuffer(const vku::VulkanContext& vc, const vku::FrameDrawer& frameDrawer) {
+  const vk::RenderPassBeginInfo renderPassBeginInfo(*vc.renderPass, *frameDrawer.framebuffer, vk::Rect2D{ {0,0}, vc.swapchainExtent }, {} /* OR clearValues */);
 
   const vk::raii::CommandBuffer& cmdBuf = frameDrawer.commandBuffer;
   cmdBuf.beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
@@ -143,4 +143,4 @@ void FirstStudy::recordCommandBuffer(const vku::VulkanContext& vc, const vku::Fr
   cmdBuf.endRenderPass();
 }
 
-void FirstStudy::onDeinit() { }
+void SecondStudy::onDeinit() { }

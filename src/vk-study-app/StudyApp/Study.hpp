@@ -1,5 +1,7 @@
 #pragma once
-#include "VulkanContext.hpp"
+#include "../vku/VulkanContext.hpp"
+#include "../StudyApp/AppSettings.hpp"
+
 #include <vulkan/vulkan_raii.hpp>
 
 namespace vku {
