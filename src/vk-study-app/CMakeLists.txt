@@ -10,6 +10,7 @@ add_executable(${APP}
   StudyApp/AppSettings.hpp
   StudyApp/StudyRunner.hpp StudyApp/StudyRunner.cpp
   StudyApp/Study.hpp 
+  studies/ClearStudy.hpp studies/ClearStudy.cpp
   studies/FirstStudy.hpp studies/FirstStudy.cpp
   studies/SecondStudy.hpp studies/SecondStudy.cpp
 )
