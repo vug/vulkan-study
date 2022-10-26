@@ -1,9 +1,48 @@
-# vk-bootstrap-study
+# Vulkan Studies
 
-Recreation of [vk-bootstrap/example/triangle.cpp](https://github.com/charles-lunarg/vk-bootstrap/blob/c16de538149069c81cfbbab74f278f703beddb7b/example/triangle.cpp) from [vk\-bootstrap/triangle\.cpp at master · charles\-lunarg/vk\-bootstrap](https://github.com/charles-lunarg/vk-bootstrap/blob/master/example/triangle.cpp) using [vulkan_raii.hpp](https://github.com/KhronosGroup/Vulkan-Hpp/blob/429c4c522c65d10ec6df4633a1b78fc28aca7dc3/vulkan/vulkan_raii.hpp) by comparing the logic with snippets from [Vulkan-Hpp/RAII_Samples/](https://github.com/KhronosGroup/Vulkan-Hpp/tree/6fe966c6d985bab4d97bdaa55e1e97ea9dd4aec9/RAII_Samples)
+A [vulkan_raii.hpp](https://github.com/KhronosGroup/Vulkan-Hpp/) app to study Vulkan.
 
-See [Vulkan\-Hpp/vk\_raii\_ProgrammingGuide\.md at master · KhronosGroup/Vulkan\-Hpp](https://github.com/KhronosGroup/Vulkan-Hpp/blob/master/vk_raii_ProgrammingGuide.md)
+* My Vulkan Object abstractions are in `vku` namespace under `vku/` folder.
+  * Most important class is `VulkanContext`. 
+    * It initializes Vulkan
+    * gets physical and logical devices
+    * creates swapchain (with its imageviews, framebuffers etc)
+    * One graphics and one present queues (stores their family indices too)
+    * Creates a RenderPass that's compatible with Swapchain's Framebuffer
+    * RenderPass does not do clearing at beginning, and does NOT change image layout to Present at end
+    * Also provides `drawFrameBegin()` and `drawFrameEnd()` methods. 
+      * They hide synchronization logic.
+      * Begin calculates currentFrame (in frames-in-flight setup) and imageIndex (the index of Swapchain image that is used among N of them (N=3))
+      * Begin returns a simple struct, `FrameDrawer` that has current CommandBuffer, current Image etc.
+      * The idea is to sandwich further RenderPasses between Begin and End and fill CommandBuffer with drawcalls
+  * `SpirVHelper`
+    * Has logic for compiling GLSL to SPIRV on-the-fly and makes a ShaderModule
+  * `utils.hpp`
+    * Tells whether it's a Debug or Release build via `isDebugBuild` namespace variable
+    * and has other helpers, for now `setImageLayout` that creates pipeline barriers for image layout transitions
+  * `Image` is what you'd expect
+    * a struct that holds `vk::Format`, vk::raii::Image`, `vk::raii::DeviceMemory`, `vk::raii::ImageView` which are usually used together.
+  
+StudyApp that'll run individual studies (aka Layer, aka Sample)
+  * A study is an abstract class with `init`, `recordCommandBuffer` and `deinit` functions.
+    * record method will be given the `VulkanContext` and `FrameDrawer` using which individual concrete `Study`s will implement their 
+  * has a `list` of `Study`s. and push pop methods to add remove `Study`s.
+  * `run` method starts the Study app and goes into main loop.
 
-Very similar to `vk-bootstrap-study` but splits the logic into `VulkanContext`, `AppSettings`, `Image`, `Window` classes.
+Usage: 
+
+```c++
+int main() {
+  vku::StudyRunner sr;
+  sr.pushStudy(std::make_unique<MyStudy>());
+  sr.pushStudy(std::make_unique<YourStudy>());
+  sr.run();
+}
+```
+
+# References
+
+* [Vulkan\-Hpp/vk\_raii\_ProgrammingGuide\.md at master · KhronosGroup/Vulkan\-Hpp](https://github.com/KhronosGroup/Vulkan-Hpp/blob/master/vk_raii_ProgrammingGuide.md)
+
 
 ![screenshot](screenshot.png)
