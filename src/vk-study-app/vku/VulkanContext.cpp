@@ -28,7 +28,11 @@ namespace vku {
     renderPass(constructRenderPass()),
     framebuffers(constructFramebuffers()),
     commandPool(device, vk::CommandPoolCreateInfo(vk::CommandPoolCreateFlagBits::eResetCommandBuffer, graphicsQueueFamilyIndex)),
-    commandBuffers(device, vk::CommandBufferAllocateInfo(*commandPool, vk::CommandBufferLevel::ePrimary, MAX_FRAMES_IN_FLIGHT))
+    commandBuffers(device, vk::CommandBufferAllocateInfo(*commandPool, vk::CommandBufferLevel::ePrimary, MAX_FRAMES_IN_FLIGHT)),
+    copyCommandBuffer([&]() {
+      vk::raii::CommandBuffers copyCmdBuffers = vk::raii::CommandBuffers(device, vk::CommandBufferAllocateInfo(*commandPool, vk::CommandBufferLevel::ePrimary, 1));
+      return std::move(copyCmdBuffers[0]);
+    }())
   {
     for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
       // (Semaphores begin their lifetime at "unsignaled" state)

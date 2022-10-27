@@ -61,6 +61,8 @@ namespace vku {
     std::vector<vk::raii::Framebuffer> framebuffers;
     vk::raii::CommandPool commandPool;
     vk::raii::CommandBuffers commandBuffers;
+    // for copying buffers from host to device etc
+    vk::raii::CommandBuffer copyCommandBuffer;
   private:
     //---- Synchronization
     // A semaphore is used to add order between queue operations on the GPU

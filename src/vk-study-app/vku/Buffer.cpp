@@ -41,10 +41,8 @@ namespace vku {
     memory = vk::raii::DeviceMemory{ vc.device, vk::MemoryAllocateInfo(memReqs.size, memAlloc.memoryTypeIndex) };
     dev.bindBufferMemory(*buffer, *memory, 0);
 
-    // TODO: get copy command buffer from VulkanContext
-    // vk::Buffer copies are done on the queue, so we need a command buffer for them
-    auto copyCmdBuffers = vk::raii::CommandBuffers(vc.device, vk::CommandBufferAllocateInfo(*vc.commandPool, vk::CommandBufferLevel::ePrimary, 1));
-    vk::raii::CommandBuffer copyCmdBuf(std::move(copyCmdBuffers[0]));
+    const vk::raii::CommandBuffer& copyCmdBuf = vc.copyCommandBuffer;
+    copyCmdBuf.reset();
     copyCmdBuf.begin(vk::CommandBufferBeginInfo());
     vk::BufferCopy copyRegion;
     copyRegion.setSize(sizeBytes);
