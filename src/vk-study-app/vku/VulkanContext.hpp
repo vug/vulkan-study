@@ -50,13 +50,13 @@ namespace vku {
     vk::SampleCountFlagBits swapchainSamples;
     vk::Extent2D swapchainExtent;
     vk::raii::SwapchainKHR swapchain;
+    std::vector<vku::Image> depthImages;
     std::vector<vk::raii::ImageView> swapchainImageViews;
     vk::raii::Queue graphicsQueue;
     vk::raii::Queue presentQueue;
     uint32_t graphicsQueueFamilyIndex;
     uint32_t presentQueueFamilyIndex;
     vk::raii::RenderPass renderPass;
-    std::vector<vku::Image> depthImages;
     std::vector<vk::raii::Framebuffer> framebuffers;
     vk::raii::CommandPool commandPool;
     vk::raii::CommandBuffers commandBuffers;

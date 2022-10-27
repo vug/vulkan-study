@@ -9,10 +9,10 @@
 namespace vku {
   StudyRunner::StudyRunner() :
     appSettings({
-      .name = "vk-bootstrap variation study",
-      .hasPresentDepth = false,
+      .name = "A Vulkan Study Application",
+      .hasPresentDepth = true,
     }),
-    window(),
+    window(appSettings),
     vc(window, appSettings)
   {}
 

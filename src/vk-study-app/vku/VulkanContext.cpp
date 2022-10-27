@@ -89,7 +89,7 @@ namespace vku {
       .set_desired_format({ static_cast<VkFormat>(swapchainColorFormat), static_cast<VkColorSpaceKHR>(swapchainColorSpace) }) // default
       .set_desired_present_mode(VK_PRESENT_MODE_MAILBOX_KHR) // default. other: VK_PRESENT_MODE_FIFO_KHR
        // Transfer Bit needed to enable clearing via vkCmdClearColorImage
-      .set_image_usage_flags(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT )
+      .set_image_usage_flags(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT)
       .set_required_min_image_count(NUM_IMAGES)
       .build().value();
     assert(vkbSwapchain.image_format == static_cast<VkFormat>(swapchainColorFormat));
