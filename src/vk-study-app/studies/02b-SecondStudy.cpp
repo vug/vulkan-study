@@ -1,4 +1,4 @@
-#include "SecondStudy.hpp"
+#include "02b-SecondStudy.hpp"
 
 #include "../vku/SpirvHelper.hpp"
 

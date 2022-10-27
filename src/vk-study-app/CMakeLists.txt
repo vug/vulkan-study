@@ -10,9 +10,10 @@ add_executable(${APP}
   StudyApp/AppSettings.hpp
   StudyApp/StudyRunner.hpp StudyApp/StudyRunner.cpp
   StudyApp/Study.hpp 
-  studies/ClearStudy.hpp studies/ClearStudy.cpp
-  studies/FirstStudy.hpp studies/FirstStudy.cpp
-  studies/SecondStudy.hpp studies/SecondStudy.cpp
+  studies/01-ClearStudy.hpp studies/01-ClearStudy.cpp
+  studies/02-FirstStudy.hpp studies/02-FirstStudy.cpp
+  studies/02b-SecondStudy.hpp studies/02b-SecondStudy.cpp
+  studies/03-Vertices.hpp studies/03-Vertices.cpp
 )
 
 # CMake can find VulkanSDK if it was first installed from https://www.lunarg.com/vulkan-sdk/ 
