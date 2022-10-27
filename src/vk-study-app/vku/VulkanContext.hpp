@@ -40,6 +40,7 @@ namespace vku {
     vkb::PhysicalDevice vkbPhysicalDevice;
   public:
     vk::raii::PhysicalDevice physicalDevice;
+    const vk::PhysicalDeviceMemoryProperties physicalDeviceMemoryProperties;
   private:
     vkb::Device vkbDevice;
   public:
@@ -93,5 +94,8 @@ namespace vku {
 
     FrameDrawer drawFrameBegin();
     void drawFrameEnd(const FrameDrawer& frameDrawer);
+
+    // utilities
+    uint32_t getMemoryType(uint32_t requirementTypeBits, const vk::MemoryPropertyFlags& flags) const;
   };
 }

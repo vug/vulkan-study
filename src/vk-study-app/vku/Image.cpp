@@ -10,24 +10,10 @@ namespace vku {
     return vk::raii::Image{ vc.device, imageCreateInfo };
       }()),
     memory([&]() {
-        vk::PhysicalDeviceMemoryProperties memoryProperties = vc.physicalDevice.getMemoryProperties();
         vk::MemoryRequirements memoryRequirements = image.getMemoryRequirements();
-
-        // ?
-        uint32_t typeBits = memoryRequirements.memoryTypeBits;
-        uint32_t typeIndex = uint32_t(~0);
-        for (uint32_t i = 0; i < memoryProperties.memoryTypeCount; i++)
-        {
-          if ((typeBits & 1) &&
-            ((memoryProperties.memoryTypes[i].propertyFlags & vk::MemoryPropertyFlagBits::eDeviceLocal) == vk::MemoryPropertyFlagBits::eDeviceLocal))
-          {
-            typeIndex = i;
-            break;
-          }
-          typeBits >>= 1;
-        }
+        const uint32_t typeBits = memoryRequirements.memoryTypeBits;
+        uint32_t typeIndex = vc.getMemoryType(typeBits, vk::MemoryPropertyFlagBits::eDeviceLocal);
         assert(typeIndex != uint32_t(~0));
-
         vk::MemoryAllocateInfo memoryAllocateInfo(memoryRequirements.size, typeIndex);
         return vk::raii::DeviceMemory{ vc.device, memoryAllocateInfo };
       }()),

@@ -12,6 +12,7 @@ namespace vku {
     instance(constructInstance()),
     surface(window.createSurface(instance)),
     physicalDevice(constructPhysicalDevice()),
+    physicalDeviceMemoryProperties(physicalDevice.getMemoryProperties()),
     device(constructDevice()),
     // TODO: find a better format picking scheme // can get available formats via: auto surfaceFormats = physicalDevice.getSurfaceFormatsKHR(*surface);
     swapchainColorFormat(vk::Format::eB8G8R8A8Unorm), // or vk::Format::eB8G8R8A8Srgb;
@@ -285,5 +286,17 @@ namespace vku {
     assert(result == vk::Result::eSuccess); // or vk::Result::eSuboptimalKHR
 
     currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+  }
+
+  uint32_t VulkanContext::getMemoryType(uint32_t requirementTypeBits, const vk::MemoryPropertyFlags& propertyFlags) const {
+    for (uint32_t ix = 0; ix < physicalDeviceMemoryProperties.memoryTypeCount; ix++) {
+      if ((requirementTypeBits & 1) &&
+          ((physicalDeviceMemoryProperties.memoryTypes[ix].propertyFlags & propertyFlags) == propertyFlags)) {
+        return ix;
+      }
+      requirementTypeBits >>= 1;
+    }
+    assert(false); // memory type with given properties was not found
+    return uint32_t(~0);
   }
 }
