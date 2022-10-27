@@ -2,22 +2,14 @@
 
 #include "../StudyApp/Study.hpp"
 
+#include "../vku/Buffer.hpp"
+
 #include <memory>
-
-struct Vertex {
-  float pos[3];
-  float col[3];
-};
-
-struct Buffer {
-  vk::raii::Buffer buffer = nullptr;
-  vk::raii::DeviceMemory memory = nullptr;
-};
 
 class VerticesStudy : public vku::Study {
 private:
-  Buffer vertices;
-  Buffer indices;
+  vku::Buffer vertices;
+  vku::Buffer indices;
   uint32_t indexCount;
   std::unique_ptr<vk::raii::Pipeline> pipeline;
 

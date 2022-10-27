@@ -7,6 +7,11 @@
 #include <iostream>
 #include <string>
 
+struct Vertex {
+  float pos[3];
+  float col[3];
+};
+
 void VerticesStudy::onInit(const vku::AppSettings appSettings, const vku::VulkanContext& vc) {
   //---- Vertex Data
   std::vector<Vertex> vertexBuffer = { { { 1.0f, 1.0f, 0.0f },
@@ -21,98 +26,14 @@ void VerticesStudy::onInit(const vku::AppSettings appSettings, const vku::Vulkan
                                          { 0.0f,
                                            0.0f,
                                            1.0f } } };
-
   uint32_t vertexBufferSize = (uint32_t)(vertexBuffer.size() * sizeof(Vertex));
 
   std::vector<uint32_t> indexBuffer = { 0, 1, 2 };
-
   uint32_t indexBufferSize = (uint32_t)(indexBuffer.size() * sizeof(uint32_t));
   indexCount = (uint32_t)indexBuffer.size();
 
-  //---- CommandBuffer for copying
-  // vk::Buffer copies are done on the queue, so we need a command buffer for them
-  auto copyCmdBuffers = vk::raii::CommandBuffers(vc.device, vk::CommandBufferAllocateInfo(*vc.commandPool, vk::CommandBufferLevel::ePrimary, 1));
-  vk::raii::CommandBuffer& copyCmdBuf = copyCmdBuffers[0];
-
-  //---- Vertex Data Upload via Staging buffers
-  // Static data like vertex and index buffer should be stored on the device memory
-  // for optimal (and fastest) access by the GPU
-  //
-  // To achieve this we use so-called "staging buffers" :
-  // - Create a buffer that's visible to the host (and can be mapped)
-  // - Copy the data to this buffer
-  // - Create another buffer that's local on the device (VRAM) with the same size
-  // - Copy the data from the host to the device using a command buffer
-  // - Delete the host visible (staging) buffer
-  // - Use the device local buffers for rendering
-
-  vk::MemoryAllocateInfo memAlloc;
-  vk::MemoryRequirements memReqs;
-
-  const vk::Device& dev = *vc.device;
-  {
-    struct {
-      Buffer vertices;
-      Buffer indices;
-    } stagingBuffers;
-
-    // Vertex buffer
-    // Create a host-visible buffer to copy the vertex data to (staging buffer)
-    stagingBuffers.vertices.buffer = vk::raii::Buffer(vc.device, vk::BufferCreateInfo({}, vertexBufferSize, vk::BufferUsageFlagBits::eTransferSrc));
-    memReqs = stagingBuffers.vertices.buffer.getMemoryRequirements();
-    memAlloc.allocationSize = memReqs.size;
-    memAlloc.memoryTypeIndex = vc.getMemoryType(memReqs.memoryTypeBits, vk::MemoryPropertyFlagBits::eHostVisible);
-    stagingBuffers.vertices.memory = vk::raii::DeviceMemory{ vc.device, vk::MemoryAllocateInfo(memReqs.size, memAlloc.memoryTypeIndex) };
-
-    // Map and copy
-    void* data = dev.mapMemory(*stagingBuffers.vertices.memory, 0, memAlloc.allocationSize, vk::MemoryMapFlags());
-    memcpy(data, vertexBuffer.data(), vertexBufferSize);
-    dev.unmapMemory(*stagingBuffers.vertices.memory);
-    dev.bindBufferMemory(*stagingBuffers.vertices.buffer, *stagingBuffers.vertices.memory, 0);
-
-    // Create the destination buffer with device only visibility
-    // vk::Buffer will be used as a vertex buffer and is the copy destination
-    vertices.buffer = vk::raii::Buffer(vc.device, vk::BufferCreateInfo({}, vertexBufferSize, vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferDst));
-    memReqs = vertices.buffer.getMemoryRequirements();
-    memAlloc.allocationSize = memReqs.size;
-    memAlloc.memoryTypeIndex = vc.getMemoryType(memReqs.memoryTypeBits, vk::MemoryPropertyFlagBits::eDeviceLocal);
-    vertices.memory = vk::raii::DeviceMemory{ vc.device, vk::MemoryAllocateInfo(memReqs.size, memAlloc.memoryTypeIndex) };
-    dev.bindBufferMemory(*vertices.buffer, *vertices.memory, 0);
-
-    // Index Buffer
-    stagingBuffers.indices.buffer = vk::raii::Buffer(vc.device, vk::BufferCreateInfo({}, indexBufferSize, vk::BufferUsageFlagBits::eTransferSrc));
-    memReqs = stagingBuffers.indices.buffer.getMemoryRequirements();
-    memAlloc.allocationSize = memReqs.size;
-    memAlloc.memoryTypeIndex = vc.getMemoryType(memReqs.memoryTypeBits, vk::MemoryPropertyFlagBits::eHostVisible);
-    stagingBuffers.indices.memory = vk::raii::DeviceMemory{ vc.device, vk::MemoryAllocateInfo(memReqs.size, memAlloc.memoryTypeIndex) };
-
-    data = dev.mapMemory(*stagingBuffers.indices.memory, 0, memAlloc.allocationSize, vk::MemoryMapFlags());
-    memcpy(data, indexBuffer.data(), vertexBufferSize);
-    dev.unmapMemory(*stagingBuffers.indices.memory);
-    dev.bindBufferMemory(*stagingBuffers.indices.buffer, *stagingBuffers.indices.memory, 0);
-
-    indices.buffer = vk::raii::Buffer(vc.device, vk::BufferCreateInfo({}, indexBufferSize, vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eTransferDst));
-    memReqs = indices.buffer.getMemoryRequirements();
-    memAlloc.allocationSize = memReqs.size;
-    memAlloc.memoryTypeIndex = vc.getMemoryType(memReqs.memoryTypeBits, vk::MemoryPropertyFlagBits::eDeviceLocal);
-    indices.memory = vk::raii::DeviceMemory{ vc.device, vk::MemoryAllocateInfo(memReqs.size, memAlloc.memoryTypeIndex) };
-    dev.bindBufferMemory(*indices.buffer, *indices.memory, 0);
-
-    // Command
-    copyCmdBuf.begin(vk::CommandBufferBeginInfo());
-    vk::BufferCopy copyRegion;
-
-    copyRegion.setSize(vertexBufferSize);
-    copyCmdBuf.copyBuffer(*stagingBuffers.vertices.buffer, *vertices.buffer, copyRegion);
-    copyRegion.setSize(indexBufferSize);
-    copyCmdBuf.copyBuffer(*stagingBuffers.indices.buffer, *indices.buffer, copyRegion);
-    copyCmdBuf.end();
-
-    vk::SubmitInfo copySubmitInfo(nullptr, nullptr, *copyCmdBuf, nullptr);
-    vc.graphicsQueue.submit(copySubmitInfo, {});
-    vc.graphicsQueue.waitIdle();
-  } // destroy and free staging buffers?
-
+  vertices = vku::Buffer(vc, vertexBuffer.data(), vertexBufferSize, vk::BufferUsageFlagBits::eVertexBuffer);
+  indices = vku::Buffer(vc, indexBuffer.data(), indexBufferSize, vk::BufferUsageFlagBits::eIndexBuffer);
 
 
   //---- Pipeline
