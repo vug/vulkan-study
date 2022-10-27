@@ -16,11 +16,10 @@ struct Buffer {
 
 class VerticesStudy : public vku::Study {
 private:
+  Buffer vertices;
+  Buffer indices;
+  uint32_t indexCount;
   std::unique_ptr<vk::raii::Pipeline> pipeline;
-  std::unique_ptr<vk::raii::CommandBuffer> copyCmdBuf;
-  std::vector<Vertex> vertexBuffer;
-  std::vector<uint32_t> indexBuffer;
-  
 
 public:
   virtual ~VerticesStudy() = default;
