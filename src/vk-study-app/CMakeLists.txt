@@ -7,6 +7,7 @@ add_executable(${APP}
   vku/VulkanContext.hpp vku/VulkanContext.cpp
   vku/Window.hpp vku/Window.cpp
   vku/Image.hpp vku/Image.cpp
+  vku/Buffer.hpp vku/Buffer.cpp
   StudyApp/AppSettings.hpp
   StudyApp/StudyRunner.hpp StudyApp/StudyRunner.cpp
   StudyApp/Study.hpp 
