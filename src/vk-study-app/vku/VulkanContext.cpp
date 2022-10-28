@@ -164,14 +164,15 @@ namespace vku {
       return vk::raii::RenderPass{ device, vk::RenderPassCreateInfo{vk::RenderPassCreateFlags(), attachmentDescriptions, subpass} };
     }
 
+    // TODO: make single and chained versions
     attachmentDescriptions.emplace_back(vk::AttachmentDescriptionFlags(),
       swapchainDepthFormat,
       swapchainSamples,
-      vk::AttachmentLoadOp::eDontCare, //eClear,
-      vk::AttachmentStoreOp::eDontCare,
       vk::AttachmentLoadOp::eDontCare,
       vk::AttachmentStoreOp::eDontCare,
-      vk::ImageLayout::eUndefined,
+      vk::AttachmentLoadOp::eLoad,
+      vk::AttachmentStoreOp::eStore,
+      vk::ImageLayout::eDepthStencilAttachmentOptimal,
       vk::ImageLayout::eDepthStencilAttachmentOptimal);
     vk::AttachmentReference depthReference(1, vk::ImageLayout::eDepthStencilAttachmentOptimal);
     vk::SubpassDescription subpass(vk::SubpassDescriptionFlags{}, vk::PipelineBindPoint::eGraphics, {}, colorReference, {}, &depthReference);
@@ -268,6 +269,8 @@ namespace vku {
 
     // Transition swapchain image layout from eTransferDstOptimal -> eColorAttachmentOptimal
     vku::setImageLayout(cmdBuf, image, swapchainColorFormat, vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eColorAttachmentOptimal);
+    if (appSettings.hasPresentDepth)
+      vku::setImageLayout(cmdBuf, *depthImages[imageIndex].image, swapchainDepthFormat, vk::ImageLayout::eUndefined, vk::ImageLayout::eDepthStencilAttachmentOptimal);
 
     return FrameDrawer{ cmdBuf, imageIndex, image, framebuffers[imageIndex] };
   }

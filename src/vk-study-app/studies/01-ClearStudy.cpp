@@ -14,12 +14,19 @@ void ClearStudy::recordCommandBuffer(const vku::VulkanContext& vc, const vku::Fr
   cmdBuf.beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
 
   // Clearing inside a RenderPass via a vkCmdClearAttachments
-  const std::array<float, 4> col = { 0.5f, 0.5f, 1.0f, 1.0f };
-  vk::ClearAttachment clearAttachment = vk::ClearAttachment(vk::ImageAspectFlagBits::eColor, 0, vk::ClearColorValue{ col });
   const vk::Rect2D renderArea = { {0,0}, vc.swapchainExtent };
   vk::ClearRect clearRect = vk::ClearRect(renderArea, 0, 1);
-  cmdBuf.clearAttachments(clearAttachment, clearRect);
+  
 
+  const std::array<float, 4> col = { 0.5f, 0.5f, 1.0f, 1.0f };
+  vk::ClearAttachment clearColorAttachment = vk::ClearAttachment(vk::ImageAspectFlagBits::eColor, 0, vk::ClearColorValue{ col });
+  cmdBuf.clearAttachments(clearColorAttachment, clearRect);
+
+  if (vc.appSettings.hasPresentDepth) {
+    vk::ClearAttachment clearDepthAttachment = vk::ClearAttachment(vk::ImageAspectFlagBits::eDepth, 0, vk::ClearDepthStencilValue{ 1.0f, 0 });
+    cmdBuf.clearAttachments(clearDepthAttachment, clearRect);
+  }
+    
   cmdBuf.endRenderPass();
 }
 
