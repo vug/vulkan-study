@@ -43,6 +43,8 @@ void UniformsStudy::onInit(const vku::AppSettings appSettings, const vku::Vulkan
   uniforms.viewMatrix = glm::translate(glm::mat4(), glm::vec3(0.0f, 0.0f, zoom));
   uniforms.modelMatrix = glm::mat4();
 
+  ubo = vku::UniformBuffer(vc, &uniforms, sizeof(Uniforms));
+
   //---- Pipeline
   const std::string vertexShaderStr = R"(
 #version 450
@@ -180,6 +182,7 @@ void main()
   pipeline = std::make_unique<vk::raii::Pipeline>(vc.device, nullptr, graphicsPipelineCreateInfo);
   assert(pipeline->getConstructorSuccessCode() == vk::Result::eSuccess);
 }
+
 void UniformsStudy::recordCommandBuffer(const vku::VulkanContext& vc, const vku::FrameDrawer& frameDrawer) {
   const vk::RenderPassBeginInfo renderPassBeginInfo(*vc.renderPass, *frameDrawer.framebuffer, vk::Rect2D{ {0,0}, vc.swapchainExtent }, {});
 

@@ -3,7 +3,7 @@
 #include "VulkanContext.hpp"
 
 namespace vku {
-  UniformBuffer::UniformBuffer(const VulkanContext& vc, void* srcData, uint32_t sizeBytes, vk::BufferUsageFlagBits usage) {
+  UniformBuffer::UniformBuffer(const VulkanContext& vc, void* srcData, uint32_t sizeBytes) {
     vk::MemoryAllocateInfo memAlloc;
     vk::MemoryRequirements memReqs;
 
@@ -20,6 +20,8 @@ namespace vku {
     descriptor.offset = 0;
     descriptor.range = sizeBytes;
 
+    // TODO: to keep a handle to the memory and not unmap it afer updating,
+    // create the memory with the vk::MemoryPropertyFlagBits::eHostCoherent
     void* dstData = dev.mapMemory(*memory, 0, memAlloc.allocationSize, vk::MemoryMapFlags());
     memcpy(dstData, srcData, sizeBytes);
     dev.unmapMemory(*memory);

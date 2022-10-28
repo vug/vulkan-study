@@ -12,6 +12,6 @@ namespace vku {
     vk::DescriptorBufferInfo descriptor;
 
     UniformBuffer() = default;
-    UniformBuffer(const VulkanContext& vc, void* srcData, uint32_t sizeBytes, vk::BufferUsageFlagBits usage);
+    UniformBuffer(const VulkanContext& vc, void* srcData, uint32_t sizeBytes);
   };
 }

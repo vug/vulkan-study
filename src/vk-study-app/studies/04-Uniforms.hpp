@@ -3,6 +3,7 @@
 #include "../StudyApp/Study.hpp"
 
 #include "../vku/Buffer.hpp"
+#include "../vku/UniformBuffer.hpp"
 
 #include <glm/mat4x4.hpp>
 
@@ -20,6 +21,7 @@ private:
   vku::Buffer indices;
   uint32_t indexCount;
   Uniforms uniforms;
+  vku::UniformBuffer ubo;
   std::unique_ptr<vk::raii::Pipeline> pipeline;
 
 public:
