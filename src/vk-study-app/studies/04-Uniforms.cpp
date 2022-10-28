@@ -2,6 +2,7 @@
 
 #include "../vku/SpirvHelper.hpp"
 
+#include <glm/gtc/matrix_transform.hpp>
 #include <vulkan/vulkan_raii.hpp>
 
 #include <iostream>
@@ -35,6 +36,12 @@ void UniformsStudy::onInit(const vku::AppSettings appSettings, const vku::Vulkan
   vertices = vku::Buffer(vc, vertexBuffer.data(), vertexBufferSize, vk::BufferUsageFlagBits::eVertexBuffer);
   indices = vku::Buffer(vc, indexBuffer.data(), indexBufferSize, vk::BufferUsageFlagBits::eIndexBuffer);
 
+  //---- Uniform Data
+  // Update matrices
+  uniforms.projectionMatrix = glm::perspective(glm::radians(60.0f), (float)800 / (float)800, 0.1f, 256.0f);
+  const float zoom{ -2.5f };
+  uniforms.viewMatrix = glm::translate(glm::mat4(), glm::vec3(0.0f, 0.0f, zoom));
+  uniforms.modelMatrix = glm::mat4();
 
   //---- Pipeline
   const std::string vertexShaderStr = R"(
