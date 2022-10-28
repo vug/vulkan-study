@@ -17,8 +17,8 @@ class UniformsStudy : public vku::Study {
   };
 
 private:
-  vku::Buffer vertices;
-  vku::Buffer indices;
+  vku::Buffer vbo;
+  vku::Buffer ibo;
   uint32_t indexCount;
   Uniforms uniforms;
   vku::UniformBuffer ubo;

@@ -17,27 +17,25 @@ struct Vertex {
 
 void UniformsStudy::onInit(const vku::AppSettings appSettings, const vku::VulkanContext& vc) {
   //---- Vertex Data
-  std::vector<Vertex> vertexBuffer = { { {  1.0f,  1.0f, 0.0f },
-                                         {  1.0f,  0.0f, 0.0f } },
-                                       { { -1.0f,  1.0f, 0.0f },
-                                         {  0.0f,  1.0f, 0.0f } },
-                                       { {  0.0f, -1.0f, 0.0f },
-                                         {  0.0f,  0.0f, 1.0f } } };
-  uint32_t vertexBufferSize = (uint32_t)(vertexBuffer.size() * sizeof(Vertex));
+  std::vector<Vertex> vertices = { { {  1.0f,  1.0f, 0.0f },
+                                     {  1.0f,  0.0f, 0.0f } },
+                                   { { -1.0f,  1.0f, 0.0f },
+                                     {  0.0f,  1.0f, 0.0f } },
+                                   { {  0.0f, -1.0f, 0.0f },
+                                     {  0.0f,  0.0f, 1.0f } } };
+  uint32_t vboSizeBytes = (uint32_t)(vertices.size() * sizeof(Vertex));
+  vbo = vku::Buffer(vc, vertices.data(), vboSizeBytes, vk::BufferUsageFlagBits::eVertexBuffer);
 
-  std::vector<uint32_t> indexBuffer = { 0, 1, 2 };
-  uint32_t indexBufferSize = (uint32_t)(indexBuffer.size() * sizeof(uint32_t));
-  indexCount = (uint32_t)indexBuffer.size();
-
-  vertices = vku::Buffer(vc, vertexBuffer.data(), vertexBufferSize, vk::BufferUsageFlagBits::eVertexBuffer);
-  indices = vku::Buffer(vc, indexBuffer.data(), indexBufferSize, vk::BufferUsageFlagBits::eIndexBuffer);
+  std::vector<uint32_t> indices = { 0, 1, 2 };
+  uint32_t iboSizeBytes = (uint32_t)(indices.size() * sizeof(uint32_t));
+  indexCount = (uint32_t)indices.size();
+  ibo = vku::Buffer(vc, indices.data(), iboSizeBytes, vk::BufferUsageFlagBits::eIndexBuffer);
 
   //---- Uniform Data
   // create UBO and connect it to a Uniforms instance
   ubo = vku::UniformBuffer(vc, &uniforms, sizeof(Uniforms));
   uniforms.projectionMatrix = glm::perspective(glm::radians(45.0f), (float)800 / (float)800, 0.1f, 256.0f);
-  // will set view and model matrices at every frame
-
+  // will set the view and model matrices at every frame
 
   //---- Descriptor Set Layout
   vk::DescriptorSetLayoutBinding layoutBinding = { 0, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eVertex };
@@ -213,10 +211,10 @@ void UniformsStudy::recordCommandBuffer(const vku::VulkanContext& vc, const vku:
   cmdBuf.bindPipeline(vk::PipelineBindPoint::eGraphics, **pipeline);
 
   vk::DeviceSize offsets = 0;
-  cmdBuf.bindVertexBuffers(0, *vertices.buffer, offsets);
-  cmdBuf.bindIndexBuffer(*indices.buffer, 0, vk::IndexType::eUint32);
+  cmdBuf.bindVertexBuffers(0, *vbo.buffer, offsets);
+  cmdBuf.bindIndexBuffer(*ibo.buffer, 0, vk::IndexType::eUint32);
   cmdBuf.drawIndexed(indexCount, 1, 0, 0, 1);
-  
+
   cmdBuf.endRenderPass();
 }
 
