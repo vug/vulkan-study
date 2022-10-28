@@ -39,11 +39,32 @@ void UniformsStudy::onInit(const vku::AppSettings appSettings, const vku::Vulkan
   //---- Uniform Data
   // Update matrices
   uniforms.projectionMatrix = glm::perspective(glm::radians(60.0f), (float)800 / (float)800, 0.1f, 256.0f);
-  const float zoom{ -2.5f };
-  uniforms.viewMatrix = glm::translate(glm::mat4(), glm::vec3(0.0f, 0.0f, zoom));
-  uniforms.modelMatrix = glm::mat4();
+  const float zoom{ 2.5f };
+  auto vec = glm::vec3(0.0f, 0.0f, zoom);
+  uniforms.viewMatrix = glm::translate(glm::mat4(1), vec);
+  uniforms.modelMatrix = glm::translate(glm::mat4(1), glm::vec3(0.1, 0.2, 0));
 
   ubo = vku::UniformBuffer(vc, &uniforms, sizeof(Uniforms));
+
+  //---- Descriptor Set Layout
+  vk::DescriptorSetLayoutBinding layoutBinding = { 0, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eVertex };
+  vk::raii::DescriptorSetLayout descriptorSetLayout = vk::raii::DescriptorSetLayout(vc.device, { {}, 1, &layoutBinding });
+
+  //---- Descriptor Set
+  vk::DescriptorSetAllocateInfo allocateInfo = vk::DescriptorSetAllocateInfo(*vc.descriptorPool, 1, &(*descriptorSetLayout));
+  descriptorSets = vk::raii::DescriptorSets(vc.device, allocateInfo);
+
+
+  vk::WriteDescriptorSet writeDescriptorSet;
+  // Binding 0 : Uniform buffer
+  writeDescriptorSet.dstSet = *descriptorSets[0];
+  writeDescriptorSet.descriptorCount = 1;
+  writeDescriptorSet.descriptorType = vk::DescriptorType::eUniformBuffer;
+  writeDescriptorSet.pBufferInfo = &ubo.descriptor;
+  // Binds this uniform buffer to binding point 0
+  writeDescriptorSet.dstBinding = 0;
+
+  vc.device.updateDescriptorSets(writeDescriptorSet, nullptr);
 
   //---- Pipeline
   const std::string vertexShaderStr = R"(
@@ -55,12 +76,12 @@ void UniformsStudy::onInit(const vku::AppSettings appSettings, const vku::Vulkan
 layout (location = 0) in vec3 inPos;
 layout (location = 1) in vec3 inColor;
 
-//layout (binding = 0) uniform UBO 
-//{
-//	mat4 projectionMatrix;
-//	mat4 modelMatrix;
-//	mat4 viewMatrix;
-//} ubo;
+layout (binding = 0) uniform UBO 
+{
+	mat4 projectionMatrix;
+	mat4 modelMatrix;
+	mat4 viewMatrix;
+} ubo;
 
 layout (location = 0) out vec3 outColor;
 
@@ -74,7 +95,7 @@ void main()
 {
 	outColor = inColor;
 	//gl_Position = ubo.projectionMatrix * ubo.viewMatrix * ubo.modelMatrix * vec4(inPos.xyz, 1.0);
-  gl_Position = vec4(inPos.xyz, 1.0);
+  gl_Position = ubo.modelMatrix * vec4(inPos.xyz, 1.0);
 }
 )";
 
@@ -160,7 +181,8 @@ void main()
   std::array<vk::DynamicState, 2> dynamicStates = { vk::DynamicState::eViewport, vk::DynamicState::eScissor };
   vk::PipelineDynamicStateCreateInfo dynamicStateCreateInfo({}, dynamicStates);
 
-  vk::raii::PipelineLayout pipelineLayout(vc.device, { {}, {} }); // { flags, descriptorSetLayout }
+  //vk::PipelineLayout pipelineLayout = (*vc.device).createPipelineLayout(vk::PipelineLayoutCreateInfo({}, 1, &descriptorSetLayout));
+  pipelineLayout = { vc.device, { {}, 1, &(*descriptorSetLayout) } }; // { flags, descriptorSetLayout }
 
   vk::GraphicsPipelineCreateInfo graphicsPipelineCreateInfo(
     {},
@@ -188,6 +210,7 @@ void UniformsStudy::recordCommandBuffer(const vku::VulkanContext& vc, const vku:
 
   const vk::raii::CommandBuffer& cmdBuf = frameDrawer.commandBuffer;
   cmdBuf.beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
+  cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelineLayout, 0, *descriptorSets[0], nullptr);
   cmdBuf.bindPipeline(vk::PipelineBindPoint::eGraphics, **pipeline);
 
   vk::DeviceSize offsets = 0;

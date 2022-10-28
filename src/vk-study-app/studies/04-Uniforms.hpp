@@ -22,6 +22,8 @@ private:
   uint32_t indexCount;
   Uniforms uniforms;
   vku::UniformBuffer ubo;
+  vk::raii::DescriptorSets descriptorSets = nullptr;
+  vk::raii::PipelineLayout pipelineLayout = nullptr;
   std::unique_ptr<vk::raii::Pipeline> pipeline;
 
 public:

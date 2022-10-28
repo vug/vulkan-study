@@ -201,7 +201,7 @@ namespace vku {
     // typeCounts[1].descriptorCount = 2;
 
     const uint32_t maxNumofRequestableDescriptorSets = 1;
-    vk::DescriptorPoolCreateInfo descriptorPoolInfo = { {}, maxNumofRequestableDescriptorSets, typeCounts };
+    vk::DescriptorPoolCreateInfo descriptorPoolInfo = { vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet, maxNumofRequestableDescriptorSets, typeCounts };
     return device.createDescriptorPool(descriptorPoolInfo);
   }
 
