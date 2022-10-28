@@ -54,14 +54,12 @@ void UniformsStudy::onInit(const vku::AppSettings appSettings, const vku::Vulkan
   vk::DescriptorSetAllocateInfo allocateInfo = vk::DescriptorSetAllocateInfo(*vc.descriptorPool, 1, &(*descriptorSetLayout));
   descriptorSets = vk::raii::DescriptorSets(vc.device, allocateInfo);
 
-
-  vk::WriteDescriptorSet writeDescriptorSet;
   // Binding 0 : Uniform buffer
+  vk::WriteDescriptorSet writeDescriptorSet;
   writeDescriptorSet.dstSet = *descriptorSets[0];
   writeDescriptorSet.descriptorCount = 1;
   writeDescriptorSet.descriptorType = vk::DescriptorType::eUniformBuffer;
   writeDescriptorSet.pBufferInfo = &ubo.descriptor;
-  // Binds this uniform buffer to binding point 0
   writeDescriptorSet.dstBinding = 0;
 
   vc.device.updateDescriptorSets(writeDescriptorSet, nullptr);
@@ -206,6 +204,12 @@ void main()
 }
 
 void UniformsStudy::recordCommandBuffer(const vku::VulkanContext& vc, const vku::FrameDrawer& frameDrawer) {
+  static float x = 0.0f;
+  x += 0.001f;
+  if (x > 1.0f) x = -1.0f;
+  uniforms.modelMatrix = glm::translate(glm::mat4(1), glm::vec3(x, 0.2, 0));
+  ubo.update();
+
   const vk::RenderPassBeginInfo renderPassBeginInfo(*vc.renderPass, *frameDrawer.framebuffer, vk::Rect2D{ {0,0}, vc.swapchainExtent }, {});
 
   const vk::raii::CommandBuffer& cmdBuf = frameDrawer.commandBuffer;
