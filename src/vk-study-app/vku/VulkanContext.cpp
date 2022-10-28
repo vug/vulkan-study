@@ -168,10 +168,10 @@ namespace vku {
     attachmentDescriptions.emplace_back(vk::AttachmentDescriptionFlags(),
       swapchainDepthFormat,
       swapchainSamples,
-      vk::AttachmentLoadOp::eDontCare,
-      vk::AttachmentStoreOp::eDontCare,
       vk::AttachmentLoadOp::eLoad,
       vk::AttachmentStoreOp::eStore,
+      vk::AttachmentLoadOp::eDontCare, // These are for stencil hence we don't care
+      vk::AttachmentStoreOp::eDontCare,
       vk::ImageLayout::eDepthStencilAttachmentOptimal,
       vk::ImageLayout::eDepthStencilAttachmentOptimal);
     vk::AttachmentReference depthReference(1, vk::ImageLayout::eDepthStencilAttachmentOptimal);
