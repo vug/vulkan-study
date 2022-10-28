@@ -16,6 +16,7 @@ add_executable(${APP}
   studies/02-FirstStudy.hpp studies/02-FirstStudy.cpp
   studies/02b-SecondStudy.hpp studies/02b-SecondStudy.cpp
   studies/03-Vertices.hpp studies/03-Vertices.cpp
+  studies/04-Uniforms.hpp studies/04-Uniforms.cpp
 )
 
 # CMake can find VulkanSDK if it was first installed from https://www.lunarg.com/vulkan-sdk/ 
