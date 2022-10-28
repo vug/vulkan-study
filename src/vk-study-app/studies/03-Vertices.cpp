@@ -171,17 +171,7 @@ void main()
   );
 
   pipeline = std::make_unique<vk::raii::Pipeline>(vc.device, nullptr, graphicsPipelineCreateInfo);
-  switch (pipeline->getConstructorSuccessCode())
-  {
-  case vk::Result::eSuccess:
-    std::cout << "Pipeline compilation successful\n";
-    break;
-  case vk::Result::ePipelineCompileRequiredEXT:
-    std::cerr << "Pipeline compilation failed(?)";
-    break;
-  default: std::unreachable();
-  }
-
+  assert(pipeline->getConstructorSuccessCode() == vk::Result::eSuccess);
 }
 void VerticesStudy::recordCommandBuffer(const vku::VulkanContext& vc, const vku::FrameDrawer& frameDrawer) {
   const vk::RenderPassBeginInfo renderPassBeginInfo(*vc.renderPass, *frameDrawer.framebuffer, vk::Rect2D{ {0,0}, vc.swapchainExtent }, {});

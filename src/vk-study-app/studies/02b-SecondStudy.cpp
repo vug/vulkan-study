@@ -119,16 +119,7 @@ void main () { outColor = vec4 (fragColor, 1.0); }
   );
 
   pipeline = std::make_unique<vk::raii::Pipeline>(vc.device, nullptr, graphicsPipelineCreateInfo);
-  switch (pipeline->getConstructorSuccessCode())
-  {
-  case vk::Result::eSuccess:
-    std::cout << "Pipeline compilation successful\n";
-    break;
-  case vk::Result::ePipelineCompileRequiredEXT:
-    std::cerr << "Pipeline compilation failed(?)";
-    break;
-  default: std::unreachable();
-  }
+  assert(pipeline->getConstructorSuccessCode() == vk::Result::eSuccess);
 }
 
 void SecondStudy::recordCommandBuffer(const vku::VulkanContext& vc, const vku::FrameDrawer& frameDrawer) {
