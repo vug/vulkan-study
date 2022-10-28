@@ -5,11 +5,13 @@ project(VulkanStudy
   DESCRIPTION "Studying Vulkan by writing small apps")
 
 # dependencies
-# GLFW
+# GLFW https://github.com/glfw/glfw
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 add_subdirectory(dependencies/glfw)
+# GLM https://github.com/g-truc/glm
+add_subdirectory(dependencies/glm)
 # vk-bootstrap
 add_subdirectory(dependencies/vk-bootstrap)
 
