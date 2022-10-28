@@ -2,6 +2,8 @@
 
 #include "../vku/SpirvHelper.hpp"
 
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <vulkan/vulkan_raii.hpp>
 
@@ -9,24 +11,18 @@
 #include <string>
 
 struct Vertex {
-  float pos[3];
-  float col[3];
+  glm::vec3 position;
+  glm::vec3 color;
 };
 
 void UniformsStudy::onInit(const vku::AppSettings appSettings, const vku::VulkanContext& vc) {
   //---- Vertex Data
-  std::vector<Vertex> vertexBuffer = { { { 1.0f, 1.0f, 0.0f },
-                                         { 1.0f,
-                                           0.0f,
-                                           0.0f } },
-                                       { { -1.0f, 1.0f, 0.0f },
-                                         { 0.0f,
-                                           1.0f,
-                                           0.0f } },
-                                       { { 0.0f, -1.0f, 0.0f },
-                                         { 0.0f,
-                                           0.0f,
-                                           1.0f } } };
+  std::vector<Vertex> vertexBuffer = { { {  1.0f,  1.0f, 0.0f },
+                                         {  1.0f,  0.0f, 0.0f } },
+                                       { { -1.0f,  1.0f, 0.0f },
+                                         {  0.0f,  1.0f, 0.0f } },
+                                       { {  0.0f, -1.0f, 0.0f },
+                                         {  0.0f,  0.0f, 1.0f } } };
   uint32_t vertexBufferSize = (uint32_t)(vertexBuffer.size() * sizeof(Vertex));
 
   std::vector<uint32_t> indexBuffer = { 0, 1, 2 };
@@ -37,14 +33,11 @@ void UniformsStudy::onInit(const vku::AppSettings appSettings, const vku::Vulkan
   indices = vku::Buffer(vc, indexBuffer.data(), indexBufferSize, vk::BufferUsageFlagBits::eIndexBuffer);
 
   //---- Uniform Data
-  // Update matrices
-  uniforms.projectionMatrix = glm::perspective(glm::radians(60.0f), (float)800 / (float)800, 0.1f, 256.0f);
-  const float zoom{ 2.5f };
-  auto vec = glm::vec3(0.0f, 0.0f, zoom);
-  uniforms.viewMatrix = glm::translate(glm::mat4(1), vec);
-  uniforms.modelMatrix = glm::translate(glm::mat4(1), glm::vec3(0.1, 0.2, 0));
-
+  // create UBO and connect it to a Uniforms instance
   ubo = vku::UniformBuffer(vc, &uniforms, sizeof(Uniforms));
+  uniforms.projectionMatrix = glm::perspective(glm::radians(45.0f), (float)800 / (float)800, 0.1f, 256.0f);
+  // will set view and model matrices at every frame
+
 
   //---- Descriptor Set Layout
   vk::DescriptorSetLayoutBinding layoutBinding = { 0, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eVertex };
@@ -92,8 +85,7 @@ out gl_PerVertex
 void main() 
 {
 	outColor = inColor;
-	//gl_Position = ubo.projectionMatrix * ubo.viewMatrix * ubo.modelMatrix * vec4(inPos.xyz, 1.0);
-  gl_Position = ubo.modelMatrix * vec4(inPos.xyz, 1.0);
+	gl_Position = ubo.projectionMatrix * ubo.viewMatrix * ubo.modelMatrix * vec4(inPos.xyz, 1.0);
 }
 )";
 
@@ -137,7 +129,7 @@ void main()
     false,                        // depthClampEnable
     false,                        // rasterizerDiscardEnable
     vk::PolygonMode::eFill,       // polygonMode
-    vk::CullModeFlagBits::eBack,  // cullMode
+    vk::CullModeFlagBits::eNone,  // cullMode
     vk::FrontFace::eClockwise,    // frontFace
     false,                        // depthBiasEnable
     0.0f,                         // depthBiasConstantFactor
@@ -204,11 +196,14 @@ void main()
 }
 
 void UniformsStudy::recordCommandBuffer(const vku::VulkanContext& vc, const vku::FrameDrawer& frameDrawer) {
-  static float x = 0.0f;
-  x += 0.001f;
-  if (x > 1.0f) x = -1.0f;
-  uniforms.modelMatrix = glm::translate(glm::mat4(1), glm::vec3(x, 0.2, 0));
-  ubo.update();
+  static float t = 0.0f;
+  const glm::vec3 up = { 0, 1, 0 };
+  const float r{ 5.0f };
+  uniforms.viewMatrix = glm::lookAt(glm::vec3(r * std::cos(t), 0, r * std::sin(t)), glm::vec3(0, 0, 0), up);
+  t += 0.001f;
+
+  uniforms.modelMatrix = glm::translate(glm::mat4(1), glm::vec3(0, std::sin(t) * 0.5f, 0));
+  ubo.update(); // don't forget to call update after uniform data changes
 
   const vk::RenderPassBeginInfo renderPassBeginInfo(*vc.renderPass, *frameDrawer.framebuffer, vk::Rect2D{ {0,0}, vc.swapchainExtent }, {});
 

@@ -10,7 +10,7 @@ namespace vku {
   StudyRunner::StudyRunner() :
     appSettings({
       .name = "A Vulkan Study Application",
-      .hasPresentDepth = true,
+      .hasPresentDepth = false,
     }),
     window(appSettings),
     vc(window, appSettings)
@@ -25,7 +25,6 @@ namespace vku {
       study->onInit(appSettings, vc);
     }
       
-
     //---- Main Loop
     while (!window.shouldClose()) {
       window.pollEvents();
