@@ -63,6 +63,7 @@ namespace vku {
     vk::raii::CommandBuffers commandBuffers;
     // for copying buffers from host to device etc
     vk::raii::CommandBuffer copyCommandBuffer;
+    vk::raii::DescriptorPool descriptorPool;
   private:
     //---- Synchronization
     // A semaphore is used to add order between queue operations on the GPU
@@ -87,6 +88,7 @@ namespace vku {
     std::vector<vk::raii::ImageView> constructSwapchainImageViews();
     vk::raii::RenderPass constructRenderPass();
     std::vector<vk::raii::Framebuffer> constructFramebuffers();
+    vk::raii::DescriptorPool constructDescriptorPool();
     // To be called when app window is resized
     void recreateSwapchain();
 

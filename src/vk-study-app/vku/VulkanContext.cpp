@@ -32,7 +32,8 @@ namespace vku {
     copyCommandBuffer([&]() {
       vk::raii::CommandBuffers copyCmdBuffers = vk::raii::CommandBuffers(device, vk::CommandBufferAllocateInfo(*commandPool, vk::CommandBufferLevel::ePrimary, 1));
       return std::move(copyCmdBuffers[0]);
-    }())
+    }()),
+    descriptorPool(constructDescriptorPool())
   {
     for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
       // (Semaphores begin their lifetime at "unsignaled" state)
@@ -187,6 +188,21 @@ namespace vku {
       fbs.push_back(vk::raii::Framebuffer(device, framebufferCreateInfo));
     }
     return fbs; // probably unneccessary copy
+  }
+
+  vk::raii::DescriptorPool VulkanContext::constructDescriptorPool() {
+    // This example only uses one descriptor type (uniform buffer) and only
+    // requests one descriptor of this type
+    const uint32_t numberOfUniformBuffers = 1;
+    std::array<vk::DescriptorPoolSize, 1> typeCounts = { vk::DescriptorPoolSize{vk::DescriptorType::eUniformBuffer, numberOfUniformBuffers} };
+    // For additional types you need to add new entries in the type count list
+    // E.g. for two combined image samplers :
+    // typeCounts[1].type = vk::DescriptorType::eCombinedImageSampler;
+    // typeCounts[1].descriptorCount = 2;
+
+    const uint32_t maxNumofRequestableDescriptorSets = 1;
+    vk::DescriptorPoolCreateInfo descriptorPoolInfo = { {}, maxNumofRequestableDescriptorSets, typeCounts };
+    return device.createDescriptorPool(descriptorPoolInfo);
   }
 
   void VulkanContext::recreateSwapchain() {
