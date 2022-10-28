@@ -196,6 +196,7 @@ namespace vku {
 
     framebuffers.clear();
     swapchainImageViews.clear();
+    depthImages.clear();
     swapchain.clear();
 
     swapchain = constructSwapchain();
