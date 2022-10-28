@@ -34,6 +34,13 @@ namespace vku {
         study->recordCommandBuffer(vc, frameDrawer);
         // TODO: might need to add some synchronization here. If layer order does not look correct uncomment below line.
         //vku::setImageLayout(frameDrawer.commandBuffer, frameDrawer.image, vc.swapchainColorFormat, vk::ImageLayout::eColorAttachmentOptimal, vk::ImageLayout::eColorAttachmentOptimal);
+        // or
+        //vkCmdPipelineBarrier(
+        //  *frameDrawer.commandBuffer, 
+        //  VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 
+        //  VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 
+        //  {},
+        //  0, nullptr, 0, nullptr, 0, nullptr);
       }
       vc.drawFrameEnd(frameDrawer);
     }
