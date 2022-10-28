@@ -4,6 +4,8 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
+#include <string>
+
 namespace vku {
   class FrameDrawer;
 
@@ -11,6 +13,7 @@ namespace vku {
   public:
     virtual ~Study() = default;
 
+    inline virtual std::string getName() = 0;
     virtual void onInit(const vku::AppSettings appSettings, const vku::VulkanContext& vc) = 0;
     //virtual void onRender(const VulkanContext& vc) = 0;
     virtual void recordCommandBuffer(const VulkanContext& vc, const FrameDrawer& frameDrawer) = 0;

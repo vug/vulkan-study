@@ -16,6 +16,7 @@ private:
 public:
   virtual ~VerticesStudy() = default;
 
+  inline std::string getName() final { return "VertexBuffer upload to GPU, bind to pipeline/shader."; }
   void onInit(const vku::AppSettings appSettings, const vku::VulkanContext& vc) final;
   void recordCommandBuffer(const vku::VulkanContext& vc, const vku::FrameDrawer& frameDrawer) final;
   void onDeinit() final;

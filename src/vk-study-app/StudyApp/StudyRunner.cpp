@@ -20,8 +20,11 @@ namespace vku {
     std::cout << "Hello, Vulkan!\n";
 
     vku::spirv::init();
-    for (auto& study : studies)
+    for (auto& study : studies) {
+      std::cout << std::format("Loading Study: '{}'\n", study->getName());;
       study->onInit(appSettings, vc);
+    }
+      
 
     //---- Main Loop
     while (!window.shouldClose()) {
