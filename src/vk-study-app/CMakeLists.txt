@@ -50,6 +50,7 @@ message("SPIRV-Tools-Opt_Library set to: ${SPIRV-Tools-Opt_Library}")
 target_link_libraries(${APP} PRIVATE
 	glfw
   glm::glm
+  vivid
 	vk-bootstrap::vk-bootstrap
   Vulkan::Vulkan # Makes Vulkan headers such as <vulkan/vulkan.hpp> or <vulkan/vulkan_raii.hpp> available
   Vulkan::glslang

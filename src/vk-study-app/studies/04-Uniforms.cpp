@@ -5,6 +5,7 @@
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <vivid/vivid.h>
 #include <vulkan/vulkan_raii.hpp>
 
 #include <iostream>
@@ -16,6 +17,7 @@ struct Vertex {
 };
 
 void UniformsStudy::onInit(const vku::AppSettings appSettings, const vku::VulkanContext& vc) {
+  std::cout << vivid::ansi::lightBlue << "Hi from Vivid at UniformsStudy" << vivid::ansi::reset << std::endl;
   //---- Vertex Data
   std::vector<Vertex> vertices = { { {  1.0f,  1.0f, 0.0f },
                                      {  1.0f,  0.0f, 0.0f } },

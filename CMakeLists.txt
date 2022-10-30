@@ -12,6 +12,8 @@ set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 add_subdirectory(dependencies/glfw)
 # GLM https://github.com/g-truc/glm
 add_subdirectory(dependencies/glm)
+# vivid https://github.com/gurki/vivid
+add_subdirectory(dependencies/vivid)
 # vk-bootstrap
 add_subdirectory(dependencies/vk-bootstrap)
 
