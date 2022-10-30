@@ -7,3 +7,6 @@
 [submodule "dependencies/glm"]
 	path = dependencies/glm
 	url = https://github.com/g-truc/glm.git
+[submodule "dependencies/vivid"]
+	path = dependencies/vivid
+	url = https://github.com/gurki/vivid.git
