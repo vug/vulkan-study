@@ -13,6 +13,7 @@ add_subdirectory(dependencies/glfw)
 # GLM https://github.com/g-truc/glm
 add_subdirectory(dependencies/glm)
 # vivid https://github.com/gurki/vivid
+set(FETCHCONTENT_SOURCE_DIR_GLM "dependencies/glm" CACHE STRING "" FORCE) # Throus a warning about relative directory unsafe. Ignore.
 add_subdirectory(dependencies/vivid)
 # vk-bootstrap
 add_subdirectory(dependencies/vk-bootstrap)
