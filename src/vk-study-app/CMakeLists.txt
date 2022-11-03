@@ -9,6 +9,7 @@ add_executable(${APP}
   vku/Image.hpp vku/Image.cpp
   vku/Buffer.hpp vku/Buffer.cpp
   vku/UniformBuffer.hpp vku/UniformBuffer.cpp
+  vku/Model.hpp vku/Model.cpp
   StudyApp/AppSettings.hpp
   StudyApp/StudyRunner.hpp StudyApp/StudyRunner.cpp
   StudyApp/Study.hpp 
