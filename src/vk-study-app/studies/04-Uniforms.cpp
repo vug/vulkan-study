@@ -1,5 +1,6 @@
 #include "04-Uniforms.hpp"
 
+#include "../vku/Model.hpp"
 #include "../vku/SpirvHelper.hpp"
 
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -9,26 +10,19 @@
 #include <vulkan/vulkan_raii.hpp>
 
 #include <iostream>
+#include <numeric>
 #include <string>
-
-struct Vertex {
-  glm::vec3 position;
-  glm::vec3 color;
-};
 
 void UniformsStudy::onInit(const vku::AppSettings appSettings, const vku::VulkanContext& vc) {
   std::cout << vivid::ansi::lightBlue << "Hi from Vivid at UniformsStudy" << vivid::ansi::reset << std::endl;
   //---- Vertex Data
   const vivid::ColorMap cmap = vivid::ColorMap::Preset::Viridis;
-  std::vector<Vertex> vertices = { 
-    { {  1.0f,  1.0f, 0.0f }, cmap.at(0.0f) },
-    { { -1.0f,  1.0f, 0.0f }, cmap.at(0.5f) },
-    { {  0.0f, -1.0f, 0.0f }, cmap.at(1.0f) },
-  };
-  uint32_t vboSizeBytes = (uint32_t)(vertices.size() * sizeof(Vertex));
+  std::vector<vku::DefaultVertex> vertices = vku::makeBox({ 0.6f, 0.9f, 1.5f });
+  uint32_t vboSizeBytes = (uint32_t)(vertices.size() * sizeof(vku::DefaultVertex));
   vbo = vku::Buffer(vc, vertices.data(), vboSizeBytes, vk::BufferUsageFlagBits::eVertexBuffer);
 
-  std::vector<uint32_t> indices = { 0, 1, 2 };
+  std::vector<uint32_t> indices(vertices.size());
+  std::iota(indices.begin(), indices.end(), 0);
   uint32_t iboSizeBytes = (uint32_t)(indices.size() * sizeof(uint32_t));
   indexCount = (uint32_t)indices.size();
   ibo = vku::Buffer(vc, indices.data(), iboSizeBytes, vk::BufferUsageFlagBits::eIndexBuffer);
@@ -65,7 +59,9 @@ void UniformsStudy::onInit(const vku::AppSettings appSettings, const vku::Vulkan
 #extension GL_ARB_shading_language_420pack : enable
 
 layout (location = 0) in vec3 inPos;
-layout (location = 1) in vec3 inColor;
+layout (location = 1) in vec2 inTexCoord;
+layout (location = 2) in vec3 inNormal;
+layout (location = 3) in vec4 inColor;
 
 layout (binding = 0) uniform UBO 
 {
@@ -74,7 +70,7 @@ layout (binding = 0) uniform UBO
 	mat4 viewMatrix;
 } ubo;
 
-layout (location = 0) out vec3 outColor;
+layout (location = 0) out vec4 outColor;
 
 out gl_PerVertex 
 {
@@ -95,13 +91,13 @@ void main()
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
 
-layout (location = 0) in vec3 inColor;
+layout (location = 0) in vec4 inColor;
 
 layout (location = 0) out vec4 outFragColor;
 
 void main() 
 {
-  outFragColor = vec4(inColor, 1.0);
+  outFragColor = inColor;
 }
 )";
 
@@ -112,12 +108,7 @@ void main()
     vk::PipelineShaderStageCreateInfo({}, vk::ShaderStageFlagBits::eFragment, *fragmentShader, "main")
   };
 
-  // No vertexBindingDescription and no vertexAttributeDescriptions for this example
-  std::vector<vk::VertexInputBindingDescription> bindingDescs = { { 0, sizeof(Vertex), vk::VertexInputRate::eVertex } };
-  std::vector<vk::VertexInputAttributeDescription> attrDescs(2);
-  attrDescs[0] = { 0, 0, vk::Format::eR32G32B32Sfloat, 0 };
-  attrDescs[1] = { 1, 0, vk::Format::eR32G32B32Sfloat, sizeof(float) * 3 };
-  vk::PipelineVertexInputStateCreateInfo vertexInputStateCreateInfo({}, bindingDescs, attrDescs);
+  vku::VertexAttributesInfo vertexAttributesInfo = vku::getVertexAttributesInfo();
 
   vk::PipelineInputAssemblyStateCreateInfo inputAssemblyStateCreateInfo({}, vk::PrimitiveTopology::eTriangleList, false);
 
@@ -177,7 +168,7 @@ void main()
   vk::GraphicsPipelineCreateInfo graphicsPipelineCreateInfo(
     {},
     shaderStageCreateInfos,
-    &vertexInputStateCreateInfo,
+    &vertexAttributesInfo.createInfo,
     &inputAssemblyStateCreateInfo,
     nullptr, // *vk::PipelineTessellationStateCreateInfo
     &viewportStateCreateInfo,
