@@ -27,7 +27,7 @@ namespace vku {
   };
 
   std::vector<DefaultVertex> makeBox(const glm::vec3&);
-  //std::vector<BasicVertex> GenerateTorus(float outerRadius, int outerSegments, float innerRadius, int innerSegments); dimensions);
+  std::vector<DefaultVertex> makeTorus(float outerRadius, int outerSegments, float innerRadius, int innerSegments);
 
   VertexAttributesInfo getVertexAttributesInfo();
 }

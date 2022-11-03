@@ -1,8 +1,10 @@
 #include "Model.hpp"
 
+#include <glm/geometric.hpp>
 #include <vulkan/vulkan.hpp>
 
 #include <array>
+#include <numbers>
 
 namespace vku {
   std::vector<DefaultVertex> makeBox(const glm::vec3& dimensions) {
@@ -48,6 +50,49 @@ namespace vku {
         vertices.emplace_back(pv.position, uvs[ix], face.normal, pv.color);
       }
     }
+    return vertices;
+  }
+
+  std::vector<DefaultVertex> makeTorus(float outerRadius, int outerSegments, float innerRadius, int innerSegments) {
+    std::vector<DefaultVertex> points;
+    for (int i = 0; i < outerSegments; i++) {
+      const float u = (float)i / (outerSegments - 1);
+      const float outerAngle = 2.f * std::numbers::pi * u;
+      const glm::vec3 innerCenter = glm::vec3{ cosf(outerAngle), sinf(outerAngle), 0.0f } * outerRadius;
+      for (int j = 0; j < innerSegments; j++) {
+        const float v = (float)j / (innerSegments - 1);
+        const float innerAngle = 2.f * std::numbers::pi * v;
+        const glm::vec3 innerPos = glm::vec3{ cosf(innerAngle) * cosf(outerAngle),  cosf(innerAngle) * sinf(outerAngle), sinf(innerAngle) } *innerRadius;
+
+        const glm::vec3 pos = innerCenter + innerPos;
+        const glm::vec3 norm = glm::normalize(innerPos);
+        const glm::vec2 uv = { u, v };
+        const float pattern = static_cast<float>((i % 2) ^ (j % 2));
+        const glm::vec4 col = glm::vec4{ 1.0, 1.0, 0.0, 1.0 } * pattern + glm::vec4{ 0.0, 1.0, 1.0, 1.0 } * (1.0f - pattern);
+
+        points.emplace_back(DefaultVertex{ pos, uv, norm, col });
+      }
+    }
+
+    std::vector<DefaultVertex> vertices;
+    for (size_t i = 0; i < outerSegments; i++) {
+      for (size_t j = 0; j < innerSegments; j++) {
+        const size_t i1 = (i + 1) % outerSegments;
+        const size_t j1 = (j + 1) % innerSegments;
+        const DefaultVertex& p1 = points[i * innerSegments + j];
+        const DefaultVertex& p2 = points[i * innerSegments + j1];
+        const DefaultVertex& p3 = points[i1 * innerSegments + j];
+        const DefaultVertex& p4 = points[i1 * innerSegments + j1];
+        vertices.push_back(p3); // triangle-1
+        vertices.push_back(p2);
+        vertices.push_back(p1);
+
+        vertices.push_back(p2); // triangle-2
+        vertices.push_back(p3);
+        vertices.push_back(p4);
+      }
+    }
+
     return vertices;
   }
 
