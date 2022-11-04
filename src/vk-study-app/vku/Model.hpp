@@ -16,6 +16,11 @@ namespace vku {
     // custom1 (glm::vec4), custom2 (glm::ivec4)
   };
 
+  struct MeshData {
+    std::vector<DefaultVertex> vertices;
+    std::vector<uint32_t> indices;
+  };
+
   class VertexAttributesInfo {
   private:
     std::vector<vk::VertexInputBindingDescription> bindingDescriptions;
@@ -26,8 +31,8 @@ namespace vku {
     VertexAttributesInfo(std::vector<vk::VertexInputBindingDescription>& bindingDescs, std::vector<vk::VertexInputAttributeDescription>& attrDescs);
   };
 
-  std::vector<DefaultVertex> makeQuad(const glm::vec2& dimensions);
-  std::vector<DefaultVertex> makeBox(const glm::vec3& dimensions);
+  MeshData makeQuad(const glm::vec2& dimensions);
+  MeshData makeBox(const glm::vec3& dimensions);
   std::vector<DefaultVertex> makeTorus(float outerRadius, int outerSegments, float innerRadius, int innerSegments);
 
   VertexAttributesInfo getVertexAttributesInfo();

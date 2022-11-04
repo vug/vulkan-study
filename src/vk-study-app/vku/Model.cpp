@@ -5,9 +5,10 @@
 
 #include <array>
 #include <numbers>
+#include <numeric>
 
 namespace vku {
-  std::vector<DefaultVertex> makeQuad(const glm::vec2& dimensions) {
+  MeshData makeQuad(const glm::vec2& dimensions) {
     const float halfWidth = .5f * dimensions.x;
     const float halfHeight = .5f * dimensions.y;
 
@@ -22,13 +23,16 @@ namespace vku {
     const DefaultVertex bottomLeft{ .position = {-halfWidth, -halfHeight, 0}, .texCoord = {0, 0}, .normal = normal, .color = green };
     const DefaultVertex bottomRight{ .position = {halfWidth, -halfHeight, 0}, .texCoord = {1, 0}, .normal = normal, .color = blue };
     const DefaultVertex topRight{ .position = {halfWidth, halfHeight, 0}, .texCoord = {1, 1}, .normal = normal, .color = white };
-    return { 
-      topLeft, bottomLeft, bottomRight,
-      topLeft, bottomRight, topRight,
+    return MeshData{
+      .vertices = { topLeft, bottomLeft, bottomRight, topRight },
+      .indices = {
+        0, 1, 2,
+        0, 2, 3,
+      }
     };
   }
 
-  std::vector<DefaultVertex> makeBox(const glm::vec3& dimensions) {
+  MeshData makeBox(const glm::vec3& dimensions) {
     const glm::vec3 halfDim = dimensions * 0.5f;
     const float width = halfDim.x, height = halfDim.y, depth = halfDim.z;
 
@@ -60,18 +64,22 @@ namespace vku {
     const Face fUp = { { p010, p011, p111, p110 }, nUp };
     const Face fDown = { { p100, p101, p001, p000 }, nDown };
 
-    std::vector<DefaultVertex> vertices;
-    const int indices[] = { 0, 1, 2,    // triangle 1 of quad
-                            0, 2, 3, }; // triangle 2 of quad
+    MeshData meshData;
+    const int faceIndices[] = { 0, 1, 2,    // triangle 1 of quad
+                                0, 2, 3, }; // triangle 2 of quad
     const glm::vec2 uvs[] = { {0.0f, 0.0f}, {1.0f, 0.0f}, {1.0f, 1.0f}, {0.0f, 1.0f} };
     const Face faces[] = { fBack, fFront, fLeft, fRight, fUp, fDown };
     for (auto& face : faces) {
-      for (int ix : indices) {
+      for (int ix : faceIndices) {
         const PartialVertex& pv = face.corners[ix];
-        vertices.emplace_back(pv.position, uvs[ix], face.normal, pv.color);
+        meshData.vertices.emplace_back(pv.position, uvs[ix], face.normal, pv.color);
       }
     }
-    return vertices;
+
+    // Since all 3 vertices at the same corner have different normals we couldn't reuse vertices with given DefaultVertex schema
+    meshData.indices.resize(meshData.vertices.size());
+    std::iota(meshData.indices.begin(), meshData.indices.end(), 0);
+    return meshData;
   }
 
   std::vector<DefaultVertex> makeTorus(float outerRadius, int outerSegments, float innerRadius, int innerSegments) {

@@ -10,21 +10,22 @@
 #include <vulkan/vulkan_raii.hpp>
 
 #include <iostream>
-#include <numeric>
 #include <string>
 
 void UniformsStudy::onInit(const vku::AppSettings appSettings, const vku::VulkanContext& vc) {
   std::cout << vivid::ansi::lightBlue << "Hi from Vivid at UniformsStudy" << vivid::ansi::reset << std::endl;
   //---- Vertex Data
   const vivid::ColorMap cmap = vivid::ColorMap::Preset::Viridis;
-  std::vector<vku::DefaultVertex> vertices = vku::makeBox({ 0.6f, 0.9f, 1.5f });
+  vku::MeshData boxMeshData = vku::makeBox({ 0.6f, 0.9f, 1.5f });
   //std::vector<vku::DefaultVertex> vertices = vku::makeTorus(1.f, 17, .5f, 6);
-  //std::vector<vku::DefaultVertex> vertices = vku::makeQuad({ 1, 1 });
+  vku::MeshData quadMeshData = vku::makeQuad({ 1, 1 });
+  
+  std::vector<vku::DefaultVertex>& vertices = boxMeshData.vertices;
+  std::vector<uint32_t>& indices = boxMeshData.indices;
+
   uint32_t vboSizeBytes = (uint32_t)(vertices.size() * sizeof(vku::DefaultVertex));
   vbo = vku::Buffer(vc, vertices.data(), vboSizeBytes, vk::BufferUsageFlagBits::eVertexBuffer);
 
-  std::vector<uint32_t> indices(vertices.size());
-  std::iota(indices.begin(), indices.end(), 0);
   uint32_t iboSizeBytes = (uint32_t)(indices.size() * sizeof(uint32_t));
   indexCount = (uint32_t)indices.size();
   ibo = vku::Buffer(vc, indices.data(), iboSizeBytes, vk::BufferUsageFlagBits::eIndexBuffer);
