@@ -250,7 +250,9 @@ namespace vku {
     cmdBuf.reset(); // clean up, don't reuse existing commands
 
     cmdBuf.begin(vk::CommandBufferBeginInfo{});
-    const auto viewport = vk::Viewport{ 0.f, 0.f, static_cast<float>(swapchainExtent.width), static_cast<float>(swapchainExtent.height), 0.f, 1.f };
+    // By default +y is down in Vulkan. To make it consistent with OpenGL flip y-direction by giving a negative height value to the viewport
+    // Also need to shift the origin upwards accordingly. See https://www.saschawillems.de/blog/2019/03/29/flipping-the-vulkan-viewport/ 
+    const auto viewport = vk::Viewport{ 0.f, static_cast<float>(swapchainExtent.height), static_cast<float>(swapchainExtent.width), -static_cast<float>(swapchainExtent.height), 0.f, 1.f };
     cmdBuf.setViewport(0, viewport);
     const auto renderArea = vk::Rect2D{ {0,0}, swapchainExtent };
     cmdBuf.setScissor(0, renderArea);

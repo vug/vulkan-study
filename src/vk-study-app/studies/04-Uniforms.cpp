@@ -17,8 +17,9 @@ void UniformsStudy::onInit(const vku::AppSettings appSettings, const vku::Vulkan
   std::cout << vivid::ansi::lightBlue << "Hi from Vivid at UniformsStudy" << vivid::ansi::reset << std::endl;
   //---- Vertex Data
   const vivid::ColorMap cmap = vivid::ColorMap::Preset::Viridis;
-  //std::vector<vku::DefaultVertex> vertices = vku::makeBox({ 0.6f, 0.9f, 1.5f });
-  std::vector<vku::DefaultVertex> vertices = vku::makeTorus(1.f, 17, .5f, 6);
+  std::vector<vku::DefaultVertex> vertices = vku::makeBox({ 0.6f, 0.9f, 1.5f });
+  //std::vector<vku::DefaultVertex> vertices = vku::makeTorus(1.f, 17, .5f, 6);
+  //std::vector<vku::DefaultVertex> vertices = vku::makeQuad({ 1, 1 });
   uint32_t vboSizeBytes = (uint32_t)(vertices.size() * sizeof(vku::DefaultVertex));
   vbo = vku::Buffer(vc, vertices.data(), vboSizeBytes, vk::BufferUsageFlagBits::eVertexBuffer);
 
@@ -121,8 +122,8 @@ void main()
     false,                        // depthClampEnable
     false,                        // rasterizerDiscardEnable
     vk::PolygonMode::eFill,       // polygonMode
-    vk::CullModeFlagBits::eNone,  // cullMode
-    vk::FrontFace::eClockwise,    // frontFace
+    vk::CullModeFlagBits::eBack,  // cullMode
+    vk::FrontFace::eCounterClockwise,    // frontFace
     false,                        // depthBiasEnable
     0.0f,                         // depthBiasConstantFactor
     0.0f,                         // depthBiasClamp
