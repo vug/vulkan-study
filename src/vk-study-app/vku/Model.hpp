@@ -26,7 +26,8 @@ namespace vku {
     VertexAttributesInfo(std::vector<vk::VertexInputBindingDescription>& bindingDescs, std::vector<vk::VertexInputAttributeDescription>& attrDescs);
   };
 
-  std::vector<DefaultVertex> makeBox(const glm::vec3&);
+  std::vector<DefaultVertex> makeQuad(const glm::vec2& dimensions);
+  std::vector<DefaultVertex> makeBox(const glm::vec3& dimensions);
   std::vector<DefaultVertex> makeTorus(float outerRadius, int outerSegments, float innerRadius, int innerSegments);
 
   VertexAttributesInfo getVertexAttributesInfo();

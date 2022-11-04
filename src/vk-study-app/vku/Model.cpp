@@ -7,6 +7,27 @@
 #include <numbers>
 
 namespace vku {
+  std::vector<DefaultVertex> makeQuad(const glm::vec2& dimensions) {
+    const float halfWidth = .5f * dimensions.x;
+    const float halfHeight = .5f * dimensions.y;
+
+    const glm::vec3 normal{ 0, 0, -1 };
+
+    const glm::vec4 red{ 1, 0, 0, 1 };
+    const glm::vec4 green{ 0, 1, 0, 1 };
+    const glm::vec4 blue{ 0, 0, 1, 1 };
+    const glm::vec4 white{ 1, 1, 1, 1 };
+
+    const DefaultVertex topLeft{ .position = {-halfWidth, halfHeight, 0}, .texCoord = {0, 1}, .normal = normal, .color = red };
+    const DefaultVertex bottomLeft{ .position = {-halfWidth, -halfHeight, 0}, .texCoord = {0, 0}, .normal = normal, .color = green };
+    const DefaultVertex bottomRight{ .position = {halfWidth, -halfHeight, 0}, .texCoord = {1, 0}, .normal = normal, .color = blue };
+    const DefaultVertex topRight{ .position = {halfWidth, halfHeight, 0}, .texCoord = {1, 1}, .normal = normal, .color = white };
+    return { 
+      topLeft, bottomLeft, bottomRight,
+      topLeft, bottomRight, topRight,
+    };
+  }
+
   std::vector<DefaultVertex> makeBox(const glm::vec3& dimensions) {
     const glm::vec3 halfDim = dimensions * 0.5f;
     const float width = halfDim.x, height = halfDim.y, depth = halfDim.z;
