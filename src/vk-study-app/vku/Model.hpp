@@ -33,7 +33,7 @@ namespace vku {
 
   MeshData makeQuad(const glm::vec2& dimensions);
   MeshData makeBox(const glm::vec3& dimensions);
-  std::vector<DefaultVertex> makeTorus(float outerRadius, int outerSegments, float innerRadius, int innerSegments);
+  MeshData makeTorus(float outerRadius, int outerSegments, float innerRadius, int innerSegments);
 
   VertexAttributesInfo getVertexAttributesInfo();
 }

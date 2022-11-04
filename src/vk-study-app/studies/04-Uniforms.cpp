@@ -17,7 +17,7 @@ void UniformsStudy::onInit(const vku::AppSettings appSettings, const vku::Vulkan
   //---- Vertex Data
   const vivid::ColorMap cmap = vivid::ColorMap::Preset::Viridis;
   vku::MeshData boxMeshData = vku::makeBox({ 0.6f, 0.9f, 1.5f });
-  //std::vector<vku::DefaultVertex> vertices = vku::makeTorus(1.f, 17, .5f, 6);
+  vku::MeshData torusMeshData = vku::makeTorus(1.f, 17, .5f, 6);
   vku::MeshData quadMeshData = vku::makeQuad({ 1, 1 });
   
   std::vector<vku::DefaultVertex>& vertices = boxMeshData.vertices;

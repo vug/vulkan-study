@@ -82,8 +82,8 @@ namespace vku {
     return meshData;
   }
 
-  std::vector<DefaultVertex> makeTorus(float outerRadius, int outerSegments, float innerRadius, int innerSegments) {
-    std::vector<DefaultVertex> points;
+  MeshData makeTorus(float outerRadius, int outerSegments, float innerRadius, int innerSegments) {
+    MeshData meshData;
     for (int i = 0; i < outerSegments; i++) {
       const float u = (float)i / (outerSegments - 1);
       const float outerAngle = 2.f * std::numbers::pi * u;
@@ -99,30 +99,25 @@ namespace vku {
         const float pattern = static_cast<float>((i % 2) ^ (j % 2));
         const glm::vec4 col = glm::vec4{ 1.0, 1.0, 0.0, 1.0 } * pattern + glm::vec4{ 0.0, 1.0, 1.0, 1.0 } * (1.0f - pattern);
 
-        points.emplace_back(DefaultVertex{ pos, uv, norm, col });
+        meshData.vertices.emplace_back(DefaultVertex{ pos, uv, norm, col });
       }
     }
 
-    std::vector<DefaultVertex> vertices;
     for (size_t i = 0; i < outerSegments; i++) {
       for (size_t j = 0; j < innerSegments; j++) {
         const size_t i1 = (i + 1) % outerSegments;
         const size_t j1 = (j + 1) % innerSegments;
-        const DefaultVertex& p1 = points[i * innerSegments + j];
-        const DefaultVertex& p2 = points[i * innerSegments + j1];
-        const DefaultVertex& p3 = points[i1 * innerSegments + j];
-        const DefaultVertex& p4 = points[i1 * innerSegments + j1];
-        vertices.push_back(p3); // triangle-1
-        vertices.push_back(p2);
-        vertices.push_back(p1);
+        const uint32_t ix1 = i * innerSegments + j;
+        const uint32_t ix2 = i * innerSegments + j1;
+        const uint32_t ix3 = i1 * innerSegments + j;
+        const uint32_t ix4 = i1 * innerSegments + j1;
 
-        vertices.push_back(p2); // triangle-2
-        vertices.push_back(p3);
-        vertices.push_back(p4);
+        meshData.indices.insert(meshData.indices.begin(), { ix3, ix2, ix1 }); // triangle-1
+        meshData.indices.insert(meshData.indices.begin(), { ix2, ix3, ix4 }); // triangle-2
       }
     }
 
-    return vertices;
+    return meshData;
   }
 
   VertexAttributesInfo::VertexAttributesInfo(std::vector<vk::VertexInputBindingDescription>& bindingDescs, std::vector<vk::VertexInputAttributeDescription>& attrDescs) : 
