@@ -76,7 +76,7 @@ target_compile_features(${APP} PRIVATE cxx_std_23)
 target_compile_definitions(${APP} PRIVATE ASSETS_ROOT_FOLDER="${PROJECT_SOURCE_DIR}/assets")
 
 if(MSVC)
-  add_compile_options(/W4) # /WX if warnings should be treated as errors
+  target_compile_options(${APP} PRIVATE /W4) # /WX if warnings should be treated as errors
 
   # set cwd to ${APP}/Debug instead of just ${APP}/
   set_property(TARGET ${APP} PROPERTY VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR})
