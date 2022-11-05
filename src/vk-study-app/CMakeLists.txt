@@ -18,7 +18,7 @@ add_executable(${APP}
   studies/02b-SecondStudy.hpp studies/02b-SecondStudy.cpp
   studies/03-Vertices.hpp studies/03-Vertices.cpp
   studies/04-Uniforms.hpp studies/04-Uniforms.cpp
-)
+  studies/05-Instanced.hpp studies/05-Instanced.cpp)
 
 # CMake can find VulkanSDK if it was first installed from https://www.lunarg.com/vulkan-sdk/ 
 # using FindVulkan module. `include(FindVulkan)` not needed
