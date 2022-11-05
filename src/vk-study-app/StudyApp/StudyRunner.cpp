@@ -49,7 +49,7 @@ namespace vku {
     vc.device.waitIdle();
 
     for (auto& study : studies)
-      studies.back()->onDeinit();
+      study->onDeinit();
     vku::spirv::finalize();
     // Need to be destroyed explicitly becomes raii instance does not own it apparently.
 

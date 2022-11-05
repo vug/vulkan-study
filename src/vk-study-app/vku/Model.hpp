@@ -35,7 +35,7 @@ namespace vku {
 
   MeshData makeQuad(const glm::vec2& dimensions);
   MeshData makeBox(const glm::vec3& dimensions);
-  MeshData makeTorus(float outerRadius, int outerSegments, float innerRadius, int innerSegments);
+  MeshData makeTorus(float outerRadius, uint32_t outerSegments, float innerRadius, uint32_t innerSegments);
   MeshData loadOBJ(const std::filesystem::path& filepath);
 
   VertexAttributesInfo getVertexAttributesInfo();

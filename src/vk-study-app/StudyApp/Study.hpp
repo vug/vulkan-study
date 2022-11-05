@@ -7,7 +7,7 @@
 #include <string>
 
 namespace vku {
-  class FrameDrawer;
+  struct FrameDrawer;
 
   class Study {
   public:

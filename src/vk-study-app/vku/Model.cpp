@@ -87,15 +87,15 @@ namespace vku {
     return meshData;
   }
 
-  MeshData makeTorus(float outerRadius, int outerSegments, float innerRadius, int innerSegments) {
+  MeshData makeTorus(float outerRadius, uint32_t outerSegments, float innerRadius, uint32_t innerSegments) {
     MeshData meshData;
-    for (int i = 0; i < outerSegments; i++) {
+    for (uint32_t i = 0; i < outerSegments; i++) {
       const float u = (float)i / (outerSegments - 1);
-      const float outerAngle = 2.f * std::numbers::pi * u;
+      const float outerAngle = 2.f * std::numbers::pi_v<float> * u;
       const glm::vec3 innerCenter = glm::vec3{ cosf(outerAngle), sinf(outerAngle), 0.0f } * outerRadius;
-      for (int j = 0; j < innerSegments; j++) {
+      for (uint32_t j = 0; j < innerSegments; j++) {
         const float v = (float)j / (innerSegments - 1);
-        const float innerAngle = 2.f * std::numbers::pi * v;
+        const float innerAngle = 2.f * std::numbers::pi_v<float> * v;
         const glm::vec3 innerPos = glm::vec3{ cosf(innerAngle) * cosf(outerAngle),  cosf(innerAngle) * sinf(outerAngle), sinf(innerAngle) } *innerRadius;
 
         const glm::vec3 pos = innerCenter + innerPos;
@@ -108,10 +108,10 @@ namespace vku {
       }
     }
 
-    for (size_t i = 0; i < outerSegments; i++) {
-      for (size_t j = 0; j < innerSegments; j++) {
-        const size_t i1 = (i + 1) % outerSegments;
-        const size_t j1 = (j + 1) % innerSegments;
+    for (uint32_t i = 0; i < outerSegments; i++) {
+      for (uint32_t j = 0; j < innerSegments; j++) {
+        const uint32_t i1 = (i + 1) % outerSegments;
+        const uint32_t j1 = (j + 1) % innerSegments;
         const uint32_t ix1 = i * innerSegments + j;
         const uint32_t ix2 = i * innerSegments + j1;
         const uint32_t ix3 = i1 * innerSegments + j;
@@ -160,12 +160,12 @@ namespace vku {
     const tinyobj::attrib_t& attrib = reader.GetAttrib();
     const std::vector<tinyobj::shape_t>& shapes = reader.GetShapes();
     assert(shapes.size() > 0);
-    const std::vector<tinyobj::material_t>& materials = reader.GetMaterials();
+    // const std::vector<tinyobj::material_t>& materials = reader.GetMaterials(); TODO: use material info if mat file with the same name exists
     assert(attrib.vertices.size() % 3 == 0); // Assert triangular mesh TODO: check should be on all faces
 
     MeshData meshData;
     uint32_t vertexIndex = 0;
-    std::unordered_map<VertexId, size_t, VertexId::HashFunc> vertexToIndex; // map from unique vertex attribute combinations to IndexBuffer index
+    std::unordered_map<VertexId, uint32_t, VertexId::HashFunc> vertexToIndex; // map from unique vertex attribute combinations to IndexBuffer index
     for (const auto& shape : shapes) {
       for (const auto& objIndex : shape.mesh.indices) {
         VertexId vId{ objIndex.vertex_index, objIndex.texcoord_index, objIndex.normal_index };

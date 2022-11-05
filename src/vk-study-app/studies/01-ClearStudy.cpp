@@ -5,7 +5,7 @@
 #include <iostream>
 #include <string>
 
-void ClearStudy::onInit(const vku::AppSettings appSettings, const vku::VulkanContext& vc) { }
+void ClearStudy::onInit([[maybe_unused]] const vku::AppSettings appSettings, [[maybe_unused]] const vku::VulkanContext& vc) { }
 
 void ClearStudy::recordCommandBuffer(const vku::VulkanContext& vc, const vku::FrameDrawer& frameDrawer) {
   const vk::RenderPassBeginInfo renderPassBeginInfo(*vc.renderPass, *frameDrawer.framebuffer, vk::Rect2D{ {0,0}, vc.swapchainExtent }, {});

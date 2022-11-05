@@ -76,8 +76,8 @@ namespace vku {
       ->build()
       .value();
 
-    vk::raii::Context context;
-    return vk::raii::Instance{ context, vkbInstance->instance };
+    vk::raii::Context ctx;
+    return vk::raii::Instance{ ctx, vkbInstance->instance };
   }
 
   vk::raii::PhysicalDevice VulkanContext::constructPhysicalDevice() {
@@ -242,7 +242,7 @@ namespace vku {
     try {
       std::tie(result, imageIndex) = swapchain.acquireNextImage(std::numeric_limits<uint64_t>::max(), *imageAvailableForRenderingSemaphores[currentFrame]);
     }
-    catch (vk::OutOfDateKHRError& e) {
+    catch ([[maybe_unused]] vk::OutOfDateKHRError& e) {
       assert(result == vk::Result::eErrorOutOfDateKHR); // to see whether result gets a wrong value as it happens with presentKHR
       recreateSwapchain();
       return FrameDrawer{ cmdBuf, imageIndex, swapchain.getImages()[imageIndex], framebuffers[imageIndex] };
@@ -306,7 +306,7 @@ namespace vku {
     try {
       result = presentQueue.presentKHR(presentInfo);
     }
-    catch (vk::OutOfDateKHRError& e) {
+    catch ([[maybe_unused]] vk::OutOfDateKHRError& e) {
       // for some reason, even though "out of date" exception was thrown result is still vk::eSuccess.
       // Setting it to correct value manually just in case result will be used below later.
       result = vk::Result::eErrorOutOfDateKHR;
