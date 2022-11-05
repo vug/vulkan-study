@@ -2,6 +2,7 @@
 
 #include "../vku/Model.hpp"
 #include "../vku/SpirvHelper.hpp"
+#include "../vku/utils.hpp"
 
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
@@ -20,7 +21,7 @@ void UniformsStudy::onInit(const vku::AppSettings appSettings, const vku::Vulkan
   vku::MeshData torusMeshData = vku::makeTorus(1.f, 17, .5f, 6);
   vku::MeshData quadMeshData = vku::makeQuad({ 1, 1 });
   // TODO: do not hard-code absolute paths, instead have a global "assets root folder"
-  vku::MeshData objMeshData = vku::loadOBJ("C:/Users/veliu/Documents/repos/vulkan-study/assets/models/suzanne.obj");
+  vku::MeshData objMeshData = vku::loadOBJ(vku::assetsRootFolder / "models/suzanne.obj");
   
   vku::MeshData& md = objMeshData;
 
