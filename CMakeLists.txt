@@ -12,6 +12,8 @@ set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 add_subdirectory(dependencies/glfw)
 # GLM https://github.com/g-truc/glm
 add_subdirectory(dependencies/glm)
+# tinyobjloader https://github.com/tinyobjloader/tinyobjloader
+add_subdirectory(dependencies/tinyobjloader)
 # vivid https://github.com/gurki/vivid
 set(FETCHCONTENT_SOURCE_DIR_GLM "dependencies/glm" CACHE STRING "" FORCE) # Throus a warning about relative directory unsafe. Ignore.
 add_subdirectory(dependencies/vivid)

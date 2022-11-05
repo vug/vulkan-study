@@ -20,10 +20,6 @@ or pulled later via
 git submodule update --init --recursive
 ```
 
-# VulkanSDK
-
-Vulkan is not a submodule. It needs to be downloaded from LunarG website, https://www.lunarg.com/vulkan-sdk/, and installed with the installer.
-
 # GLFW
 
 * <https://www.glfw.org/>
@@ -75,6 +71,22 @@ cl /std:c++20 /W4 /external:I"../dependencies" /external:W0 /I"../dependencies/g
 
 Also choose appropriate optimization flags, or use `/Zi` for generating debug symbols
 
+# tinyobj-loader
+
+> Tiny but powerful single file wavefront obj loader written in C++03.
+
+```cmd
+git submodule add https://github.com/tinyobjloader/tinyobjloader.git
+```
+
+# vivid
+
+https://github.com/gurki/vivid
+
+```cmd
+git submodule add https://github.com/gurki/vivid/vivid.git
+```
+
 # vk-bootstrap
 
 * https://github.com/charles-lunarg/vk-bootstrap
@@ -83,3 +95,7 @@ Also choose appropriate optimization flags, or use `/Zi` for generating debug sy
 ```cmd
 git submodule add https://github.com/charles-lunarg/vk-bootstrap.git
 ```
+
+# VulkanSDK
+
+Vulkan is not a submodule. It needs to be downloaded from LunarG website, https://www.lunarg.com/vulkan-sdk/, and installed with the installer.
