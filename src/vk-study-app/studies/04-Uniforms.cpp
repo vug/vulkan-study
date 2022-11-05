@@ -19,16 +19,17 @@ void UniformsStudy::onInit(const vku::AppSettings appSettings, const vku::Vulkan
   vku::MeshData boxMeshData = vku::makeBox({ 0.6f, 0.9f, 1.5f });
   vku::MeshData torusMeshData = vku::makeTorus(1.f, 17, .5f, 6);
   vku::MeshData quadMeshData = vku::makeQuad({ 1, 1 });
+  // TODO: do not hard-code absolute paths, instead have a global "assets root folder"
+  vku::MeshData objMeshData = vku::loadOBJ("C:/Users/veliu/Documents/repos/vulkan-study/assets/models/suzanne.obj");
   
-  std::vector<vku::DefaultVertex>& vertices = boxMeshData.vertices;
-  std::vector<uint32_t>& indices = boxMeshData.indices;
+  vku::MeshData& md = objMeshData;
 
-  uint32_t vboSizeBytes = (uint32_t)(vertices.size() * sizeof(vku::DefaultVertex));
-  vbo = vku::Buffer(vc, vertices.data(), vboSizeBytes, vk::BufferUsageFlagBits::eVertexBuffer);
+  uint32_t vboSizeBytes = (uint32_t)(md.vertices.size() * sizeof(vku::DefaultVertex));
+  vbo = vku::Buffer(vc, md.vertices.data(), vboSizeBytes, vk::BufferUsageFlagBits::eVertexBuffer);
 
-  uint32_t iboSizeBytes = (uint32_t)(indices.size() * sizeof(uint32_t));
-  indexCount = (uint32_t)indices.size();
-  ibo = vku::Buffer(vc, indices.data(), iboSizeBytes, vk::BufferUsageFlagBits::eIndexBuffer);
+  uint32_t iboSizeBytes = (uint32_t)(md.indices.size() * sizeof(uint32_t));
+  indexCount = (uint32_t)md.indices.size();
+  ibo = vku::Buffer(vc, md.indices.data(), iboSizeBytes, vk::BufferUsageFlagBits::eIndexBuffer);
 
   //---- Uniform Data
   // create UBO and connect it to a Uniforms instance
@@ -123,7 +124,7 @@ void main()
     false,                        // depthClampEnable
     false,                        // rasterizerDiscardEnable
     vk::PolygonMode::eFill,       // polygonMode
-    vk::CullModeFlagBits::eBack,  // cullMode
+    vk::CullModeFlagBits::eNone,  // cullMode {eBack}
     vk::FrontFace::eCounterClockwise,    // frontFace
     false,                        // depthBiasEnable
     0.0f,                         // depthBiasConstantFactor
