@@ -65,8 +65,8 @@ namespace vku {
         ->enable_validation_layers(vku::isDebugBuild) // == .enable_layer("VK_LAYER_KHRONOS_validation")
         .add_validation_feature_enable(VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT)
         // TODO: Create my own callback function and set it via set_debug_callback()
-      // See debugUtilsMessengerCallback in utils.cpp
-      .use_default_debug_messenger();
+        // See debugUtilsMessengerCallback in utils.cpp
+        .use_default_debug_messenger();
     }
     for (const auto& ext : vulkanInstanceExtensions)
       vkbInstanceBuilder->enable_extension(ext.c_str());
@@ -98,7 +98,7 @@ namespace vku {
     vkb::Swapchain vkbSwapchain = vkb::SwapchainBuilder{ vkbDevice }
       .set_desired_format({ static_cast<VkFormat>(swapchainColorFormat), static_cast<VkColorSpaceKHR>(swapchainColorSpace) }) // default
       .set_desired_present_mode(VK_PRESENT_MODE_MAILBOX_KHR) // default. other: VK_PRESENT_MODE_FIFO_KHR
-       // Transfer Bit needed to enable clearing via vkCmdClearColorImage
+      // Transfer Bit needed to enable clearing via vkCmdClearColorImage
       .set_image_usage_flags(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT)
       .set_required_min_image_count(NUM_IMAGES)
       .build().value();
@@ -152,7 +152,7 @@ namespace vku {
       vk::AttachmentDescriptionFlags(),
       swapchainColorFormat,
       swapchainSamples,
-      vk::AttachmentLoadOp::eLoad, // could eDontCare be more efficient? 
+      vk::AttachmentLoadOp::eDontCare, // eLoad would require a barrier because it'll cause a RAW hazard
       vk::AttachmentStoreOp::eStore,
       vk::AttachmentLoadOp::eDontCare,
       vk::AttachmentStoreOp::eDontCare,
@@ -263,7 +263,7 @@ namespace vku {
 
     // Transition swapchain image layout from eUndefined -> eTransferDstOptimal (required for vkCmdClearColorImage)
     const vk::Image& image = swapchain.getImages()[imageIndex];
-    const auto subresourceRanges = vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 };
+    const auto subresourceRanges = vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 };  
     vku::setImageLayout(cmdBuf, image, swapchainColorFormat, vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal);
 
     const std::array<float, 4> col = { 1.f, 1.0f, 1.0f, 1.0f };
