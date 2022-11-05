@@ -1,6 +1,6 @@
 #pragma once
 
-#include <vulkan/vulkan_raii.hpp>
+#include <functional>
 
 namespace vku {
 #if !defined( NDEBUG )
@@ -8,8 +8,6 @@ namespace vku {
 #else
   constexpr bool isDebugBuild = false;
 #endif
-
-  void setImageLayout(vk::raii::CommandBuffer const& commandBuffer, vk::Image image, vk::Format format, vk::ImageLayout oldImageLayout, vk::ImageLayout newImageLayout);
 
   template <class T>
   inline void hash_combine(std::size_t& s, const T& v)

@@ -14,4 +14,6 @@ namespace vku {
     // TODO: not sure about needing vc here. Maybe VC can be a friend and only VC can create images?
     Image(const VulkanContext& vc, vk::Format format, vk::Extent2D extent, vk::SampleCountFlagBits samples, vk::ImageTiling tiling, vk::ImageUsageFlags usage, vk::ImageAspectFlagBits aspect);
   };
+
+  void setImageLayout(vk::raii::CommandBuffer const& commandBuffer, vk::Image image, vk::Format format, vk::ImageLayout oldImageLayout, vk::ImageLayout newImageLayout);
 }
