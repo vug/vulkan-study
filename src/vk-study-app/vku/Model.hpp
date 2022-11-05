@@ -23,20 +23,17 @@ namespace vku {
     std::vector<uint32_t> indices;
   };
 
-  class VertexAttributesInfo {
+  class DefaultVertexInputStateCreateInfo : public vk::PipelineVertexInputStateCreateInfo {
   private:
     std::vector<vk::VertexInputBindingDescription> bindingDescriptions;
     std::vector<vk::VertexInputAttributeDescription> attributeDescriptions;
+
   public:
-    vk::PipelineVertexInputStateCreateInfo createInfo;
-    
-    VertexAttributesInfo(std::vector<vk::VertexInputBindingDescription>& bindingDescs, std::vector<vk::VertexInputAttributeDescription>& attrDescs);
+    DefaultVertexInputStateCreateInfo();
   };
 
   MeshData makeQuad(const glm::vec2& dimensions);
   MeshData makeBox(const glm::vec3& dimensions);
   MeshData makeTorus(float outerRadius, uint32_t outerSegments, float innerRadius, uint32_t innerSegments);
   MeshData loadOBJ(const std::filesystem::path& filepath);
-
-  VertexAttributesInfo getVertexAttributesInfo();
 }

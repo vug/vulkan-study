@@ -113,7 +113,7 @@ void main()
     vk::PipelineShaderStageCreateInfo({}, vk::ShaderStageFlagBits::eFragment, *fragmentShader, "main")
   };
 
-  vku::VertexAttributesInfo vertexAttributesInfo = vku::getVertexAttributesInfo();
+  vku::DefaultVertexInputStateCreateInfo vertexInputStateCreateInfo;
 
   vk::PipelineInputAssemblyStateCreateInfo inputAssemblyStateCreateInfo({}, vk::PrimitiveTopology::eTriangleList, false);
 
@@ -173,7 +173,7 @@ void main()
   vk::GraphicsPipelineCreateInfo graphicsPipelineCreateInfo(
     {},
     shaderStageCreateInfos,
-    &vertexAttributesInfo.createInfo,
+    &vertexInputStateCreateInfo,
     &inputAssemblyStateCreateInfo,
     nullptr, // *vk::PipelineTessellationStateCreateInfo
     &viewportStateCreateInfo,

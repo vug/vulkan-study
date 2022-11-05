@@ -188,19 +188,16 @@ namespace vku {
     return meshData;
   }
 
-  VertexAttributesInfo::VertexAttributesInfo(std::vector<vk::VertexInputBindingDescription>& bindingDescs, std::vector<vk::VertexInputAttributeDescription>& attrDescs) : 
-    bindingDescriptions(bindingDescs), 
-    attributeDescriptions(attrDescs), 
-    createInfo({}, bindingDescriptions, attributeDescriptions) {}
-
-  VertexAttributesInfo getVertexAttributesInfo() {
-    std::vector<vk::VertexInputBindingDescription> bindingDescs = { { 0, sizeof(vku::DefaultVertex), vk::VertexInputRate::eVertex } };
-    std::vector<vk::VertexInputAttributeDescription> attrDescs = {
+  DefaultVertexInputStateCreateInfo::DefaultVertexInputStateCreateInfo() :
+    bindingDescriptions({ { 0, sizeof(vku::DefaultVertex), vk::VertexInputRate::eVertex } }),
+    attributeDescriptions({
       { 0, 0, vk::Format::eR32G32B32Sfloat, offsetof(DefaultVertex, position) },
       { 1, 0, vk::Format::eR32G32Sfloat, offsetof(DefaultVertex, texCoord) },
       { 2, 0, vk::Format::eR32G32B32Sfloat, offsetof(DefaultVertex, normal) },
       { 3, 0, vk::Format::eR32G32B32A32Sfloat, offsetof(DefaultVertex, color) },
-    };
-    return VertexAttributesInfo{bindingDescs, attrDescs};
+      })
+  {
+    setVertexAttributeDescriptions(attributeDescriptions);
+    setVertexBindingDescriptions(bindingDescriptions);
   }
 }
