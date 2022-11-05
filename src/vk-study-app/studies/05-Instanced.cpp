@@ -75,18 +75,18 @@ layout (binding = 0) uniform UBO
 	mat4 viewMatrix;
 } ubo;
 
-layout (location = 0) out vec4 outColor;
-
-out gl_PerVertex 
-{
-    vec4 gl_Position;   
-};
+layout (location = 0) out struct {
+    vec4 worldPosition;
+    vec4 color;
+} v2f;
 
 
 void main() 
 {
-	outColor = inColor;
-	gl_Position = ubo.projectionMatrix * ubo.viewMatrix * ubo.modelMatrix * vec4(inPos.xyz, 1.0);
+	v2f.color = inColor;
+	v2f.worldPosition = ubo.projectionMatrix * ubo.viewMatrix * ubo.modelMatrix * vec4(inPos.xyz, 1.0);
+
+  gl_Position = v2f.worldPosition;
 }
 )";
 
@@ -96,13 +96,16 @@ void main()
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
 
-layout (location = 0) in vec4 inColor;
+layout (location = 0) in struct {
+    vec4 worldPosition;
+    vec4 color;
+} v2f;
 
 layout (location = 0) out vec4 outFragColor;
 
 void main() 
 {
-  outFragColor = inColor;
+  outFragColor = v2f.color;
 }
 )";
 
