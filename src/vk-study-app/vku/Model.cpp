@@ -1,11 +1,16 @@
 #include "Model.hpp"
 
+#include "utils.hpp"
+
 #include <glm/geometric.hpp>
+#include <tiny_obj_loader.h>
 #include <vulkan/vulkan.hpp>
 
 #include <array>
+#include <iostream>
 #include <numbers>
 #include <numeric>
+#include <unordered_map>
 
 namespace vku {
   MeshData makeQuad(const glm::vec2& dimensions) {
@@ -114,6 +119,69 @@ namespace vku {
 
         meshData.indices.insert(meshData.indices.begin(), { ix3, ix2, ix1 }); // triangle-1
         meshData.indices.insert(meshData.indices.begin(), { ix2, ix3, ix4 }); // triangle-2
+      }
+    }
+
+    return meshData;
+  }
+
+  struct VertexId {
+    int posIx;
+    int texIx;
+    int nrmIx;
+
+    bool operator==(const VertexId& other) const {
+      return posIx == other.posIx && texIx == other.texIx && nrmIx == other.nrmIx;
+    }
+
+    struct HashFunc {
+      std::size_t operator()(const VertexId& vi) const {
+        std::size_t res = 0;
+        hash_combine(res, vi.posIx);
+        hash_combine(res, vi.texIx);
+        hash_combine(res, vi.nrmIx);
+        return res;
+      }
+    };
+  };
+
+  // OBJ file is a compressed format. Each attribute (position, texCoord, normal) stores unqiue values, e.g. only one normal value is stored if all vertices have the same normal etc.
+  // However, vertices sent to the GPU have combinations of the attributes. Here we stores only vertices with unique attributes in vertex data 
+  // and triangles are stored as successive triplets of indices to the vertex data.
+  MeshData loadOBJ(const std::filesystem::path& filepath) { // taken from https://github.com/tinyobjloader/tinyobjloader and modified
+    tinyobj::ObjReaderConfig reader_config;
+    tinyobj::ObjReader reader;
+    // TODO: When errors happen return with a failure result. Can be done via optionals.
+    if (!reader.ParseFromFile(filepath.string(), reader_config) && !reader.Error().empty())
+        std::cerr << "TinyObjReader: " << reader.Error() << '\n';
+    if (!reader.Warning().empty())
+      std::cerr << "TinyObjReader: " << reader.Warning() << '\n';
+
+    const tinyobj::attrib_t& attrib = reader.GetAttrib();
+    const std::vector<tinyobj::shape_t>& shapes = reader.GetShapes();
+    assert(shapes.size() > 0);
+    const std::vector<tinyobj::material_t>& materials = reader.GetMaterials();
+    assert(attrib.vertices.size() % 3 == 0); // Assert triangular mesh TODO: check should be on all faces
+
+    MeshData meshData;
+    uint32_t vertexIndex = 0;
+    std::unordered_map<VertexId, size_t, VertexId::HashFunc> vertexToIndex; // map from unique vertex attribute combinations to IndexBuffer index
+    for (const auto& shape : shapes) {
+      for (const auto& objIndex : shape.mesh.indices) {
+        VertexId vId{ objIndex.vertex_index, objIndex.texcoord_index, objIndex.normal_index };
+        if (vertexToIndex.contains(vId))
+          meshData.indices.push_back(vertexToIndex[vId]);
+        else {
+          meshData.vertices.emplace_back(
+            glm::vec3{ attrib.vertices[3 * vId.posIx], attrib.vertices[3 * vId.posIx + 1], attrib.vertices[3 * vId.posIx + 2] },
+            objIndex.texcoord_index >= 0 ? glm::vec2{ attrib.texcoords[2 * vId.texIx], attrib.texcoords[2 * vId.texIx + 1] } : glm::vec2{},
+            glm::vec3{ attrib.normals[3 * vId.nrmIx], attrib.normals[3 * vId.nrmIx + 1] , attrib.normals[3 * vId.nrmIx + 2] },
+            // when there is no color info in OBJ file tinyobjloader uses white
+            glm::vec4{ attrib.colors[3 * vId.posIx], attrib.colors[3 * vId.posIx + 1], attrib.colors[3 * vId.posIx + 2], 1 }
+          );
+          meshData.indices.push_back(vertexIndex);
+          vertexToIndex.insert({ vId, vertexIndex++ });
+        }
       }
     }
 

@@ -6,6 +6,8 @@
 
 #include <vulkan/vulkan.hpp>
 
+#include <filesystem>
+
 namespace vku {
   struct DefaultVertex {
     glm::vec3 position{ 0, 0, 0 };
@@ -34,6 +36,7 @@ namespace vku {
   MeshData makeQuad(const glm::vec2& dimensions);
   MeshData makeBox(const glm::vec3& dimensions);
   MeshData makeTorus(float outerRadius, int outerSegments, float innerRadius, int innerSegments);
+  MeshData loadOBJ(const std::filesystem::path& filepath);
 
   VertexAttributesInfo getVertexAttributesInfo();
 }
