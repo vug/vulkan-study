@@ -59,11 +59,15 @@ namespace vku {
     vkbInstanceBuilder = new vkb::InstanceBuilder();
     vkbInstanceBuilder
       ->set_app_name("Example Vulkan Application")
-      .require_api_version(1, 3, 0)
-      .enable_validation_layers(vku::isDebugBuild) // == .enable_layer("VK_LAYER_KHRONOS_validation")
-      // TODO: can create my own callback function and set it via set_debug_callback()
+      .require_api_version(1, 3, 0);
+    if (vku::isDebugBuild) {
+      vkbInstanceBuilder
+        ->enable_validation_layers(vku::isDebugBuild) // == .enable_layer("VK_LAYER_KHRONOS_validation")
+        .add_validation_feature_enable(VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT)
+        // TODO: Create my own callback function and set it via set_debug_callback()
       // See debugUtilsMessengerCallback in utils.cpp
       .use_default_debug_messenger();
+    }
     for (const auto& ext : vulkanInstanceExtensions)
       vkbInstanceBuilder->enable_extension(ext.c_str());
 
