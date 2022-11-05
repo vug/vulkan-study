@@ -1,6 +1,7 @@
 #pragma once
 
 #include <functional>
+#include <filesystem>
 
 namespace vku {
 #if !defined( NDEBUG )
@@ -8,6 +9,8 @@ namespace vku {
 #else
   constexpr bool isDebugBuild = false;
 #endif
+
+  const std::filesystem::path assetsRootFolder = ASSETS_ROOT_FOLDER;
 
   template <class T>
   inline void hash_combine(std::size_t& s, const T& v)

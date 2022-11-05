@@ -73,6 +73,8 @@ target_include_directories(${APP} PRIVATE
 
 target_compile_features(${APP} PRIVATE cxx_std_23)
 
+target_compile_definitions(${APP} PRIVATE ASSETS_ROOT_FOLDER="${PROJECT_SOURCE_DIR}/assets")
+
 if(MSVC)
   add_compile_options(/W4) # /WX if warnings should be treated as errors
 
