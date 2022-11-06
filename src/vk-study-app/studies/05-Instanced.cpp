@@ -32,11 +32,18 @@ void InstancingStudy::onInit(const vku::AppSettings appSettings, const vku::Vulk
   indexCount = (uint32_t)md.indices.size();
   ibo = vku::Buffer(vc, md.indices.data(), iboSizeBytes, vk::BufferUsageFlagBits::eIndexBuffer);
 
+  const auto& scale = glm::scale(glm::mat4(1), { 0.2f, 0.1f, 0.2f });
+  const auto& rotate = glm::rotate(glm::mat4(1), 1.5f, { 0, 1, 0 });
+  const auto& translate = glm::translate(glm::mat4(1), { 0, 0, 0 });
+  std::vector<InstanceData> instances;
+  instances.emplace_back( translate * rotate * scale);
+
+  instanceBuffer = vku::Buffer(vc, instances.data(), static_cast<uint32_t>(instances.size() * sizeof(InstanceData)), vk::BufferUsageFlagBits::eVertexBuffer);
+  instanceCount = 1;
+
   //---- Uniform Data
   // create UBO and connect it to a Uniforms instance
   ubo = vku::UniformBuffer(vc, &uniforms, sizeof(Uniforms));
-  uniforms.projectionMatrix = glm::perspective(glm::radians(45.0f), (float)800 / (float)800, 0.1f, 256.0f);
-  // will set the view and model matrices at every frame
 
   //---- Descriptor Set Layout
   vk::DescriptorSetLayoutBinding layoutBinding = { 0, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eVertex };
@@ -63,10 +70,14 @@ void InstancingStudy::onInit(const vku::AppSettings appSettings, const vku::Vulk
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
 
+// Vertex attributes
 layout (location = 0) in vec3 inObjectPosition;
 layout (location = 1) in vec2 inTexCoord;
 layout (location = 2) in vec3 inObjectNormal;
 layout (location = 3) in vec4 inColor;
+
+// Instanced attributes
+layout (location = 4) in mat4 instanceTransform;
 
 layout (binding = 0) uniform UBO 
 {
@@ -85,10 +96,11 @@ layout (location = 0) out struct {
 
 void main() 
 {
-  vec4 worldPosition4 = ubo.WorldFromObjectMatrix * vec4(inObjectPosition.xyz, 1.0);
+  mat4 transform = instanceTransform; // {ubo.WorldFromObjectMatrix, instanceTransform}
+  vec4 worldPosition4 = transform  * vec4(inObjectPosition.xyz, 1.0);
   v2f.worldPosition = worldPosition4.xyz;
 
-  v2f.worldNormal = mat3(transpose(inverse(ubo.WorldFromObjectMatrix))) * inObjectNormal;
+  v2f.worldNormal = mat3(transpose(inverse(transform))) * inObjectNormal;
 
   v2f.objectNormal = inObjectNormal;
 
@@ -130,7 +142,25 @@ void main()
     vk::PipelineShaderStageCreateInfo({}, vk::ShaderStageFlagBits::eFragment, *fragmentShader, "main")
   };
 
-  vku::VertexInputStateCreateInfo vertexInputStateCreateInfo;
+  vku::VertexInputStateCreateInfo vertexInputStateCreateInfo(
+    { 
+      { 0, sizeof(vku::DefaultVertex), vk::VertexInputRate::eVertex },
+      { 1, sizeof(InstanceData), vk::VertexInputRate::eInstance },
+    },
+    {
+      {
+        { 0, 0, vk::Format::eR32G32B32Sfloat, offsetof(vku::DefaultVertex, position) },
+        { 1, 0, vk::Format::eR32G32Sfloat, offsetof(vku::DefaultVertex, texCoord) },
+        { 2, 0, vk::Format::eR32G32B32Sfloat, offsetof(vku::DefaultVertex, normal) },
+        { 3, 0, vk::Format::eR32G32B32A32Sfloat, offsetof(vku::DefaultVertex, color) },
+
+        { 4, 1, vk::Format::eR32G32B32A32Sfloat, sizeof(glm::vec4) * 0 },
+        { 5, 1, vk::Format::eR32G32B32A32Sfloat, sizeof(glm::vec4) * 1 },
+        { 6, 1, vk::Format::eR32G32B32A32Sfloat, sizeof(glm::vec4) * 2 },
+        { 7, 1, vk::Format::eR32G32B32A32Sfloat, sizeof(glm::vec4) * 3 },
+      }
+    }
+   );
 
   vk::PipelineInputAssemblyStateCreateInfo inputAssemblyStateCreateInfo({}, vk::PrimitiveTopology::eTriangleList, false);
 
@@ -210,13 +240,18 @@ void main()
 
 void InstancingStudy::recordCommandBuffer(const vku::VulkanContext& vc, const vku::FrameDrawer& frameDrawer) {
   static float t = 0.0f;
+
+  // TODO: remove since we are doing instanced rendering
+  uniforms.modelMatrix = glm::translate(glm::mat4(1), glm::vec3(0, std::sin(t) * 0.5f, 0));
+
   const glm::vec3 up = { 0, 1, 0 };
   const float r{ 5.0f };
   uniforms.viewMatrix = glm::lookAt(glm::vec3(r * std::cos(t), 0, r * std::sin(t)), glm::vec3(0, 0, 0), up);
-  t += 0.001f;
 
-  uniforms.modelMatrix = glm::translate(glm::mat4(1), glm::vec3(0, std::sin(t) * 0.5f, 0));
+  uniforms.projectionMatrix = glm::perspective(glm::radians(45.0f), (float)800 / (float)800, 0.1f, 256.0f);
+
   ubo.update(); // don't forget to call update after uniform data changes
+  t += 0.001f;
 
   const vk::RenderPassBeginInfo renderPassBeginInfo(*vc.renderPass, *frameDrawer.framebuffer, vk::Rect2D{ {0,0}, vc.swapchainExtent }, {});
 
@@ -227,8 +262,9 @@ void InstancingStudy::recordCommandBuffer(const vku::VulkanContext& vc, const vk
 
   vk::DeviceSize offsets = 0;
   cmdBuf.bindVertexBuffers(0, *vbo.buffer, offsets);
+  cmdBuf.bindVertexBuffers(1, *instanceBuffer.buffer, offsets);
   cmdBuf.bindIndexBuffer(*ibo.buffer, 0, vk::IndexType::eUint32);
-  cmdBuf.drawIndexed(indexCount, 1, 0, 0, 1);
+  cmdBuf.drawIndexed(indexCount, instanceCount, 0, 0, 0);
 
   cmdBuf.endRenderPass();
 }

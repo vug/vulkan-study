@@ -10,6 +10,10 @@
 #include <memory>
 
 class InstancingStudy : public vku::Study {
+  struct InstanceData {
+    glm::mat4x4 transform;
+  };
+
   struct Uniforms {
     glm::mat4 projectionMatrix;
     glm::mat4 modelMatrix;
@@ -20,6 +24,8 @@ private:
   vku::Buffer vbo;
   vku::Buffer ibo;
   uint32_t indexCount;
+  vku::Buffer instanceBuffer;
+  uint32_t instanceCount;
   Uniforms uniforms;
   vku::UniformBuffer ubo;
   vk::raii::DescriptorSets descriptorSets = nullptr;
