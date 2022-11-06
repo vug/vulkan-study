@@ -5,6 +5,7 @@
 #include "../vku/utils.hpp"
 
 #include <iostream>
+#include <chrono> 
 
 namespace vku {
   StudyRunner::StudyRunner() :
@@ -24,11 +25,13 @@ namespace vku {
       std::cout << std::format("Loading Study: '{}'\n", study->getName());;
       study->onInit(appSettings, vc);
     }
-      
+    
+
     //---- Main Loop
     while (!window.shouldClose()) {
       window.pollEvents();
 
+      auto time = std::chrono::system_clock::now();
       const vku::FrameDrawer frameDrawer = vc.drawFrameBegin();
       for (auto& study : studies) {
         study->recordCommandBuffer(vc, frameDrawer);
@@ -43,6 +46,8 @@ namespace vku {
         //  0, nullptr, 0, nullptr, 0, nullptr);
       }
       vc.drawFrameEnd(frameDrawer);
+      std::chrono::duration<double> duration = std::chrono::system_clock::now() - time;
+      std::cout << "frame duration: " << duration << ", FPS: " << 1.f / duration.count() << '\n';
     }
 
     // END

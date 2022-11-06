@@ -11,6 +11,8 @@
 #include <vulkan/vulkan_raii.hpp>
 
 #include <iostream>
+#include <numbers>
+#include <random>
 #include <string>
 
 void InstancingStudy::onInit(const vku::AppSettings appSettings, const vku::VulkanContext& vc) {
@@ -32,14 +34,21 @@ void InstancingStudy::onInit(const vku::AppSettings appSettings, const vku::Vulk
   indexCount = (uint32_t)md.indices.size();
   ibo = vku::Buffer(vc, md.indices.data(), iboSizeBytes, vk::BufferUsageFlagBits::eIndexBuffer);
 
-  const auto& scale = glm::scale(glm::mat4(1), { 0.2f, 0.1f, 0.2f });
-  const auto& rotate = glm::rotate(glm::mat4(1), 1.5f, { 0, 1, 0 });
-  const auto& translate = glm::translate(glm::mat4(1), { 0, 0, 0 });
   std::vector<InstanceData> instances;
-  instances.emplace_back( translate * rotate * scale);
-
+  instanceCount = 100'000;
+  std::default_random_engine rndGenerator(0); // (unsigned)time(nullptr)
+  std::uniform_real_distribution<float> uniform01(0.0f, 1.0f);
+  std::uniform_real_distribution<float> uniformN11(-1.0f, 1.0f);
+  const auto& u1 = [&rndGenerator, &uniform01]() { return uniform01(rndGenerator); };
+  const auto& u2 = [&rndGenerator, &uniformN11]() { return uniformN11(rndGenerator); };
+  //std::uniform_int_distribution<uint32_t> rndTextureIndex(0, textures.rocks.layerCount);
+  for (uint32_t i = 0; i < instanceCount; ++i) {
+    const auto& scale = glm::scale(glm::mat4(1), glm::vec3{ 0.5f + 0.3f * u1(), 0.5f + 0.3f * u1(), 0.5f + 0.3f * u1() } * 0.01f);
+    const auto& rotate = glm::rotate(glm::mat4(1), 2.f * std::numbers::pi_v<float> * u1(), {u2(), u2(), u2()});
+    const auto& translate = glm::translate(glm::mat4(1), { u2(), u2(), u2()});
+    instances.emplace_back(translate * rotate * scale);
+  }
   instanceBuffer = vku::Buffer(vc, instances.data(), static_cast<uint32_t>(instances.size() * sizeof(InstanceData)), vk::BufferUsageFlagBits::eVertexBuffer);
-  instanceCount = 1;
 
   //---- Uniform Data
   // create UBO and connect it to a Uniforms instance
@@ -127,7 +136,7 @@ layout (location = 0) out vec4 outFragColor;
 
 void main() 
 {
-  vec3 lightPos = vec3(0, 10, 0);
+  vec3 lightPos = vec3(0, 0, 0);
   vec3 fragToLightDir = normalize(lightPos - v2f.worldPosition); // not light to frag
   float diffuse = max(dot(v2f.worldNormal, fragToLightDir), 0);  
   
