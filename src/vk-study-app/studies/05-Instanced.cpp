@@ -63,30 +63,38 @@ void InstancingStudy::onInit(const vku::AppSettings appSettings, const vku::Vulk
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
 
-layout (location = 0) in vec3 inPos;
+layout (location = 0) in vec3 inObjectPosition;
 layout (location = 1) in vec2 inTexCoord;
-layout (location = 2) in vec3 inNormal;
+layout (location = 2) in vec3 inObjectNormal;
 layout (location = 3) in vec4 inColor;
 
 layout (binding = 0) uniform UBO 
 {
-	mat4 projectionMatrix;
-	mat4 modelMatrix;
-	mat4 viewMatrix;
+	mat4 ProjectionFromViewMatrix;
+	mat4 WorldFromObjectMatrix;
+	mat4 ViewFromWorldMatrix;
 } ubo;
 
 layout (location = 0) out struct {
-    vec4 worldPosition;
+    vec3 worldPosition;
+    vec3 worldNormal;
+    vec3 objectNormal;
     vec4 color;
 } v2f;
 
 
 void main() 
 {
-	v2f.color = inColor;
-	v2f.worldPosition = ubo.projectionMatrix * ubo.viewMatrix * ubo.modelMatrix * vec4(inPos.xyz, 1.0);
+  vec4 worldPosition4 = ubo.WorldFromObjectMatrix * vec4(inObjectPosition.xyz, 1.0);
+  v2f.worldPosition = worldPosition4.xyz;
 
-  gl_Position = v2f.worldPosition;
+  v2f.worldNormal = mat3(transpose(inverse(ubo.WorldFromObjectMatrix))) * inObjectNormal;
+
+  v2f.objectNormal = inObjectNormal;
+
+  gl_Position = ubo.ProjectionFromViewMatrix * ubo.ViewFromWorldMatrix * worldPosition4;
+
+  v2f.color = inColor;
 }
 )";
 
@@ -97,7 +105,9 @@ void main()
 #extension GL_ARB_shading_language_420pack : enable
 
 layout (location = 0) in struct {
-    vec4 worldPosition;
+    vec3 worldPosition;
+    vec3 worldNormal;
+    vec3 objectNormal;
     vec4 color;
 } v2f;
 
@@ -105,7 +115,11 @@ layout (location = 0) out vec4 outFragColor;
 
 void main() 
 {
-  outFragColor = v2f.color;
+  vec3 lightPos = vec3(0, 10, 0);
+  vec3 fragToLightDir = normalize(lightPos - v2f.worldPosition); // not light to frag
+  float diffuse = max(dot(v2f.worldNormal, fragToLightDir), 0);  
+  
+  outFragColor = v2f.color * diffuse;
 }
 )";
 
