@@ -130,7 +130,7 @@ void main()
     vk::PipelineShaderStageCreateInfo({}, vk::ShaderStageFlagBits::eFragment, *fragmentShader, "main")
   };
 
-  vku::DefaultVertexInputStateCreateInfo vertexInputStateCreateInfo;
+  vku::VertexInputStateCreateInfo vertexInputStateCreateInfo;
 
   vk::PipelineInputAssemblyStateCreateInfo inputAssemblyStateCreateInfo({}, vk::PrimitiveTopology::eTriangleList, false);
 

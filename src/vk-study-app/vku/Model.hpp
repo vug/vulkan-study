@@ -23,13 +23,14 @@ namespace vku {
     std::vector<uint32_t> indices;
   };
 
-  class DefaultVertexInputStateCreateInfo : public vk::PipelineVertexInputStateCreateInfo {
+  class VertexInputStateCreateInfo : public vk::PipelineVertexInputStateCreateInfo {
   private:
     std::vector<vk::VertexInputBindingDescription> bindingDescriptions;
     std::vector<vk::VertexInputAttributeDescription> attributeDescriptions;
 
   public:
-    DefaultVertexInputStateCreateInfo();
+    VertexInputStateCreateInfo(const std::vector<vk::VertexInputBindingDescription>& bindingDescs, const std::vector<vk::VertexInputAttributeDescription>& attributeDescs);
+    VertexInputStateCreateInfo(); // Meaningful default constructor
   };
 
   MeshData makeQuad(const glm::vec2& dimensions);

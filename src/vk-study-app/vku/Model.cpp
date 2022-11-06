@@ -92,7 +92,7 @@ namespace vku {
     for (uint32_t i = 0; i < outerSegments; i++) {
       const float u = (float)i / (outerSegments - 1);
       const float outerAngle = 2.f * std::numbers::pi_v<float> * u;
-      const glm::vec3 innerCenter = glm::vec3{ cosf(outerAngle), sinf(outerAngle), 0.0f } * outerRadius;
+      const glm::vec3 innerCenter = glm::vec3{ cosf(outerAngle), sinf(outerAngle), 0.0f } *outerRadius;
       for (uint32_t j = 0; j < innerSegments; j++) {
         const float v = (float)j / (innerSegments - 1);
         const float innerAngle = 2.f * std::numbers::pi_v<float> * v;
@@ -153,7 +153,7 @@ namespace vku {
     tinyobj::ObjReader reader;
     // TODO: When errors happen return with a failure result. Can be done via optionals.
     if (!reader.ParseFromFile(filepath.string(), reader_config) && !reader.Error().empty())
-        std::cerr << "TinyObjReader: " << reader.Error() << '\n';
+      std::cerr << "TinyObjReader: " << reader.Error() << '\n';
     if (!reader.Warning().empty())
       std::cerr << "TinyObjReader: " << reader.Warning() << '\n';
 
@@ -188,16 +188,22 @@ namespace vku {
     return meshData;
   }
 
-  DefaultVertexInputStateCreateInfo::DefaultVertexInputStateCreateInfo() :
-    bindingDescriptions({ { 0, sizeof(vku::DefaultVertex), vk::VertexInputRate::eVertex } }),
-    attributeDescriptions({
-      { 0, 0, vk::Format::eR32G32B32Sfloat, offsetof(DefaultVertex, position) },
-      { 1, 0, vk::Format::eR32G32Sfloat, offsetof(DefaultVertex, texCoord) },
-      { 2, 0, vk::Format::eR32G32B32Sfloat, offsetof(DefaultVertex, normal) },
-      { 3, 0, vk::Format::eR32G32B32A32Sfloat, offsetof(DefaultVertex, color) },
-      })
+  VertexInputStateCreateInfo::VertexInputStateCreateInfo(const std::vector<vk::VertexInputBindingDescription>& bindingDescs, const std::vector<vk::VertexInputAttributeDescription>& attributeDescs) :
+    bindingDescriptions(bindingDescs),
+    attributeDescriptions(attributeDescs)
   {
     setVertexAttributeDescriptions(attributeDescriptions);
     setVertexBindingDescriptions(bindingDescriptions);
   }
+
+  VertexInputStateCreateInfo::VertexInputStateCreateInfo() :
+    VertexInputStateCreateInfo(
+      { { 0, sizeof(vku::DefaultVertex), vk::VertexInputRate::eVertex } },
+      {
+            { 0, 0, vk::Format::eR32G32B32Sfloat, offsetof(DefaultVertex, position) },
+            { 1, 0, vk::Format::eR32G32Sfloat, offsetof(DefaultVertex, texCoord) },
+            { 2, 0, vk::Format::eR32G32B32Sfloat, offsetof(DefaultVertex, normal) },
+            { 3, 0, vk::Format::eR32G32B32A32Sfloat, offsetof(DefaultVertex, color) },
+      }) 
+  {}
 }
