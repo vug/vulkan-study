@@ -1,5 +1,6 @@
 #include "StudyRunner.hpp"
 
+#include "../vku/ImGuiHelper.hpp"
 #include "../vku/SpirvHelper.hpp"
 #include "../vku/Window.hpp"
 #include "../vku/utils.hpp"
@@ -26,6 +27,7 @@ namespace vku {
       study->onInit(appSettings, vc);
     }
     
+    ImGuiHelper imGuiHelper{ vc, window };
 
     //---- Main Loop
     while (!window.shouldClose()) {
@@ -33,6 +35,7 @@ namespace vku {
 
       auto time = std::chrono::system_clock::now();
       const vku::FrameDrawer frameDrawer = vc.drawFrameBegin();
+      imGuiHelper.Begin();
       for (auto& study : studies) {
         study->recordCommandBuffer(vc, frameDrawer);
         // TODO: might need to add some synchronization here. If layer order does not look correct uncomment below line.
@@ -44,9 +47,18 @@ namespace vku {
         //  VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 
         //  {},
         //  0, nullptr, 0, nullptr, 0, nullptr);
+        imGuiHelper.ShowDemoWindow();
       }
+      imGuiHelper.End();
+
+      // A final render pass for ImGui draw commands
+      const vk::RenderPassBeginInfo renderPassBeginInfo(*vc.renderPass, *frameDrawer.framebuffer, vk::Rect2D{ {0,0}, vc.swapchainExtent }, {});
+      frameDrawer.commandBuffer.beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
+      imGuiHelper.AddDrawCalls(*frameDrawer.commandBuffer);
+      frameDrawer.commandBuffer.endRenderPass();
+
       vc.drawFrameEnd(frameDrawer);
-      std::chrono::duration<double> duration = std::chrono::system_clock::now() - time;
+      std::chrono::duration<float> duration = std::chrono::system_clock::now() - time;
       std::cout << "frame duration: " << duration << ", FPS: " << 1.f / duration.count() << '\n';
     }
 
