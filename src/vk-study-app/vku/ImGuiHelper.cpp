@@ -107,6 +107,7 @@ namespace vku {
 	}
 
 	void ImGuiHelper::ShowDemoWindow() {
+		static bool isDemoWindowOpen = true;
 		ImGui::ShowDemoWindow(&isDemoWindowOpen);
 	}
 }

@@ -19,6 +19,5 @@ namespace vku {
 		const VulkanContext& vc;
 		const Window& win;
 		VkDescriptorPool imguiPool;
-		bool isDemoWindowOpen = false;
 	};
 }
