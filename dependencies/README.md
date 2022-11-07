@@ -71,6 +71,18 @@ cl /std:c++20 /W4 /external:I"../dependencies" /external:W0 /I"../dependencies/g
 
 Also choose appropriate optimization flags, or use `/Zi` for generating debug symbols
 
+# ImGui
+
+> Dear ImGui is a bloat-free graphical user interface library for C++. It outputs optimized vertex buffers that you can render anytime in your 3D-pipeline-enabled application. It is fast, portable, renderer agnostic, and self-contained (no external dependencies).
+
+* master branch: https://github.com/ocornut/imgui
+* docking branch: https://github.com/ocornut/imgui/tree/docking
+
+
+```cmd
+git submodule add --branch docking https://github.com/ocornut/imgui.git
+```
+
 # tinyobj-loader
 
 > Tiny but powerful single file wavefront obj loader written in C++03.
