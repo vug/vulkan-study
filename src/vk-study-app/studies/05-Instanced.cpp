@@ -35,7 +35,7 @@ void InstancingStudy::onInit(const vku::AppSettings appSettings, const vku::Vulk
   ibo = vku::Buffer(vc, md.indices.data(), iboSizeBytes, vk::BufferUsageFlagBits::eIndexBuffer);
 
   std::vector<InstanceData> instances;
-  instanceCount = 100'000;
+  instanceCount = 50'000; // quads: (5M, 30FPS), (2.5M, 60FPS). box: (1M, 80FPS), (2M, 40FPS). suzanne: (100K, 30FPS), (50K, 60FPS).
   std::default_random_engine rndGenerator(0); // (unsigned)time(nullptr)
   std::uniform_real_distribution<float> uniform01(0.0f, 1.0f);
   std::uniform_real_distribution<float> uniformN11(-1.0f, 1.0f);
@@ -43,11 +43,13 @@ void InstancingStudy::onInit(const vku::AppSettings appSettings, const vku::Vulk
   const auto& u2 = [&rndGenerator, &uniformN11]() { return uniformN11(rndGenerator); };
   //std::uniform_int_distribution<uint32_t> rndTextureIndex(0, textures.rocks.layerCount);
   for (uint32_t i = 0; i < instanceCount; ++i) {
-    const auto& scale = glm::scale(glm::mat4(1), glm::vec3{ 0.5f + 0.3f * u1(), 0.5f + 0.3f * u1(), 0.5f + 0.3f * u1() } * 0.01f);
+    const auto& scale = glm::scale(glm::mat4(1), glm::vec3{ 0.5f + 0.3f * u1(), 0.5f + 0.3f * u1(), 0.5f + 0.3f * u1() } * 0.02f);
     const auto& rotate = glm::rotate(glm::mat4(1), 2.f * std::numbers::pi_v<float> * u1(), {u2(), u2(), u2()});
     const auto& translate = glm::translate(glm::mat4(1), { u2(), u2(), u2()});
     const glm::mat4 transform = translate * rotate * scale;
-    instances.emplace_back(transform, glm::transpose(glm::inverse(transform)));
+    const glm::mat4 dualTransform = glm::transpose(glm::inverse(transform));
+    const glm::vec4 color{ u1(), u1(), u1(), 1 };
+    instances.emplace_back(transform, dualTransform, color);
   }
   instanceBuffer = vku::Buffer(vc, instances.data(), static_cast<uint32_t>(instances.size() * sizeof(InstanceData)), vk::BufferUsageFlagBits::eVertexBuffer);
 
@@ -89,6 +91,7 @@ layout (location = 3) in vec4 inColor;
 // Instanced attributes
 layout (location = 4) in mat4 instanceWorldFromObjectMatrix;
 layout (location = 8) in mat4 instanceDualWorldFromObjectMatrix;
+layout (location = 12) in vec4 instanceColor;
 
 layout (binding = 0) uniform UBO 
 {
@@ -117,7 +120,7 @@ void main()
 
   gl_Position = ubo.projectionFromWorldMatrix * worldPosition4;
 
-  v2f.color = inColor;
+  v2f.color = instanceColor;
 }
 )";
 
@@ -142,7 +145,7 @@ void main()
   vec3 fragToLightDir = normalize(lightPos - v2f.worldPosition); // not light to frag
   float diffuse = max(dot(normalize(v2f.worldNormal), fragToLightDir), 0);  
   
-  outFragColor = v2f.color * diffuse;
+  outFragColor = vec4(v2f.color.xyz) * diffuse;
 }
 )";
 
@@ -173,6 +176,7 @@ void main()
         { 9, 1, vk::Format::eR32G32B32A32Sfloat, sizeof(glm::vec4) * 5 },
         { 10, 1, vk::Format::eR32G32B32A32Sfloat, sizeof(glm::vec4) * 6 },
         { 11, 1, vk::Format::eR32G32B32A32Sfloat, sizeof(glm::vec4) * 7 },
+        { 12, 1, vk::Format::eR32G32B32A32Sfloat, sizeof(glm::vec4) * 8 },
       }
     }
    );

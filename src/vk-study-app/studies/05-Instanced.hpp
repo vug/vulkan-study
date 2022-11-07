@@ -13,6 +13,7 @@ class InstancingStudy : public vku::Study {
   struct InstanceData {
     glm::mat4x4 worldFromObject;
     glm::mat4x4 dualWorldFromObject;
+    glm::vec4 color;
   };
 
   struct Uniforms {
