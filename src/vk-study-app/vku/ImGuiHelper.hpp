@@ -14,9 +14,11 @@ namespace vku {
 		void End() const;
 
 		void AddDrawCalls(const VkCommandBuffer& cmdBuf) const;
+		void ShowDemoWindow();
 	private:
 		const VulkanContext& vc;
 		const Window& win;
 		VkDescriptorPool imguiPool;
+		bool isDemoWindowOpen = false;
 	};
 }

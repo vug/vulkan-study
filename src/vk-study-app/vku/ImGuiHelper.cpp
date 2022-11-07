@@ -105,4 +105,8 @@ namespace vku {
 	void ImGuiHelper::AddDrawCalls(const VkCommandBuffer& cmdBuf) const {
 		ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmdBuf);
 	}
+
+	void ImGuiHelper::ShowDemoWindow() {
+		ImGui::ShowDemoWindow(&isDemoWindowOpen);
+	}
 }
