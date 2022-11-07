@@ -145,7 +145,7 @@ void main()
   vec3 fragToLightDir = normalize(lightPos - v2f.worldPosition); // not light to frag
   float diffuse = max(dot(normalize(v2f.worldNormal), fragToLightDir), 0);  
   
-  outFragColor = vec4(v2f.color.xyz) * diffuse;
+  outFragColor = vec4(v2f.color.xyz, 1) * diffuse;
 }
 )";
 
