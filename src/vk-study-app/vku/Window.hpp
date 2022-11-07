@@ -1,7 +1,7 @@
 #pragma once
 #include "../StudyApp/AppSettings.hpp"
 
-//#define GLFW_INCLUDE_NONE
+#define GLFW_INCLUDE_NONE
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 #include <vulkan/vulkan_raii.hpp>
@@ -21,5 +21,7 @@ namespace vku {
     std::vector<std::string> getRequiredInstanceExtensions() const;
     bool shouldClose() const;
     void pollEvents() const;
+    // TODO: Make friends with ImGuiHelper
+    GLFWwindow* getGLFWWindow() const { return window.get(); }
   };
 }
