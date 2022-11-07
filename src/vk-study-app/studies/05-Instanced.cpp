@@ -46,7 +46,8 @@ void InstancingStudy::onInit(const vku::AppSettings appSettings, const vku::Vulk
     const auto& scale = glm::scale(glm::mat4(1), glm::vec3{ 0.5f + 0.3f * u1(), 0.5f + 0.3f * u1(), 0.5f + 0.3f * u1() } * 0.01f);
     const auto& rotate = glm::rotate(glm::mat4(1), 2.f * std::numbers::pi_v<float> * u1(), {u2(), u2(), u2()});
     const auto& translate = glm::translate(glm::mat4(1), { u2(), u2(), u2()});
-    instances.emplace_back(translate * rotate * scale);
+    const glm::mat4 transform = translate * rotate * scale;
+    instances.emplace_back(transform, glm::transpose(glm::inverse(transform)));
   }
   instanceBuffer = vku::Buffer(vc, instances.data(), static_cast<uint32_t>(instances.size() * sizeof(InstanceData)), vk::BufferUsageFlagBits::eVertexBuffer);
 
@@ -86,13 +87,14 @@ layout (location = 2) in vec3 inObjectNormal;
 layout (location = 3) in vec4 inColor;
 
 // Instanced attributes
-layout (location = 4) in mat4 instanceTransform;
+layout (location = 4) in mat4 instanceWorldFromObjectMatrix;
+layout (location = 8) in mat4 instanceDualWorldFromObjectMatrix;
 
 layout (binding = 0) uniform UBO 
 {
-	mat4 ProjectionFromViewMatrix;
-	mat4 WorldFromObjectMatrix;
-	mat4 ViewFromWorldMatrix;
+	mat4 viewFromWorldMatrix;
+  mat4 projectionFromViewMatrix;
+  mat4 projectionFromWorldMatrix;
 } ubo;
 
 layout (location = 0) out struct {
@@ -105,15 +107,15 @@ layout (location = 0) out struct {
 
 void main() 
 {
-  mat4 transform = instanceTransform; // {ubo.WorldFromObjectMatrix, instanceTransform}
-  vec4 worldPosition4 = transform  * vec4(inObjectPosition.xyz, 1.0);
+  const mat4 transform = instanceWorldFromObjectMatrix; // {ubo.WorldFromObjectMatrix, instanceWorldFromObjectMatrix}
+  const vec4 worldPosition4 = transform * vec4(inObjectPosition.xyz, 1.0);
   v2f.worldPosition = worldPosition4.xyz;
 
-  v2f.worldNormal = mat3(transpose(inverse(transform))) * inObjectNormal;
+  v2f.worldNormal = mat3(instanceDualWorldFromObjectMatrix) * inObjectNormal;
 
   v2f.objectNormal = inObjectNormal;
 
-  gl_Position = ubo.ProjectionFromViewMatrix * ubo.ViewFromWorldMatrix * worldPosition4;
+  gl_Position = ubo.projectionFromWorldMatrix * worldPosition4;
 
   v2f.color = inColor;
 }
@@ -138,7 +140,7 @@ void main()
 {
   vec3 lightPos = vec3(0, 0, 0);
   vec3 fragToLightDir = normalize(lightPos - v2f.worldPosition); // not light to frag
-  float diffuse = max(dot(v2f.worldNormal, fragToLightDir), 0);  
+  float diffuse = max(dot(normalize(v2f.worldNormal), fragToLightDir), 0);  
   
   outFragColor = v2f.color * diffuse;
 }
@@ -167,6 +169,10 @@ void main()
         { 5, 1, vk::Format::eR32G32B32A32Sfloat, sizeof(glm::vec4) * 1 },
         { 6, 1, vk::Format::eR32G32B32A32Sfloat, sizeof(glm::vec4) * 2 },
         { 7, 1, vk::Format::eR32G32B32A32Sfloat, sizeof(glm::vec4) * 3 },
+        { 8, 1, vk::Format::eR32G32B32A32Sfloat, sizeof(glm::vec4) * 4 },
+        { 9, 1, vk::Format::eR32G32B32A32Sfloat, sizeof(glm::vec4) * 5 },
+        { 10, 1, vk::Format::eR32G32B32A32Sfloat, sizeof(glm::vec4) * 6 },
+        { 11, 1, vk::Format::eR32G32B32A32Sfloat, sizeof(glm::vec4) * 7 },
       }
     }
    );
@@ -250,14 +256,11 @@ void main()
 void InstancingStudy::recordCommandBuffer(const vku::VulkanContext& vc, const vku::FrameDrawer& frameDrawer) {
   static float t = 0.0f;
 
-  // TODO: remove since we are doing instanced rendering
-  uniforms.modelMatrix = glm::translate(glm::mat4(1), glm::vec3(0, std::sin(t) * 0.5f, 0));
-
   const glm::vec3 up = { 0, 1, 0 };
   const float r{ 5.0f };
-  uniforms.viewMatrix = glm::lookAt(glm::vec3(r * std::cos(t), 0, r * std::sin(t)), glm::vec3(0, 0, 0), up);
-
-  uniforms.projectionMatrix = glm::perspective(glm::radians(45.0f), (float)800 / (float)800, 0.1f, 256.0f);
+  uniforms.viewFromWorld = glm::lookAt(glm::vec3(r * std::cos(t), 0, r * std::sin(t)), glm::vec3(0, 0, 0), up);
+  uniforms.projectionFromView = glm::perspective(glm::radians(45.0f), (float)800 / (float)800, 0.1f, 256.0f);
+  uniforms.projectionFromWorld = uniforms.projectionFromView * uniforms.viewFromWorld;
 
   ubo.update(); // don't forget to call update after uniform data changes
   t += 0.001f;

@@ -11,13 +11,14 @@
 
 class InstancingStudy : public vku::Study {
   struct InstanceData {
-    glm::mat4x4 transform;
+    glm::mat4x4 worldFromObject;
+    glm::mat4x4 dualWorldFromObject;
   };
 
   struct Uniforms {
-    glm::mat4 projectionMatrix;
-    glm::mat4 modelMatrix;
-    glm::mat4 viewMatrix;
+    glm::mat4 viewFromWorld;
+    glm::mat4 projectionFromView;
+    glm::mat4 projectionFromWorld;
   };
 
 private:
