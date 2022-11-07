@@ -10,6 +10,7 @@ add_executable(${APP}
   vku/Buffer.hpp vku/Buffer.cpp
   vku/UniformBuffer.hpp vku/UniformBuffer.cpp
   vku/Model.hpp vku/Model.cpp
+  vku/ImGuiHelper.hpp vku/ImGuiHelper.cpp
   StudyApp/AppSettings.hpp
   StudyApp/StudyRunner.hpp StudyApp/StudyRunner.cpp
   StudyApp/Study.hpp 
@@ -18,19 +19,8 @@ add_executable(${APP}
   studies/02b-SecondStudy.hpp studies/02b-SecondStudy.cpp
   studies/03-Vertices.hpp studies/03-Vertices.cpp
   studies/04-Uniforms.hpp studies/04-Uniforms.cpp
-  studies/05-Instanced.hpp studies/05-Instanced.cpp)
-
-# CMake can find VulkanSDK if it was first installed from https://www.lunarg.com/vulkan-sdk/ 
-# using FindVulkan module. `include(FindVulkan)` not needed
-# See https://cmake.org/cmake/help/latest/module/FindVulkan.html for docs and https://github.com/Kitware/CMake/blob/master/Modules/FindVulkan.cmake for code
-# CMake v3.24 has optional COMPONENTS using which we can check existense of components we'll need
-# It not only makes Vulkan::Vulkan Target available but also other ones that comes with VulkanSDK such as Vulkan::glslang
-find_package(Vulkan REQUIRED COMPONENTS glslang SPIRV-Tools)
-message("Vulkan SDK location: $ENV{VULKAN_SDK}") # finds the location of LunarG VulkanSDK installation set into PATH
-# Find Vulkan comes with some Result Variables
-message("Found? Vulkan: ${Vulkan_FOUND}, glslang: ${Vulkan_glslang_FOUND}, SPIRV-Tools: ${Vulkan_SPIRV-Tools_FOUND}")
-message("Vulkan Include Dirs: ${Vulkan_INCLUDE_DIRS}")
-message("Libraries. Vulkan: ${Vulkan_LIBRARIES}, glslang: ${Vulkan_glslang_LIBRARY}, SPIRV-Tools: ${Vulkan_SPIRV-Tools_LIBRARY}")
+  studies/05-Instanced.hpp studies/05-Instanced.cpp
+)
 
 # One way of finding include directory of a library
 get_target_property(glfw_interface_includes glfw INTERFACE_INCLUDE_DIRECTORIES)
@@ -51,6 +41,7 @@ message("SPIRV-Tools-Opt_Library set to: ${SPIRV-Tools-Opt_Library}")
 target_link_libraries(${APP} PRIVATE
 	glfw
   glm::glm
+  imgui
   tinyobjloader
   vivid
 	vk-bootstrap::vk-bootstrap
