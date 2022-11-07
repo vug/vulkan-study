@@ -5,6 +5,8 @@
 #include "../vku/Window.hpp"
 #include "../vku/utils.hpp"
 
+#include <imgui.h>
+
 #include <iostream>
 #include <chrono> 
 
@@ -47,10 +49,18 @@ namespace vku {
         //  VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 
         //  {},
         //  0, nullptr, 0, nullptr, 0, nullptr);
-        imGuiHelper.ShowDemoWindow();
       }
-      imGuiHelper.End();
 
+      static std::chrono::duration<float> duration{};
+      static bool showDemoWindow = false;
+      ImGui::Begin("Stats");
+      ImGui::Checkbox("Show ImGui Demo", &showDemoWindow);
+      if (showDemoWindow)
+        imGuiHelper.ShowDemoWindow();
+      ImGui::Text("frame Dur: %.2f ms, FPS: %1.f", duration.count() * 1'000, 1.0f / duration.count());
+      ImGui::End();
+
+      imGuiHelper.End();
       // A final render pass for ImGui draw commands
       const vk::RenderPassBeginInfo renderPassBeginInfo(*vc.renderPass, *frameDrawer.framebuffer, vk::Rect2D{ {0,0}, vc.swapchainExtent }, {});
       frameDrawer.commandBuffer.beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
@@ -58,8 +68,7 @@ namespace vku {
       frameDrawer.commandBuffer.endRenderPass();
 
       vc.drawFrameEnd(frameDrawer);
-      std::chrono::duration<float> duration = std::chrono::system_clock::now() - time;
-      std::cout << "frame duration: " << duration << ", FPS: " << 1.f / duration.count() << '\n';
+      duration = std::chrono::system_clock::now() - time;
     }
 
     // END
