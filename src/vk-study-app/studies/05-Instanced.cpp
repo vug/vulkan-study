@@ -260,8 +260,8 @@ void main()
 void InstancingStudy::recordCommandBuffer(const vku::VulkanContext& vc, const vku::FrameDrawer& frameDrawer) {
   static float t = 0.0f;
 
-  const glm::vec3 up = { 0, 1, 0 };
-  const float r{ 5.0f };
+  //const glm::vec3 up = { 0, 1, 0 };
+  //const float r{ 5.0f };
   //uniforms.viewFromWorld = glm::lookAt(glm::vec3(r * std::cos(t), 0, r * std::sin(t)), glm::vec3(0, 0, 0), up);
   camera.yaw = t; // TODO: make yaw private again.
   uniforms.viewFromWorld = camera.getViewFromWorld();
