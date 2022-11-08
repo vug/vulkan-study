@@ -38,6 +38,12 @@ namespace vku {
     glfwPollEvents();
   }
 
+  glm::vec2 Window::getSize() const {
+    int width, height;
+    glfwGetWindowSize(window.get(), &width, &height);
+    return { width, height };
+  }
+
   bool Window::isKeyHeld(int glfwKey) const {
     const int state = glfwGetKey(window.get(), glfwKey);
     return state == GLFW_PRESS || state == GLFW_REPEAT;

@@ -23,6 +23,7 @@ namespace vku {
     bool shouldClose() const;
     // Call once a frame
     void pollEvents() const;
+    glm::vec2 getSize() const;
     // TODO: Make friends with ImGuiHelper
     GLFWwindow* getGLFWWindow() const { return window.get(); }
 
