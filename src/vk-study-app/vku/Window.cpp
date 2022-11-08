@@ -37,4 +37,20 @@ namespace vku {
   void Window::pollEvents() const {
     glfwPollEvents();
   }
+
+  bool Window::isKeyHeld(int glfwKey) const {
+    const int state = glfwGetKey(window.get(), glfwKey);
+    return state == GLFW_PRESS || state == GLFW_REPEAT;
+  }
+
+  bool Window::isMouseButtonPressed(int glfwButton) const {
+    const int state = glfwGetMouseButton(window.get(), glfwButton);
+    return state == GLFW_PRESS;
+  }
+
+  glm::vec2 Window::getMouseCursorPosition() const {
+    double xpos, ypos;
+    glfwGetCursorPos(window.get(), &xpos, &ypos);
+    return glm::vec2{ static_cast<float>(xpos), static_cast<float>(ypos) };
+  }
 }
