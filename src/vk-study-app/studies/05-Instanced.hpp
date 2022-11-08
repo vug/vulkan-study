@@ -3,6 +3,7 @@
 #include "../StudyApp/Study.hpp"
 
 #include "../vku/Buffer.hpp"
+#include "../vku/Camera.hpp"
 #include "../vku/UniformBuffer.hpp"
 
 #include <glm/mat4x4.hpp>
@@ -33,6 +34,7 @@ private:
   vk::raii::DescriptorSets descriptorSets = nullptr;
   vk::raii::PipelineLayout pipelineLayout = nullptr;
   std::unique_ptr<vk::raii::Pipeline> pipeline;
+  vku::FirstPersonPerspectiveCamera camera;
 
 public:
   virtual ~InstancingStudy() = default;

@@ -262,8 +262,10 @@ void InstancingStudy::recordCommandBuffer(const vku::VulkanContext& vc, const vk
 
   const glm::vec3 up = { 0, 1, 0 };
   const float r{ 5.0f };
-  uniforms.viewFromWorld = glm::lookAt(glm::vec3(r * std::cos(t), 0, r * std::sin(t)), glm::vec3(0, 0, 0), up);
-  uniforms.projectionFromView = glm::perspective(glm::radians(45.0f), (float)800 / (float)800, 0.1f, 256.0f);
+  //uniforms.viewFromWorld = glm::lookAt(glm::vec3(r * std::cos(t), 0, r * std::sin(t)), glm::vec3(0, 0, 0), up);
+  camera.yaw = t; // TODO: make yaw private again.
+  uniforms.viewFromWorld = camera.getViewFromWorld();
+  uniforms.projectionFromView = camera.getProjectionFromView();
   uniforms.projectionFromWorld = uniforms.projectionFromView * uniforms.viewFromWorld;
 
   ubo.update(); // don't forget to call update after uniform data changes
