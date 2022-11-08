@@ -4,6 +4,10 @@ project(VulkanStudy
   VERSION 0.1
   DESCRIPTION "Studying Vulkan by writing small apps")
 
+if(MSVC)
+  add_compile_options(/external:I"${PROJECT_SOURCE_DIR}/dependencies" /external:W0)
+endif()
+
 # dependencies
 # GLFW https://github.com/glfw/glfw
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
@@ -22,6 +26,7 @@ message("Found? Vulkan: ${Vulkan_FOUND}, glslang: ${Vulkan_glslang_FOUND}, SPIRV
 message("Vulkan Include Dirs: ${Vulkan_INCLUDE_DIRS}")
 message("Libraries. Vulkan: ${Vulkan_LIBRARIES}, glslang: ${Vulkan_glslang_LIBRARY}, SPIRV-Tools: ${Vulkan_SPIRV-Tools_LIBRARY}")
 # GLM https://github.com/g-truc/glm
+add_compile_definitions(GLM_FORCE_SILENT_WARNINGS) # to globally silence warnings from included headers https://github.com/g-truc/glm/blob/master/manual.md#-220-glm_force_silent_warnings-silent-c-warnings-from-language-extensions
 add_subdirectory(dependencies/glm)
 # ImGui https://github.com/ocornut/imgui/tree/docking
 add_library(
