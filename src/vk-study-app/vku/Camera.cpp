@@ -26,7 +26,7 @@ namespace vku {
   }
 
   glm::quat FirstPersonCameraView::getOrientation() const {
-    return glm::quat(glm::vec3(-pitch, -yaw, 0.0f));
+    return glm::quat(glm::vec3(pitch, yaw, roll));
   }
 
   glm::mat4 PerspectiveCameraProjection::getProjectionFromView() const {

@@ -7,7 +7,7 @@
 
 namespace vku {
   class CameraView {
-  private:
+  public: // TODO: make private again (?)
     glm::vec3 position{};
   public:
     const glm::vec3& getPosition() const;
@@ -33,7 +33,7 @@ namespace vku {
   };
 
   class FirstPersonCameraView : public CameraView {
-  public:
+  public: // TODO: make private again
     float pitch{};
     float yaw{ std::numbers::pi_v<float> };
     float roll{};

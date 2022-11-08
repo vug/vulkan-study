@@ -260,7 +260,24 @@ void main()
 void InstancingStudy::onUpdate(float deltaTime, [[maybe_unused]] const vku::Window& win) {
   static float t = 0.0f;
 
-  camera.yaw = t; // TODO: make yaw private again.
+  const glm::vec2& winSize = win.getSize();
+  const glm::vec2& m = glm::clamp(win.getMouseCursorPosition(), glm::vec2{ 0, 0 }, winSize);
+
+  if (m.x > 0 && m.y > 0) {
+    const float pi = std::numbers::pi_v<float>;
+    camera.yaw = m.x / winSize.x * 2.f * pi - pi;
+    camera.pitch = m.y / winSize.y * pi - 0.5f * pi;
+
+    if (win.isKeyHeld(GLFW_KEY_W))
+      camera.position += camera.getForward() * deltaTime;
+    if (win.isKeyHeld(GLFW_KEY_S))
+      camera.position -= camera.getForward() * deltaTime;
+    if (win.isKeyHeld(GLFW_KEY_A))
+      camera.position -= camera.getRight() * deltaTime;
+    if (win.isKeyHeld(GLFW_KEY_D))
+      camera.position += camera.getRight() * deltaTime;
+
+  }
   uniforms.viewFromWorld = camera.getViewFromWorld();
   uniforms.projectionFromView = camera.getProjectionFromView();
   uniforms.projectionFromWorld = uniforms.projectionFromView * uniforms.viewFromWorld;
