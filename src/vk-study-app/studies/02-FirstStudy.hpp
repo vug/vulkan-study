@@ -15,6 +15,7 @@ public:
 
   inline std::string getName() final { return "Vertex Data embedded in Vertex Shader. Pipeline without descriptors nor vertex buffers."; }
   void onInit(const vku::AppSettings appSettings, const vku::VulkanContext& vc) final;
+  void onUpdate(float deltaTime, const vku::Window& win) final;
   void recordCommandBuffer(const vku::VulkanContext& vc, const vku::FrameDrawer& frameDrawer) final;
   void onDeinit() final;
 };

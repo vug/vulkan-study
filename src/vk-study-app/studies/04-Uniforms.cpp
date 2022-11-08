@@ -191,6 +191,8 @@ void main()
   assert(pipeline->getConstructorSuccessCode() == vk::Result::eSuccess);
 }
 
+void UniformsStudy::onUpdate([[maybe_unused]] float deltaTime, [[maybe_unused]] const vku::Window& win) { }
+
 void UniformsStudy::recordCommandBuffer(const vku::VulkanContext& vc, const vku::FrameDrawer& frameDrawer) {
   static float t = 0.0f;
   const glm::vec3 up = { 0, 1, 0 };

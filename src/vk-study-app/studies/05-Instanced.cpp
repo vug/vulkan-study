@@ -257,20 +257,19 @@ void main()
   assert(pipeline->getConstructorSuccessCode() == vk::Result::eSuccess);
 }
 
-void InstancingStudy::recordCommandBuffer(const vku::VulkanContext& vc, const vku::FrameDrawer& frameDrawer) {
+void InstancingStudy::onUpdate(float deltaTime, [[maybe_unused]] const vku::Window& win) {
   static float t = 0.0f;
 
-  //const glm::vec3 up = { 0, 1, 0 };
-  //const float r{ 5.0f };
-  //uniforms.viewFromWorld = glm::lookAt(glm::vec3(r * std::cos(t), 0, r * std::sin(t)), glm::vec3(0, 0, 0), up);
   camera.yaw = t; // TODO: make yaw private again.
   uniforms.viewFromWorld = camera.getViewFromWorld();
   uniforms.projectionFromView = camera.getProjectionFromView();
   uniforms.projectionFromWorld = uniforms.projectionFromView * uniforms.viewFromWorld;
 
   ubo.update(); // don't forget to call update after uniform data changes
-  t += 0.001f;
+  t += deltaTime;
+}
 
+void InstancingStudy::recordCommandBuffer(const vku::VulkanContext& vc, const vku::FrameDrawer& frameDrawer) {
   const vk::RenderPassBeginInfo renderPassBeginInfo(*vc.renderPass, *frameDrawer.framebuffer, vk::Rect2D{ {0,0}, vc.swapchainExtent }, {});
 
   const vk::raii::CommandBuffer& cmdBuf = frameDrawer.commandBuffer;

@@ -36,9 +36,11 @@ namespace vku {
       window.pollEvents();
 
       auto time = std::chrono::system_clock::now();
+      static std::chrono::duration<float> frameDuration{};
       const vku::FrameDrawer frameDrawer = vc.drawFrameBegin();
       imGuiHelper.Begin();
       for (auto& study : studies) {
+        study->onUpdate(frameDuration.count(), window);
         study->recordCommandBuffer(vc, frameDrawer);
         // TODO: might need to add some synchronization here. If layer order does not look correct uncomment below line.
         //vku::setImageLayout(frameDrawer.commandBuffer, frameDrawer.image, vc.swapchainColorFormat, vk::ImageLayout::eColorAttachmentOptimal, vk::ImageLayout::eColorAttachmentOptimal);
@@ -51,13 +53,12 @@ namespace vku {
         //  0, nullptr, 0, nullptr, 0, nullptr);
       }
 
-      static std::chrono::duration<float> duration{};
       static bool showDemoWindow = false;
       ImGui::Begin("Stats");
       ImGui::Checkbox("Show ImGui Demo", &showDemoWindow);
       if (showDemoWindow)
         imGuiHelper.ShowDemoWindow();
-      ImGui::Text("frame Dur: %.2f ms, FPS: %1.f", duration.count() * 1'000, 1.0f / duration.count());
+      ImGui::Text("frame Dur: %.2f ms, FPS: %1.f", frameDuration.count() * 1'000, 1.0f / frameDuration.count());
       ImGui::End();
 
       imGuiHelper.End();
@@ -68,7 +69,7 @@ namespace vku {
       frameDrawer.commandBuffer.endRenderPass();
 
       vc.drawFrameEnd(frameDrawer);
-      duration = std::chrono::system_clock::now() - time;
+      frameDuration = std::chrono::system_clock::now() - time;
     }
 
     // END

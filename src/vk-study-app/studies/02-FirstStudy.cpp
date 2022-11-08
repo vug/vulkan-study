@@ -121,6 +121,9 @@ void main () { outColor = vec4 (fragColor, 1.0); }
   pipeline = std::make_unique<vk::raii::Pipeline>(vc.device, nullptr, graphicsPipelineCreateInfo);
   assert(pipeline->getConstructorSuccessCode() == vk::Result::eSuccess);
 }
+
+void FirstStudy::onUpdate([[maybe_unused]] float deltaTime, [[maybe_unused]] const vku::Window& win) { }
+
 void FirstStudy::recordCommandBuffer(const vku::VulkanContext& vc, const vku::FrameDrawer& frameDrawer) {
   const vk::RenderPassBeginInfo renderPassBeginInfo(*vc.renderPass, *frameDrawer.framebuffer, vk::Rect2D{ {0,0}, vc.swapchainExtent }, {});
 
