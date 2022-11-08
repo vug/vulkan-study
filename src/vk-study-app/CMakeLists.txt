@@ -11,6 +11,7 @@ add_executable(${APP}
   vku/UniformBuffer.hpp vku/UniformBuffer.cpp
   vku/Model.hpp vku/Model.cpp
   vku/ImGuiHelper.hpp vku/ImGuiHelper.cpp
+  vku/Camera.hpp vku/Camera.cpp
   StudyApp/AppSettings.hpp
   StudyApp/StudyRunner.hpp StudyApp/StudyRunner.cpp
   StudyApp/Study.hpp 
