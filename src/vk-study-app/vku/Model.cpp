@@ -125,6 +125,37 @@ namespace vku {
     return meshData;
   }
 
+  MeshData makeAxes() {
+    MeshData xAxis = makeBox({ 1, 0.2, 0.2 });
+    MeshData yAxis = makeBox({ 0.2, 1, 0.2 });
+    MeshData zAxis = makeBox({ 0.2, 0.2, 1 });
+    MeshData axes;
+    for (auto& v : xAxis.vertices) {
+      v.color = { 1, 0, 0, 1 };
+      v.position += glm::vec3{0.5f, 0, 0};
+    }
+    for (auto& v : yAxis.vertices) {
+      v.color = { 0, 1, 0, 1 };
+      v.position += glm::vec3{0, 0.5f, 0};
+    }
+    for (auto& v : zAxis.vertices) {
+      v.color = { 0, 0, 1, 1 };
+      v.position += glm::vec3{0, 0, 0.5f};
+    }     
+
+    axes.vertices.insert(axes.vertices.end(), xAxis.vertices.begin(), xAxis.vertices.end());
+    axes.indices.insert(axes.indices.end(), xAxis.indices.begin(), xAxis.indices.end());
+
+    axes.vertices.insert(axes.vertices.end(), yAxis.vertices.begin(), yAxis.vertices.end());
+    for (int ix : yAxis.indices)
+      axes.indices.push_back(ix + static_cast<uint32_t>(xAxis.vertices.size()));
+
+    axes.vertices.insert(axes.vertices.end(), zAxis.vertices.begin(), zAxis.vertices.end());
+    for (int ix : zAxis.indices)
+      axes.indices.push_back(ix + static_cast<uint32_t>(xAxis.vertices.size() + yAxis.vertices.size()));
+    return axes;
+  }
+
   struct VertexId {
     int posIx;
     int texIx;
