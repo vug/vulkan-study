@@ -23,6 +23,7 @@ void InstancingStudy::onInit(const vku::AppSettings appSettings, const vku::Vulk
   vku::MeshData boxMeshData = vku::makeBox({ 0.6f, 0.9f, 1.5f });
   vku::MeshData torusMeshData = vku::makeTorus(1.f, 17, .5f, 6);
   vku::MeshData quadMeshData = vku::makeQuad({ 1, 1 });
+  vku::MeshData axesMeshData = vku::makeAxes();
   // TODO: do not hard-code absolute paths, instead have a global "assets root folder"
   vku::MeshData objMeshData = vku::loadOBJ(vku::assetsRootFolder / "models/suzanne.obj");
 
@@ -44,7 +45,7 @@ void InstancingStudy::onInit(const vku::AppSettings appSettings, const vku::Vulk
   const auto& u2 = [&rndGenerator, &uniformN11]() { return uniformN11(rndGenerator); };
   //std::uniform_int_distribution<uint32_t> rndTextureIndex(0, textures.rocks.layerCount);
   for (uint32_t i = 0; i < instanceCount; ++i) {
-    const auto& scale = glm::scale(glm::mat4(1), glm::vec3{ 0.5f + 0.3f * u1(), 0.5f + 0.3f * u1(), 0.5f + 0.3f * u1() } * 0.02f);
+    const auto& scale = glm::scale(glm::mat4(1), glm::vec3{ 0.5f + 0.3f * u1(), 0.5f + 0.3f * u1(), 0.5f + 0.3f * u1() } *0.02f);
     const auto& rotate = glm::rotate(glm::mat4(1), 2.f * std::numbers::pi_v<float> * u1(), {u2(), u2(), u2()});
     const auto& translate = glm::translate(glm::mat4(1), { u2(), u2(), u2()});
     const glm::mat4 transform = translate * rotate * scale;
@@ -122,6 +123,7 @@ void main()
   gl_Position = ubo.projectionFromWorldMatrix * worldPosition4;
 
   v2f.color = instanceColor;
+  //v2f.color = inColor;
 }
 )";
 
@@ -146,7 +148,8 @@ void main()
   vec3 fragToLightDir = normalize(lightPos - v2f.worldPosition); // not light to frag
   float diffuse = max(dot(normalize(v2f.worldNormal), fragToLightDir), 0);  
   
-  outFragColor = vec4(v2f.color.xyz, 1) * diffuse;
+  outFragColor = vec4(v2f.color.xyz, 1) * diffuse; // lit
+  //outFragColor = vec4(v2f.color.xyz, 1); // unlit
 }
 )";
 
@@ -264,23 +267,55 @@ void InstancingStudy::onUpdate(float deltaTime, [[maybe_unused]] const vku::Wind
   const glm::vec2& winSize = win.getSize();
   const glm::vec2& m = glm::clamp(win.getMouseCursorPosition(), glm::vec2{ 0, 0 }, winSize);
   ImGui::Begin("Debug");
-
   if (m.x > 0 && m.y > 0) {
-    const float pi = std::numbers::pi_v<float>;
-    camera.yaw = m.x / winSize.x * 2.f * pi - pi;
-    camera.pitch = m.y / winSize.y * pi - 0.5f * pi;
+    // simple camera mechanism
+    //camera.yaw = m.x / winSize.x * 2.f * pi - pi;
+    //camera.pitch = m.y / winSize.y * pi - 0.5f * pi;
 
+    // First Person Camera mechanism with state machine for dragging
+    static bool isDragging = false;
+    static bool isPressing = false;
+    static glm::vec2 m0{};
+    static float pitch0{};
+    static float yaw0{}; 
+    if (win.isMouseButtonPressed(GLFW_MOUSE_BUTTON_RIGHT)) {
+      // enter dragging
+      if (!isPressing) {
+        isDragging = true;
+        m0 = win.getMouseCursorPosition();
+        pitch0 = camera.pitch;
+        yaw0 = camera.yaw;
+      }  
+      isPressing = true;
+    }
+    else {
+      // exit dragging
+      if (isPressing) {
+        isDragging = false;
+      }
+        
+      isPressing = false;
+    }
+    const float speed = 0.005f;
+    if (isDragging) {
+      glm::vec2 drag = win.getMouseCursorPosition() - m0;
+      camera.pitch = glm::clamp(pitch0 - drag.y * speed, -std::numbers::pi_v<float> * 0.5f, std::numbers::pi_v<float> * 0.5f);
+      camera.yaw = yaw0 + drag.x * speed;
+    }
     ImGui::Text(std::format("yaw: {}, pitch: {}\n", camera.yaw, camera.pitch).c_str());
 
     if (win.isKeyHeld(GLFW_KEY_W))
       camera.position += camera.getForward() * deltaTime;
-    if (win.isKeyHeld(GLFW_KEY_S))
+    else if (win.isKeyHeld(GLFW_KEY_S))
       camera.position -= camera.getForward() * deltaTime;
-    if (win.isKeyHeld(GLFW_KEY_A))
+    else if (win.isKeyHeld(GLFW_KEY_A))
       camera.position -= camera.getRight() * deltaTime;
-    if (win.isKeyHeld(GLFW_KEY_D))
+    else if (win.isKeyHeld(GLFW_KEY_D))
       camera.position += camera.getRight() * deltaTime;
-
+    else if (win.isKeyHeld(GLFW_KEY_Q))
+      camera.position += glm::vec3{0, 1, 0} *deltaTime;
+    else if (win.isKeyHeld(GLFW_KEY_E))
+      camera.position -= glm::vec3{ 0, 1, 0 } * deltaTime;
   }
   uniforms.viewFromWorld = camera.getViewFromWorld();
   uniforms.projectionFromView = camera.getProjectionFromView();
