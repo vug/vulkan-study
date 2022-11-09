@@ -11,7 +11,7 @@ namespace vku {
     glm::vec3 position{};
   public:
     const glm::vec3& getPosition() const;
-    virtual glm::quat getOrientation() const = 0;
+    virtual glm::vec3 getDirection() const = 0;
 
     glm::mat4 getViewFromWorld() const;
     glm::vec3 getForward() const;
@@ -34,11 +34,11 @@ namespace vku {
 
   class FirstPersonCameraView : public CameraView {
   public: // TODO: make private again
-    float pitch{};
-    float yaw{ std::numbers::pi_v<float> };
+    float pitch{ };
+    float yaw{ std::numbers::pi_v<float> * 0.5f  };
     float roll{};
   public:
-    virtual glm::quat getOrientation() const final;
+    virtual glm::vec3 getDirection() const final;
   };
 
   class PerspectiveCameraProjection : public CameraProjection {

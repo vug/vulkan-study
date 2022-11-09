@@ -6,27 +6,32 @@ namespace vku {
   }
 
   glm::mat4 CameraView::getViewFromWorld() const {
-    return glm::translate(glm::mat4(1.0f), getPosition()) * glm::toMat4(getOrientation());
+    return glm::lookAt(position, position + getDirection(), { 0, 1, 0 });
   }
 
   glm::vec3 CameraView::getForward() const {
-    return glm::rotate(getOrientation(), glm::vec3(0.0f, 0.0f, -1.0f));
+    return getDirection();
   }
 
   glm::vec3 CameraView::getUp() const {
-    return glm::rotate(getOrientation(), glm::vec3(0.0f, 1.0f, 0.0f));
+    return glm::normalize(glm::cross(getRight(), getForward()));
   }
 
   glm::vec3 CameraView::getRight() const {
-    return glm::rotate(getOrientation(), glm::vec3(1.0f, 0.0f, 0.0f));
+    return glm::normalize(glm::cross(getDirection(), { 0, 1, 0 }));
   }
 
   glm::mat4 Camera::getProjectionFromWorld() const {
     return getProjectionFromView() * getViewFromWorld();
   }
 
-  glm::quat FirstPersonCameraView::getOrientation() const {
-    return glm::quat(glm::vec3(pitch, yaw, roll));
+  glm::vec3 FirstPersonCameraView::getDirection() const {
+    return {
+      // cos/sin x/y/z order taken from: https://learnopengl.com/code_viewer_gh.php?code=includes/learnopengl/camera.h 
+      std::cos(yaw) * std::cos(pitch),
+      std::sin(pitch),
+      std::sin(yaw) * std::cos(pitch),
+    };
   }
 
   glm::mat4 PerspectiveCameraProjection::getProjectionFromView() const {
