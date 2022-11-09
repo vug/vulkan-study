@@ -7,6 +7,7 @@
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <imgui.h>
 #include <vivid/vivid.h>
 #include <vulkan/vulkan_raii.hpp>
 
@@ -262,11 +263,14 @@ void InstancingStudy::onUpdate(float deltaTime, [[maybe_unused]] const vku::Wind
 
   const glm::vec2& winSize = win.getSize();
   const glm::vec2& m = glm::clamp(win.getMouseCursorPosition(), glm::vec2{ 0, 0 }, winSize);
+  ImGui::Begin("Debug");
 
   if (m.x > 0 && m.y > 0) {
     const float pi = std::numbers::pi_v<float>;
     camera.yaw = m.x / winSize.x * 2.f * pi - pi;
     camera.pitch = m.y / winSize.y * pi - 0.5f * pi;
+
+    ImGui::Text(std::format("yaw: {}, pitch: {}\n", camera.yaw, camera.pitch).c_str());
 
     if (win.isKeyHeld(GLFW_KEY_W))
       camera.position += camera.getForward() * deltaTime;
@@ -284,6 +288,7 @@ void InstancingStudy::onUpdate(float deltaTime, [[maybe_unused]] const vku::Wind
 
   ubo.update(); // don't forget to call update after uniform data changes
   t += deltaTime;
+  ImGui::End();
 }
 
 void InstancingStudy::recordCommandBuffer(const vku::VulkanContext& vc, const vku::FrameDrawer& frameDrawer) {
