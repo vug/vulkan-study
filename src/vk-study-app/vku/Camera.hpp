@@ -39,6 +39,8 @@ namespace vku {
     float roll{};
   public:
     virtual glm::vec3 getDirection() const final;
+
+    friend class FirstPersonCameraViewOrbitingController;
   };
 
   class PerspectiveCameraProjection : public CameraProjection {
@@ -62,4 +64,19 @@ namespace vku {
   class FirstPersonOrthographicCamera :
     public FirstPersonCameraView,
     public OrthographicCameraProjection {};
+
+  class FirstPersonCameraViewOrbitingController {
+  private:
+    FirstPersonCameraView& cameraView;
+    float phi{};
+    float deltaPhi{};
+  public:
+    float theta{ std::numbers::pi_v<float> *0.2f };
+    float phi0{};
+    float radius = 3.f;
+    float speed = 1.f;
+  public:
+    FirstPersonCameraViewOrbitingController(FirstPersonCameraView& cameraView);
+    void update(float deltaTime);
+  };
 }

@@ -46,4 +46,20 @@ namespace vku {
 
     return glm::ortho(left, right, bottom, top, nearClip, farClip);
   }
+
+  FirstPersonCameraViewOrbitingController::FirstPersonCameraViewOrbitingController(FirstPersonCameraView& cameraView)
+    : cameraView(cameraView) { }
+
+  void FirstPersonCameraViewOrbitingController::update(float deltaTime) {
+    deltaPhi += speed * deltaTime;
+    phi = phi0 + deltaPhi;
+    cameraView.position = glm::vec3 {
+      std::cos(phi)* std::cos(theta),
+      std::sin(theta),
+      std::sin(phi)* std::cos(theta),
+    } * radius;
+
+    cameraView.yaw = phi + std::numbers::pi_v<float>;
+    cameraView.pitch = -theta;
+  }
 }
