@@ -7,6 +7,7 @@
 #include <glm/vec2.hpp>
 #include <vulkan/vulkan_raii.hpp>
 
+#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
@@ -31,5 +32,21 @@ namespace vku {
     bool isKeyHeld(int glfwKey) const;
     bool isMouseButtonPressed(int glfwButton) const;
     glm::vec2 getMouseCursorPosition() const;
+  };
+
+  // A state machine that keeps track of mouse dragging input by the given mouse button.
+  // calls given callbacks at state changes
+  class DragHelper {
+  private:
+    const Window& win;
+    int glfwMouseButton;
+    std::function<void()> onEnterDraggingCallback;
+    std::function<void()> onBeingDraggedCallback;
+    bool isBeingDragged{};
+    bool isBeingPressed{};
+  public:
+    DragHelper(const Window& win, int glfwMouseButton, std::function<void()> onEnterDraggingCallback, std::function<void()> onBeingDraggedCallback);
+    // update function to call every frame
+    void checkDragging();
   };
 }

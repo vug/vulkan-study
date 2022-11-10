@@ -264,6 +264,27 @@ void main()
 void InstancingStudy::onUpdate(float deltaTime, [[maybe_unused]] const vku::Window& win) {
   static float t = 0.0f;
 
+
+  // First Person Camera mechanism with state machine for dragging
+  const float speed = 0.005f;
+  static glm::vec2 m0{};
+  static float pitch0{};
+  static float yaw0{};
+  static vku::DragHelper dragHelper(
+    win,
+    GLFW_MOUSE_BUTTON_RIGHT, 
+    [&]() {
+      m0 = win.getMouseCursorPosition();
+      pitch0 = camera.pitch;
+      yaw0 = camera.yaw;
+    },
+    [&]() {
+      glm::vec2 drag = win.getMouseCursorPosition() - m0;
+      camera.pitch = glm::clamp(pitch0 - drag.y * speed, -std::numbers::pi_v<float> *0.5f, std::numbers::pi_v<float> *0.5f);
+      camera.yaw = yaw0 + drag.x * speed;
+    }
+  );
+
   const glm::vec2& winSize = win.getSize();
   const glm::vec2& m = glm::clamp(win.getMouseCursorPosition(), glm::vec2{ 0, 0 }, winSize);
   ImGui::Begin("Debug");
@@ -272,36 +293,7 @@ void InstancingStudy::onUpdate(float deltaTime, [[maybe_unused]] const vku::Wind
     //camera.yaw = m.x / winSize.x * 2.f * pi - pi;
     //camera.pitch = m.y / winSize.y * pi - 0.5f * pi;
 
-    // First Person Camera mechanism with state machine for dragging
-    static bool isDragging = false;
-    static bool isPressing = false;
-    static glm::vec2 m0{};
-    static float pitch0{};
-    static float yaw0{}; 
-    if (win.isMouseButtonPressed(GLFW_MOUSE_BUTTON_RIGHT)) {
-      // enter dragging
-      if (!isPressing) {
-        isDragging = true;
-        m0 = win.getMouseCursorPosition();
-        pitch0 = camera.pitch;
-        yaw0 = camera.yaw;
-      }  
-      isPressing = true;
-    }
-    else {
-      // exit dragging
-      if (isPressing) {
-        isDragging = false;
-      }
-        
-      isPressing = false;
-    }
-    const float speed = 0.005f;
-    if (isDragging) {
-      glm::vec2 drag = win.getMouseCursorPosition() - m0;
-      camera.pitch = glm::clamp(pitch0 - drag.y * speed, -std::numbers::pi_v<float> * 0.5f, std::numbers::pi_v<float> * 0.5f);
-      camera.yaw = yaw0 + drag.x * speed;
-    }
+    dragHelper.checkDragging();
     ImGui::Text(std::format("yaw: {}, pitch: {}\n", camera.yaw, camera.pitch).c_str());
 
     if (win.isKeyHeld(GLFW_KEY_W))
