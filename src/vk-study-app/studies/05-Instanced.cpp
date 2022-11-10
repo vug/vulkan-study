@@ -264,48 +264,52 @@ void main()
 void InstancingStudy::onUpdate(float deltaTime, [[maybe_unused]] const vku::Window& win) {
   static float t = 0.0f;
 
+  ImGui::Begin("Debug");
+  if (true) {
+    // First Person Camera mechanism with state machine for dragging
+    const float sensitivity = 0.005f;
+    static glm::vec2 m0{};
+    static float pitch0{};
+    static float yaw0{};
+    static vku::DragHelper dragHelper(
+      win,
+      GLFW_MOUSE_BUTTON_RIGHT,
+      [&]() {
+        m0 = win.getMouseCursorPosition();
+        pitch0 = camera.pitch;
+        yaw0 = camera.yaw;
+      },
+      [&]() {
+        glm::vec2 drag = win.getMouseCursorPosition() - m0;
+        camera.pitch = glm::clamp(pitch0 - drag.y * sensitivity, -std::numbers::pi_v<float> *0.5f, std::numbers::pi_v<float> *0.5f);
+        camera.yaw = yaw0 + drag.x * sensitivity;
+      }
+      );
+    dragHelper.checkDragging();
+    float cameraSpeed = win.isKeyHeld(GLFW_KEY_LEFT_SHIFT) ? 0.1f : 1.0f;
+    if (win.isKeyHeld(GLFW_KEY_W))
+      camera.position += camera.getForward() * cameraSpeed * deltaTime;
+    else if (win.isKeyHeld(GLFW_KEY_S))
+      camera.position -= camera.getForward() * cameraSpeed * deltaTime;
+    else if (win.isKeyHeld(GLFW_KEY_A))
+      camera.position -= camera.getRight() * cameraSpeed * deltaTime;
+    else if (win.isKeyHeld(GLFW_KEY_D))
+      camera.position += camera.getRight() * cameraSpeed * deltaTime;
+    else if (win.isKeyHeld(GLFW_KEY_Q))
+      camera.position += glm::vec3{ 0, 1, 0 } * cameraSpeed * deltaTime;
+    else if (win.isKeyHeld(GLFW_KEY_E))
+      camera.position -= glm::vec3{ 0, 1, 0 } * cameraSpeed * deltaTime;
+    ImGui::SliderFloat("FoV", &camera.fov, 15, 180, "%.1f");
+  }
+  else {
+    static vku::FirstPersonCameraViewOrbitingController cc(camera);
+    cc.update(deltaTime);
 
-  // First Person Camera mechanism with state machine for dragging
-  const float sensitivity = 0.005f;
-  static glm::vec2 m0{};
-  static float pitch0{};
-  static float yaw0{};
-  static vku::DragHelper dragHelper(
-    win,
-    GLFW_MOUSE_BUTTON_RIGHT, 
-    [&]() {
-      m0 = win.getMouseCursorPosition();
-      pitch0 = camera.pitch;
-      yaw0 = camera.yaw;
-    },
-    [&]() {
-      glm::vec2 drag = win.getMouseCursorPosition() - m0;
-      camera.pitch = glm::clamp(pitch0 - drag.y * sensitivity, -std::numbers::pi_v<float> *0.5f, std::numbers::pi_v<float> *0.5f);
-      camera.yaw = yaw0 + drag.x * sensitivity;
-    }
-  );
-
-  //// simple camera mechanism
-  //const glm::vec2& winSize = win.getSize();
-  //const glm::vec2& m = glm::clamp(win.getMouseCursorPosition(), glm::vec2{ 0, 0 }, winSize);
-  //camera.yaw = m.x / winSize.x * 2.f * pi - pi;
-  //camera.pitch = m.y / winSize.y * pi - 0.5f * pi;
-
-  dragHelper.checkDragging();
-
-  float cameraSpeed = win.isKeyHeld(GLFW_KEY_LEFT_SHIFT) ? 0.1f : 1.0f;
-  if (win.isKeyHeld(GLFW_KEY_W))
-    camera.position += camera.getForward() * cameraSpeed * deltaTime;
-  else if (win.isKeyHeld(GLFW_KEY_S))
-    camera.position -= camera.getForward() * cameraSpeed * deltaTime;
-  else if (win.isKeyHeld(GLFW_KEY_A))
-    camera.position -= camera.getRight() * cameraSpeed * deltaTime;
-  else if (win.isKeyHeld(GLFW_KEY_D))
-    camera.position += camera.getRight() * cameraSpeed * deltaTime;
-  else if (win.isKeyHeld(GLFW_KEY_Q))
-    camera.position += glm::vec3{0, 1, 0} * cameraSpeed * deltaTime;
-  else if (win.isKeyHeld(GLFW_KEY_E))
-    camera.position -= glm::vec3{ 0, 1, 0 } * cameraSpeed * deltaTime;
+    ImGui::SliderFloat("Orbiting Theta", &cc.theta, -std::numbers::pi_v<float> *0.5, std::numbers::pi_v<float> *0.5);
+    ImGui::SliderFloat("Orbiting Phi0", &cc.phi0, -std::numbers::pi_v<float>, std::numbers::pi_v<float>);
+    ImGui::SliderFloat("Orbiting Speed", &cc.speed, -2.f, 2.f);
+    ImGui::SliderFloat("Orbiting Radius", &cc.radius, 0.1f, 10.f);
+  }
   
   uniforms.viewFromWorld = camera.getViewFromWorld();
   uniforms.projectionFromView = camera.getProjectionFromView();
@@ -314,8 +318,6 @@ void InstancingStudy::onUpdate(float deltaTime, [[maybe_unused]] const vku::Wind
   ubo.update(); // don't forget to call update after uniform data changes
   t += deltaTime;
 
-  ImGui::Begin("Debug");
-  ImGui::SliderFloat("FoV", &camera.fov, 15, 360, "%.1f");
   ImGui::Text(std::format("yaw: {}, pitch: {}\n", camera.yaw, camera.pitch).c_str());
   ImGui::End();
 }
