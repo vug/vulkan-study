@@ -41,11 +41,12 @@ namespace vku {
     const Window& win;
     int glfwMouseButton;
     std::function<void()> onEnterDraggingCallback;
-    std::function<void()> onBeingDraggedCallback;
+    std::function<void(const glm::vec2& drag)> onBeingDraggedCallback;
     bool isBeingDragged{};
     bool isBeingPressed{};
+    glm::vec2 cursor0{};
   public:
-    DragHelper(const Window& win, int glfwMouseButton, std::function<void()> onEnterDraggingCallback, std::function<void()> onBeingDraggedCallback);
+    DragHelper(const Window& win, int glfwMouseButton, std::function<void()> onEnterDraggingCallback, std::function<void(const glm::vec2& drag)> onBeingDraggedCallback);
     // update function to call every frame
     void checkDragging();
   };

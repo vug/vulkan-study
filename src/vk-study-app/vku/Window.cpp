@@ -60,7 +60,7 @@ namespace vku {
     return glm::vec2{ static_cast<float>(xpos), static_cast<float>(ypos) };
   }
 
-  DragHelper::DragHelper(const Window& win, int glfwMouseButton, std::function<void()> onEnterDraggingCallback, std::function<void()> onBeingDraggedCallback) :
+  DragHelper::DragHelper(const Window& win, int glfwMouseButton, std::function<void()> onEnterDraggingCallback, std::function<void(const glm::vec2& drag)> onBeingDraggedCallback) :
     win(win), glfwMouseButton(glfwMouseButton), onEnterDraggingCallback(onEnterDraggingCallback), onBeingDraggedCallback(onBeingDraggedCallback) {}
 
   void DragHelper::checkDragging() {
@@ -68,12 +68,15 @@ namespace vku {
       // enter dragging
       if (!isBeingDragged) {
         isBeingDragged = true;
+        cursor0 = win.getMouseCursorPosition();
         onEnterDraggingCallback(); // for storing values at the beginning
         isBeingPressed = true;
       }
       // being dragged
-      else
-        onBeingDraggedCallback(); // for updating values while mouse is being dragged
+      else {
+        const glm::vec2 drag = win.getMouseCursorPosition() - cursor0;
+        onBeingDraggedCallback(drag); // for updating values while mouse is being dragged
+      }
     }
     // exit dragging
     else if (isBeingPressed) {

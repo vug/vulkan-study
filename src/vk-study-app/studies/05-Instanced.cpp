@@ -268,38 +268,32 @@ void InstancingStudy::onUpdate(float deltaTime, [[maybe_unused]] const vku::Wind
   if (true) {
     // First Person Camera mechanism with state machine for dragging
     const float sensitivity = 0.005f;
-    static glm::vec2 m0{};
     static float pitch0{};
     static float yaw0{};
     static vku::DragHelper rightDragHelper(
       win,
       GLFW_MOUSE_BUTTON_RIGHT,
       [&]() {
-        m0 = win.getMouseCursorPosition();
         pitch0 = camera.pitch;
         yaw0 = camera.yaw;
       },
-      [&]() {
-        glm::vec2 drag = win.getMouseCursorPosition() - m0;
+      [&](const glm::vec2& drag) {
         camera.pitch = glm::clamp(pitch0 - drag.y * sensitivity, -std::numbers::pi_v<float> *0.5f, std::numbers::pi_v<float> *0.5f);
         camera.yaw = yaw0 + drag.x * sensitivity;
       }
     );
     rightDragHelper.checkDragging();
 
-    static glm::vec2 m0b{};
     static glm::vec3 pos0{};
     const float sensitivityB = 0.005f; // pan sensitivity
     static vku::DragHelper middleDragHelper(
       win,
       GLFW_MOUSE_BUTTON_MIDDLE,
       [&]() {
-        m0b = win.getMouseCursorPosition();
         pos0 = camera.position;
       },
-      [&]() {
-        glm::vec2 drag = win.getMouseCursorPosition() - m0b;
-        std::cout << std::format("m0b: ({}, {}). drag: ({}, {})\n", m0b.x, m0b.y, drag.x, drag.y);
+      [&](const glm::vec2& drag) {
+        std::cout << std::format("drag: ({}, {})\n", drag.x, drag.y);
         camera.position = pos0 + (camera.getRight() * drag.x - camera.getUp() * drag.y) * sensitivityB;
       }
     );
