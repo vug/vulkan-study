@@ -285,31 +285,29 @@ void InstancingStudy::onUpdate(float deltaTime, [[maybe_unused]] const vku::Wind
     }
   );
 
+  //// simple camera mechanism
+  //const glm::vec2& winSize = win.getSize();
+  //const glm::vec2& m = glm::clamp(win.getMouseCursorPosition(), glm::vec2{ 0, 0 }, winSize);
+  //camera.yaw = m.x / winSize.x * 2.f * pi - pi;
+  //camera.pitch = m.y / winSize.y * pi - 0.5f * pi;
+
+  dragHelper.checkDragging();
+  ImGui::Text(std::format("yaw: {}, pitch: {}\n", camera.yaw, camera.pitch).c_str());
+
   float cameraSpeed = win.isKeyHeld(GLFW_KEY_LEFT_SHIFT) ? 0.1f : 1.0f;
-  const glm::vec2& winSize = win.getSize();
-  const glm::vec2& m = glm::clamp(win.getMouseCursorPosition(), glm::vec2{ 0, 0 }, winSize);
-  ImGui::Begin("Debug");
-  if (m.x > 0 && m.y > 0) {
-    // simple camera mechanism
-    //camera.yaw = m.x / winSize.x * 2.f * pi - pi;
-    //camera.pitch = m.y / winSize.y * pi - 0.5f * pi;
-
-    dragHelper.checkDragging();
-    ImGui::Text(std::format("yaw: {}, pitch: {}\n", camera.yaw, camera.pitch).c_str());
-
-    if (win.isKeyHeld(GLFW_KEY_W))
-      camera.position += camera.getForward() * cameraSpeed * deltaTime;
-    else if (win.isKeyHeld(GLFW_KEY_S))
-      camera.position -= camera.getForward() * cameraSpeed * deltaTime;
-    else if (win.isKeyHeld(GLFW_KEY_A))
-      camera.position -= camera.getRight() * cameraSpeed * deltaTime;
-    else if (win.isKeyHeld(GLFW_KEY_D))
-      camera.position += camera.getRight() * cameraSpeed * deltaTime;
-    else if (win.isKeyHeld(GLFW_KEY_Q))
-      camera.position += glm::vec3{0, 1, 0} * cameraSpeed * deltaTime;
-    else if (win.isKeyHeld(GLFW_KEY_E))
-      camera.position -= glm::vec3{ 0, 1, 0 } * cameraSpeed * deltaTime;
-  }
+  if (win.isKeyHeld(GLFW_KEY_W))
+    camera.position += camera.getForward() * cameraSpeed * deltaTime;
+  else if (win.isKeyHeld(GLFW_KEY_S))
+    camera.position -= camera.getForward() * cameraSpeed * deltaTime;
+  else if (win.isKeyHeld(GLFW_KEY_A))
+    camera.position -= camera.getRight() * cameraSpeed * deltaTime;
+  else if (win.isKeyHeld(GLFW_KEY_D))
+    camera.position += camera.getRight() * cameraSpeed * deltaTime;
+  else if (win.isKeyHeld(GLFW_KEY_Q))
+    camera.position += glm::vec3{0, 1, 0} * cameraSpeed * deltaTime;
+  else if (win.isKeyHeld(GLFW_KEY_E))
+    camera.position -= glm::vec3{ 0, 1, 0 } * cameraSpeed * deltaTime;
+  
   uniforms.viewFromWorld = camera.getViewFromWorld();
   uniforms.projectionFromView = camera.getProjectionFromView();
   uniforms.projectionFromWorld = uniforms.projectionFromView * uniforms.viewFromWorld;
