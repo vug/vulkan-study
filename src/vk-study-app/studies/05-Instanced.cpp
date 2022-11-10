@@ -292,7 +292,6 @@ void InstancingStudy::onUpdate(float deltaTime, [[maybe_unused]] const vku::Wind
   //camera.pitch = m.y / winSize.y * pi - 0.5f * pi;
 
   dragHelper.checkDragging();
-  ImGui::Text(std::format("yaw: {}, pitch: {}\n", camera.yaw, camera.pitch).c_str());
 
   float cameraSpeed = win.isKeyHeld(GLFW_KEY_LEFT_SHIFT) ? 0.1f : 1.0f;
   if (win.isKeyHeld(GLFW_KEY_W))
@@ -314,6 +313,10 @@ void InstancingStudy::onUpdate(float deltaTime, [[maybe_unused]] const vku::Wind
 
   ubo.update(); // don't forget to call update after uniform data changes
   t += deltaTime;
+
+  ImGui::Begin("Debug");
+  ImGui::SliderFloat("FoV", &camera.fov, 15, 360, "%.1f");
+  ImGui::Text(std::format("yaw: {}, pitch: {}\n", camera.yaw, camera.pitch).c_str());
   ImGui::End();
 }
 

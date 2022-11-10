@@ -42,7 +42,7 @@ namespace vku {
   };
 
   class PerspectiveCameraProjection : public CameraProjection {
-  private:
+  public: // TODO: make private again
     float fov{50.f};
   public:
     virtual glm::mat4 getProjectionFromView() const final;
