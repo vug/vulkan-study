@@ -302,15 +302,15 @@ void InstancingStudy::onUpdate(float deltaTime, [[maybe_unused]] const vku::Wind
     float cameraSpeed = win.isKeyHeld(GLFW_KEY_LEFT_SHIFT) ? 0.1f : 1.0f;
     if (win.isKeyHeld(GLFW_KEY_W))
       camera.position += camera.getForward() * cameraSpeed * deltaTime;
-    else if (win.isKeyHeld(GLFW_KEY_S))
+    if (win.isKeyHeld(GLFW_KEY_S))
       camera.position -= camera.getForward() * cameraSpeed * deltaTime;
-    else if (win.isKeyHeld(GLFW_KEY_A))
+    if (win.isKeyHeld(GLFW_KEY_A))
       camera.position -= camera.getRight() * cameraSpeed * deltaTime;
-    else if (win.isKeyHeld(GLFW_KEY_D))
+    if (win.isKeyHeld(GLFW_KEY_D))
       camera.position += camera.getRight() * cameraSpeed * deltaTime;
-    else if (win.isKeyHeld(GLFW_KEY_Q))
+    if (win.isKeyHeld(GLFW_KEY_Q))
       camera.position += glm::vec3{ 0, 1, 0 } * cameraSpeed * deltaTime;
-    else if (win.isKeyHeld(GLFW_KEY_E))
+    if (win.isKeyHeld(GLFW_KEY_E))
       camera.position -= glm::vec3{ 0, 1, 0 } * cameraSpeed * deltaTime;
     ImGui::SliderFloat("FoV", &camera.fov, 15, 180, "%.1f");
   }
