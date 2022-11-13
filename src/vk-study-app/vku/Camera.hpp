@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Window.hpp"
+
 #include <glm/mat4x4.hpp>
 #include <glm/gtx/quaternion.hpp>
 
@@ -77,6 +79,25 @@ namespace vku {
     float speed = 1.f;
   public:
     FirstPersonCameraViewOrbitingController(FirstPersonCameraView& cameraView);
+    void update(float deltaTime);
+  };
+
+  // First Person Camera mechanism with state machine for dragging
+  class FirstPersonCameraViewInputController {
+  private:
+    FirstPersonCameraView& cameraView;
+    const Window& win;
+
+    glm::vec3 pos0{};
+    float pitch0{};
+    float yaw0{};
+    vku::DragHelper rightDragHelper;
+    vku::DragHelper middleDragHelper;
+
+    const float sensitivity = 0.005f; // look around sensitivity
+    const float sensitivityB = 0.005f; // pan sensitivity
+  public:
+    FirstPersonCameraViewInputController(FirstPersonCameraView& cameraView, const Window& win);
     void update(float deltaTime);
   };
 }

@@ -72,4 +72,54 @@ namespace vku {
     ImGui::SliderFloat("Speed", &speed, -2.f, 2.f);
     ImGui::SliderFloat("Radius", &radius, 0.1f, 10.f);
   }
+
+  // -----
+
+  FirstPersonCameraViewInputController::FirstPersonCameraViewInputController(FirstPersonCameraView& cameraView, const Window& win) : 
+    cameraView(cameraView), 
+    win(win),
+    rightDragHelper(
+      win,
+      GLFW_MOUSE_BUTTON_RIGHT,
+      [&]() {
+        pitch0 = cameraView.pitch;
+        yaw0 = cameraView.yaw;
+      },
+      [&](const glm::vec2& drag) {
+        cameraView.pitch = glm::clamp(pitch0 - drag.y * sensitivity, -std::numbers::pi_v<float> *0.5f, std::numbers::pi_v<float> *0.5f);
+        cameraView.yaw = yaw0 + drag.x * sensitivity;
+      }
+    ),
+    middleDragHelper(
+      win,
+      GLFW_MOUSE_BUTTON_MIDDLE,
+      [&]() {
+        pos0 = cameraView.position;
+      },
+      [&](const glm::vec2& drag) {
+        cameraView.position = pos0 + (cameraView.getRight() * drag.x - cameraView.getUp() * drag.y) * sensitivityB;
+      }
+    ) 
+  { }
+
+  void FirstPersonCameraViewInputController::update(float deltaTime) {
+    rightDragHelper.checkDragging();
+
+
+    middleDragHelper.checkDragging();
+
+    float cameraSpeed = win.isKeyHeld(GLFW_KEY_LEFT_SHIFT) ? 0.1f : 1.0f;
+    if (win.isKeyHeld(GLFW_KEY_W))
+      cameraView.position += cameraView.getForward() * cameraSpeed * deltaTime;
+    if (win.isKeyHeld(GLFW_KEY_S))
+      cameraView.position -= cameraView.getForward() * cameraSpeed * deltaTime;
+    if (win.isKeyHeld(GLFW_KEY_A))
+      cameraView.position -= cameraView.getRight() * cameraSpeed * deltaTime;
+    if (win.isKeyHeld(GLFW_KEY_D))
+      cameraView.position += cameraView.getRight() * cameraSpeed * deltaTime;
+    if (win.isKeyHeld(GLFW_KEY_Q))
+      cameraView.position += glm::vec3{ 0, 1, 0 } * cameraSpeed * deltaTime;
+    if (win.isKeyHeld(GLFW_KEY_E))
+      cameraView.position -= glm::vec3{ 0, 1, 0 } * cameraSpeed * deltaTime;
+  }
 }

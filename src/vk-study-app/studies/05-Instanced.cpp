@@ -261,63 +261,19 @@ void main()
   assert(pipeline->getConstructorSuccessCode() == vk::Result::eSuccess);
 }
 
-void InstancingStudy::onUpdate(float deltaTime, [[maybe_unused]] const vku::Window& win) {
+void InstancingStudy::onUpdate(float deltaTime, const vku::Window& win) {
   static float t = 0.0f;
 
   ImGui::Begin("Debug");
-  if (true) {
-    // First Person Camera mechanism with state machine for dragging
-    const float sensitivity = 0.005f;
-    static float pitch0{};
-    static float yaw0{};
-    static vku::DragHelper rightDragHelper(
-      win,
-      GLFW_MOUSE_BUTTON_RIGHT,
-      [&]() {
-        pitch0 = camera.pitch;
-        yaw0 = camera.yaw;
-      },
-      [&](const glm::vec2& drag) {
-        camera.pitch = glm::clamp(pitch0 - drag.y * sensitivity, -std::numbers::pi_v<float> *0.5f, std::numbers::pi_v<float> *0.5f);
-        camera.yaw = yaw0 + drag.x * sensitivity;
-      }
-    );
-    rightDragHelper.checkDragging();
-
-    static glm::vec3 pos0{};
-    const float sensitivityB = 0.005f; // pan sensitivity
-    static vku::DragHelper middleDragHelper(
-      win,
-      GLFW_MOUSE_BUTTON_MIDDLE,
-      [&]() {
-        pos0 = camera.position;
-      },
-      [&](const glm::vec2& drag) {
-        std::cout << std::format("drag: ({}, {})\n", drag.x, drag.y);
-        camera.position = pos0 + (camera.getRight() * drag.x - camera.getUp() * drag.y) * sensitivityB;
-      }
-    );
-    middleDragHelper.checkDragging();
-
-    float cameraSpeed = win.isKeyHeld(GLFW_KEY_LEFT_SHIFT) ? 0.1f : 1.0f;
-    if (win.isKeyHeld(GLFW_KEY_W))
-      camera.position += camera.getForward() * cameraSpeed * deltaTime;
-    if (win.isKeyHeld(GLFW_KEY_S))
-      camera.position -= camera.getForward() * cameraSpeed * deltaTime;
-    if (win.isKeyHeld(GLFW_KEY_A))
-      camera.position -= camera.getRight() * cameraSpeed * deltaTime;
-    if (win.isKeyHeld(GLFW_KEY_D))
-      camera.position += camera.getRight() * cameraSpeed * deltaTime;
-    if (win.isKeyHeld(GLFW_KEY_Q))
-      camera.position += glm::vec3{ 0, 1, 0 } * cameraSpeed * deltaTime;
-    if (win.isKeyHeld(GLFW_KEY_E))
-      camera.position -= glm::vec3{ 0, 1, 0 } * cameraSpeed * deltaTime;
-    ImGui::SliderFloat("FoV", &camera.fov, 15, 180, "%.1f");
+  if (false) {
+    static vku::FirstPersonCameraViewInputController cc(camera, win);
+    cc.update(deltaTime);
   }
   else {
     static vku::FirstPersonCameraViewOrbitingController cc(camera);
     cc.update(deltaTime);
   }
+  ImGui::SliderFloat("FoV", &camera.fov, 15, 180, "%.1f"); // TODO: PerspectiveCameraController, OrthographicCameraController
   
   uniforms.viewFromWorld = camera.getViewFromWorld();
   uniforms.projectionFromView = camera.getProjectionFromView();
