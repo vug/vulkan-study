@@ -317,11 +317,6 @@ void InstancingStudy::onUpdate(float deltaTime, [[maybe_unused]] const vku::Wind
   else {
     static vku::FirstPersonCameraViewOrbitingController cc(camera);
     cc.update(deltaTime);
-
-    ImGui::SliderFloat("Orbiting Theta", &cc.theta, -std::numbers::pi_v<float> *0.5, std::numbers::pi_v<float> *0.5);
-    ImGui::SliderFloat("Orbiting Phi0", &cc.phi0, -std::numbers::pi_v<float>, std::numbers::pi_v<float>);
-    ImGui::SliderFloat("Orbiting Speed", &cc.speed, -2.f, 2.f);
-    ImGui::SliderFloat("Orbiting Radius", &cc.radius, 0.1f, 10.f);
   }
   
   uniforms.viewFromWorld = camera.getViewFromWorld();
