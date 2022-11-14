@@ -26,6 +26,7 @@ class TransformConstructionStudy : public vku::Study {
 private:
   vku::Buffer vbo;
   vku::Buffer ibo;
+  PushConstants pco;
   uint32_t indexCount;
   Uniforms uniforms;
   vku::UniformBuffer ubo;

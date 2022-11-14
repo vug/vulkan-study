@@ -35,6 +35,16 @@ void TransformConstructionStudy::onInit(const vku::AppSettings appSettings, cons
   indexCount = (uint32_t)md.indices.size();
   ibo = vku::Buffer(vc, md.indices.data(), iboSizeBytes, vk::BufferUsageFlagBits::eIndexBuffer);
 
+  glm::mat4 model =
+    glm::translate(glm::mat4(1), glm::vec3{ .1, .2, .3 })
+    * glm::rotate(glm::mat4(1), std::numbers::pi_v<float> *0.6f, glm::vec3{ 1, 1, 1 })
+    * glm::scale(glm::mat4(1), glm::vec3{0.1, 0.3, 0.5});
+  pco = { 
+    model, 
+    glm::transpose(glm::inverse(model)),
+    glm::vec4(1, 0, 0, 1)
+  };
+
   //---- Uniform Data
   // create UBO and connect it to a Uniforms instance
   ubo = vku::UniformBuffer(vc, &uniforms, sizeof(Uniforms));
@@ -70,10 +80,13 @@ layout (location = 1) in vec2 inTexCoord;
 layout (location = 2) in vec3 inObjectNormal;
 layout (location = 3) in vec4 inColor;
 
-//// Push Constants
-//layout (location = 4) in mat4 worldFromObjectMatrix;
-//layout (location = 8) in mat4 dualWorldFromObjectMatrix;
-//layout (location = 12) in vec4 instanceColor;
+layout(push_constant) uniform PushConstants
+{
+	mat4 worldFromObjectMatrix;
+	mat4 dualWorldFromObjectMatrix;
+  vec4 color;
+} pushConstants;
+
 
 layout (binding = 0) uniform UBO 
 {
@@ -92,19 +105,17 @@ layout (location = 0) out struct {
 
 void main() 
 {
-  //const mat4 transform = worldFromObjectMatrix;
-  const mat4 transform = mat4(1);
+  const mat4 transform = pushConstants.worldFromObjectMatrix;
   const vec4 worldPosition4 = transform * vec4(inObjectPosition.xyz, 1.0);
   v2f.worldPosition = worldPosition4.xyz;
 
-  //v2f.worldNormal = mat3(instanceDualWorldFromObjectMatrix) * inObjectNormal;
-v2f.worldNormal = mat3(mat4(1)) * inObjectNormal;
+  v2f.worldNormal = mat3(pushConstants.dualWorldFromObjectMatrix) * inObjectNormal;
 
   v2f.objectNormal = inObjectNormal;
 
   gl_Position = ubo.projectionFromWorldMatrix * worldPosition4;
 
-  v2f.color = inColor;
+  v2f.color = pushConstants.color;
 }
 )";
 
@@ -125,7 +136,7 @@ layout (location = 0) out vec4 outFragColor;
 
 void main() 
 {
-  vec3 lightPos = vec3(0, 0, 0);
+  vec3 lightPos = vec3(0, 10, 0);
   vec3 fragToLightDir = normalize(lightPos - v2f.worldPosition); // not light to frag
   float diffuse = max(dot(normalize(v2f.worldNormal), fragToLightDir), 0);  
   
@@ -207,8 +218,11 @@ void main()
   std::array<vk::DynamicState, 2> dynamicStates = { vk::DynamicState::eViewport, vk::DynamicState::eScissor };
   vk::PipelineDynamicStateCreateInfo dynamicStateCreateInfo({}, dynamicStates);
 
-  //vk::PipelineLayout pipelineLayout = (*vc.device).createPipelineLayout(vk::PipelineLayoutCreateInfo({}, 1, &descriptorSetLayout));
-  pipelineLayout = { vc.device, { {}, 1, &(*descriptorSetLayout) } }; // { flags, descriptorSetLayout }
+  vk::PushConstantRange pushConstant{ vk::ShaderStageFlagBits::eVertex, 0, sizeof(PushConstants) };
+  vk::PipelineLayoutCreateInfo pipelineLayoutCreateInfo;
+  pipelineLayoutCreateInfo.setSetLayouts(*descriptorSetLayout);
+  pipelineLayoutCreateInfo.setPushConstantRanges(pushConstant);
+  pipelineLayout = { vc.device, pipelineLayoutCreateInfo}; // { flags, descriptorSetLayout }
 
   vk::GraphicsPipelineCreateInfo graphicsPipelineCreateInfo(
     {},
@@ -267,6 +281,8 @@ void TransformConstructionStudy::recordCommandBuffer(const vku::VulkanContext& v
   vk::DeviceSize offsets = 0;
   cmdBuf.bindVertexBuffers(0, *vbo.buffer, offsets);
   cmdBuf.bindIndexBuffer(*ibo.buffer, 0, vk::IndexType::eUint32);
+  assert(sizeof(pco) <= vc.physicalDevice.getProperties().limits.maxPushConstantsSize); // Push constant data too big
+  cmdBuf.pushConstants<PushConstants>(*pipelineLayout, vk::ShaderStageFlagBits::eVertex, 0u, pco);
   cmdBuf.drawIndexed(indexCount, 1, 0, 0, 0);
 
   cmdBuf.endRenderPass();
