@@ -24,7 +24,6 @@ void InstancingStudy::onInit(const vku::AppSettings appSettings, const vku::Vulk
   vku::MeshData torusMeshData = vku::makeTorus(1.f, 17, .5f, 6);
   vku::MeshData quadMeshData = vku::makeQuad({ 1, 1 });
   vku::MeshData axesMeshData = vku::makeAxes();
-  // TODO: do not hard-code absolute paths, instead have a global "assets root folder"
   vku::MeshData objMeshData = vku::loadOBJ(vku::assetsRootFolder / "models/suzanne.obj");
 
   vku::MeshData& md = objMeshData;

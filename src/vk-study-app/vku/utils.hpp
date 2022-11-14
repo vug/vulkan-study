@@ -10,6 +10,7 @@ namespace vku {
   constexpr bool isDebugBuild = false;
 #endif
 
+  // TODO: get assetsRootFolder via env variable of command-line argument instead of preprocessor definition
   const std::filesystem::path assetsRootFolder = ASSETS_ROOT_FOLDER;
 
   template <class T>
