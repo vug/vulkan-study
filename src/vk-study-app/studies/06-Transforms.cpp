@@ -14,36 +14,55 @@
 #include <iostream>
 #include <numbers>
 #include <random>
+#include <ranges>
 #include <string>
 
 void TransformConstructionStudy::onInit(const vku::AppSettings appSettings, const vku::VulkanContext& vc) {
   std::cout << vivid::ansi::lightBlue << "Hi from Vivid at UniformsStudy" << vivid::ansi::reset << std::endl;
+
   //---- Vertex Data
   const vivid::ColorMap cmap = vivid::ColorMap::Preset::Viridis;
-  vku::MeshData boxMeshData = vku::makeBox({ 0.6f, 0.9f, 1.5f });
-  vku::MeshData torusMeshData = vku::makeTorus(1.f, 17, .5f, 6);
-  vku::MeshData quadMeshData = vku::makeQuad({ 1, 1 });
+  vku::MeshData boxMeshData = vku::makeBox({ 0.2f, 0.5f, 0.7f });
+  //vku::MeshData torusMeshData = vku::makeTorus(1.f, 17, .5f, 6);
+  //vku::MeshData quadMeshData = vku::makeQuad({ 1, 1 });
   vku::MeshData axesMeshData = vku::makeAxes();
   vku::MeshData objMeshData = vku::loadOBJ(vku::assetsRootFolder / "models/suzanne.obj");
 
-  vku::MeshData& md = objMeshData;
+  {
+    vku::MeshData md; // allMeshesData
+    auto insertMeshData = [&](const vku::MeshData& newMesh) -> Mesh {
+      Mesh mesh = { static_cast<uint32_t>(md.indices.size()), static_cast<uint32_t>(newMesh.indices.size()) };
+      std::ranges::copy(newMesh.vertices, std::back_inserter(md.vertices));
+      std::ranges::transform(newMesh.indices, std::back_inserter(md.indices), [&](uint32_t ix) { return ix + mesh.offset; });
+      return mesh;
+    };
 
-  uint32_t vboSizeBytes = (uint32_t)(md.vertices.size() * sizeof(vku::DefaultVertex));
-  vbo = vku::Buffer(vc, md.vertices.data(), vboSizeBytes, vk::BufferUsageFlagBits::eVertexBuffer);
+    meshes.push_back(insertMeshData(boxMeshData));
+    meshes.push_back(insertMeshData(axesMeshData));
+    meshes.push_back(insertMeshData(objMeshData));
 
-  uint32_t iboSizeBytes = (uint32_t)(md.indices.size() * sizeof(uint32_t));
-  indexCount = (uint32_t)md.indices.size();
-  ibo = vku::Buffer(vc, md.indices.data(), iboSizeBytes, vk::BufferUsageFlagBits::eIndexBuffer);
+    uint32_t vboSizeBytes = (uint32_t)(md.vertices.size() * sizeof(vku::DefaultVertex));
+    vbo = vku::Buffer(vc, md.vertices.data(), vboSizeBytes, vk::BufferUsageFlagBits::eVertexBuffer);
 
-  glm::mat4 model =
-    glm::translate(glm::mat4(1), glm::vec3{ .1, .2, .3 })
-    * glm::rotate(glm::mat4(1), std::numbers::pi_v<float> *0.6f, glm::vec3{ 1, 1, 1 })
-    * glm::scale(glm::mat4(1), glm::vec3{0.1, 0.3, 0.5});
-  pco = { 
-    model, 
-    glm::transpose(glm::inverse(model)),
-    glm::vec4(1, 0, 0, 1)
-  };
+    uint32_t iboSizeBytes = (uint32_t)(md.indices.size() * sizeof(uint32_t));
+    indexCount = (uint32_t)md.indices.size();
+    ibo = vku::Buffer(vc, md.indices.data(), iboSizeBytes, vk::BufferUsageFlagBits::eIndexBuffer);
+
+    auto makeModel = [](const glm::vec3& pos, float angle, const glm::vec3& axis, const glm::vec3& scale) {
+      return
+        glm::translate(glm::mat4(1), pos)
+        * glm::rotate(glm::mat4(1), angle, axis)
+        * glm::scale(glm::mat4(1), scale);
+    };
+    glm::mat4 model = makeModel({ -2, 0, 0 }, std::numbers::pi_v<float> *0.f, { 0, 0, 1 }, { 1, 1, 1 });
+    pcos.push_back({ model, glm::transpose(glm::inverse(model)), glm::vec4{1, 0, 0, 1} });
+
+    model = makeModel({ 0, 0, 0 }, std::numbers::pi_v<float> *0.f, { 1, 1, 1 }, { 1, 1, 1 });
+    pcos.push_back({ model, glm::transpose(glm::inverse(model)), glm::vec4{0, 1, 0, 1} });
+
+    model = makeModel({ 2, 0, 0 }, std::numbers::pi_v<float> *0.f, { 1, 1, 1 }, { 1, 1, 1 });
+    pcos.push_back({ model, glm::transpose(glm::inverse(model)), glm::vec4{0, 0, 1, 1} });
+  }
 
   //---- Uniform Data
   // create UBO and connect it to a Uniforms instance
@@ -281,9 +300,13 @@ void TransformConstructionStudy::recordCommandBuffer(const vku::VulkanContext& v
   vk::DeviceSize offsets = 0;
   cmdBuf.bindVertexBuffers(0, *vbo.buffer, offsets);
   cmdBuf.bindIndexBuffer(*ibo.buffer, 0, vk::IndexType::eUint32);
-  assert(sizeof(pco) <= vc.physicalDevice.getProperties().limits.maxPushConstantsSize); // Push constant data too big
-  cmdBuf.pushConstants<PushConstants>(*pipelineLayout, vk::ShaderStageFlagBits::eVertex, 0u, pco);
-  cmdBuf.drawIndexed(indexCount, 1, 0, 0, 0);
+  for (size_t ix = 0; ix < meshes.size(); ++ix) {
+    const PushConstants& pco = pcos[ix];
+    const Mesh& mesh = meshes[ix];
+    assert(sizeof(pco) <= vc.physicalDevice.getProperties().limits.maxPushConstantsSize); // Push constant data too big
+    cmdBuf.pushConstants<PushConstants>(*pipelineLayout, vk::ShaderStageFlagBits::eVertex, 0u, pco);
+    cmdBuf.drawIndexed(mesh.size, 1, mesh.offset, 0, 0);
+  }
 
   cmdBuf.endRenderPass();
 }

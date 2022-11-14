@@ -23,10 +23,16 @@ class TransformConstructionStudy : public vku::Study {
     glm::mat4 projectionFromWorld;
   };
 
+  struct Mesh {
+    const uint32_t offset;
+    const uint32_t size;
+  };
+
 private:
   vku::Buffer vbo;
   vku::Buffer ibo;
-  PushConstants pco;
+  std::vector<Mesh> meshes;
+  std::vector<PushConstants> pcos;
   uint32_t indexCount;
   Uniforms uniforms;
   vku::UniformBuffer ubo;
