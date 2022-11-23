@@ -7,13 +7,13 @@
 #include <memory>
 
 class VerticesStudy : public vku::Study {
-private:
+ private:
   vku::Buffer vertices;
   vku::Buffer indices;
   uint32_t indexCount;
   std::unique_ptr<vk::raii::Pipeline> pipeline;
 
-public:
+ public:
   virtual ~VerticesStudy() = default;
 
   inline std::string getName() final { return "VertexBuffer upload to GPU, bind to pipeline/shader."; }

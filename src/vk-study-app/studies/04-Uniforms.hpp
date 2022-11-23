@@ -16,7 +16,7 @@ class UniformsStudy : public vku::Study {
     glm::mat4 viewMatrix;
   };
 
-private:
+ private:
   vku::Buffer vbo;
   vku::Buffer ibo;
   uint32_t indexCount;
@@ -26,7 +26,7 @@ private:
   vk::raii::PipelineLayout pipelineLayout = nullptr;
   std::unique_ptr<vk::raii::Pipeline> pipeline;
 
-public:
+ public:
   virtual ~UniformsStudy() = default;
 
   inline std::string getName() final { return "VertexBuffer upload to GPU, bind to pipeline/shader."; }

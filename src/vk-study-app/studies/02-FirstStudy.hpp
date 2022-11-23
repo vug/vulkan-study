@@ -5,12 +5,12 @@
 #include <memory>
 
 class FirstStudy : public vku::Study {
-private:
+ private:
   // LATER: if more objects to be shared between init() and render() methods, then put all of them into a unique_ptr<RenderData>
   // OR alternatively initialize them in Constructor
   std::unique_ptr<vk::raii::Pipeline> pipeline;
 
-public:
+ public:
   virtual ~FirstStudy() = default;
 
   inline std::string getName() final { return "Vertex Data embedded in Vertex Shader. Pipeline without descriptors nor vertex buffers."; }

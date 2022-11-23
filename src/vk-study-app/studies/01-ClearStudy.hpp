@@ -3,8 +3,8 @@
 #include "../StudyApp/Study.hpp"
 
 class ClearStudy : public vku::Study {
-private:
-public:
+ private:
+ public:
   virtual ~ClearStudy() = default;
 
   inline std::string getName() final { return "Just a VkCmdClearAttachments call in a RenderPass"; }

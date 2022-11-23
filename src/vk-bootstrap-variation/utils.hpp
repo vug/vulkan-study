@@ -1,10 +1,10 @@
 #pragma once
 
 namespace vku {
-#if !defined( NDEBUG )
-  constexpr bool isDebugBuild = true;
+#if !defined(NDEBUG)
+constexpr bool isDebugBuild = true;
 #else
-  constexpr bool isDebugBuild = false;
+constexpr bool isDebugBuild = false;
 #endif
 
-}
+}  // namespace vku

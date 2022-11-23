@@ -28,7 +28,7 @@ class TransformConstructionStudy : public vku::Study {
     const uint32_t size;
   };
 
-private:
+ private:
   vku::Buffer vbo;
   vku::Buffer ibo;
   std::vector<Mesh> meshes;
@@ -41,7 +41,7 @@ private:
   std::unique_ptr<vk::raii::Pipeline> pipeline;
   vku::FirstPersonPerspectiveCamera camera;
 
-public:
+ public:
   virtual ~TransformConstructionStudy() = default;
 
   inline std::string getName() final { return "VertexBuffer upload to GPU, bind to pipeline/shader."; }

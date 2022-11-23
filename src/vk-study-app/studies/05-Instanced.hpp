@@ -23,7 +23,7 @@ class InstancingStudy : public vku::Study {
     glm::mat4 projectionFromWorld;
   };
 
-private:
+ private:
   vku::Buffer vbo;
   vku::Buffer ibo;
   uint32_t indexCount;
@@ -36,7 +36,7 @@ private:
   std::unique_ptr<vk::raii::Pipeline> pipeline;
   vku::FirstPersonPerspectiveCamera camera;
 
-public:
+ public:
   virtual ~InstancingStudy() = default;
 
   inline std::string getName() final { return "VertexBuffer upload to GPU, bind to pipeline/shader."; }
