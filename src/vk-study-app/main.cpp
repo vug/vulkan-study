@@ -13,7 +13,7 @@ int main() {
   vku::StudyRunner sr;
   [[maybe_unused]] auto& study0 = sr.pushStudy(std::make_unique<ClearStudy>());
   //sr.pushStudy(std::make_unique<FirstStudy>());
-  sr.pushStudy(std::make_unique<SecondStudy>());
+  //sr.pushStudy(std::make_unique<SecondStudy>());
   //sr.pushStudy(std::make_unique<UniformsStudy>());
   //sr.pushStudy(std::make_unique<InstancingStudy>());
   sr.pushStudy(std::make_unique<TransformConstructionStudy>());
