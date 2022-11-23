@@ -273,7 +273,10 @@ void TransformConstructionStudy::onUpdate(float deltaTime, const vku::Window& wi
     cc.update(deltaTime);
   }
   else {
-    static vku::FirstPersonCameraViewOrbitingController cc(camera);
+    static auto cc = [&]() { 
+      vku::FirstPersonCameraViewOrbitingController ret{ camera }; 
+      ret.radius = 8.5f; ret.speed = 0.6f;
+      return ret; }();
     cc.update(deltaTime);
   }
   ImGui::SliderFloat("FoV", &camera.fov, 15, 180, "%.1f"); // TODO: PerspectiveCameraController, OrthographicCameraController
