@@ -48,8 +48,7 @@ Study5: Instancing. 50K monkeys
 
 ![instancing](../../screenshots/Study05-instancing-50K_Monkeys-02.png)
 
-Two studies superimposed, analyzed in RenderDoc:
-![RenderDoc](../../screenshots/RenderDoc-TwoStudies.png)
+for more screenshots please visit the Wiki
 
 ## References
 
