@@ -9,6 +9,7 @@
 #include <vivid/vivid.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/quaternion.hpp>
 #include <vulkan/vulkan_raii.hpp>
 
 #include <iostream>
@@ -16,6 +17,28 @@
 #include <random>
 #include <ranges>
 #include <string>
+
+Transform::Transform(const glm::vec3& pos, const glm::quat& rot, const glm::vec3& sca)
+    : position{pos}, rotation{rot}, scale{sca} {}
+
+Transform::Transform(const glm::vec3& pos, const glm::vec3 axis, const float angle, const glm::vec3& sca)
+    : position{pos}, rotation{glm::angleAxis(angle, axis)}, scale{sca} {}
+
+glm::mat4 Transform::getTranslateMatrix() const {
+  return glm::translate(glm::mat4(1), position);
+}
+
+glm::mat4 Transform::getRotationMatrix() const {
+  return glm::toMat4(rotation);  // mat4_cast
+}
+
+glm::mat4 Transform::getScaleMatrix() const {
+  return glm::scale(glm::mat4(1), scale);
+}
+
+glm::mat4 Transform::getTransform() const {
+  return getScaleMatrix() * getRotationMatrix() * getTranslateMatrix();
+}
 
 void TransformConstructionStudy::onInit(const vku::AppSettings appSettings, const vku::VulkanContext& vc) {
   std::cout << vivid::ansi::lightBlue << "Hi from Vivid at UniformsStudy" << vivid::ansi::reset << std::endl;
@@ -48,17 +71,14 @@ void TransformConstructionStudy::onInit(const vku::AppSettings appSettings, cons
     indexCount = (uint32_t)md.indices.size();
     ibo = vku::Buffer(vc, md.indices.data(), iboSizeBytes, vk::BufferUsageFlagBits::eIndexBuffer);
 
-    auto makeModel = [](const glm::vec3& pos, float angle, const glm::vec3& axis, const glm::vec3& scale) {
-      return glm::translate(glm::mat4(1), pos) * glm::rotate(glm::mat4(1), angle, axis) * glm::scale(glm::mat4(1), scale);
-    };
     // box
-    glm::mat4 model = makeModel({-2, 0, 0}, std::numbers::pi_v<float> * 0.f, {0, 0, 1}, {1, 1, 1});
+    glm::mat4 model = Transform{{-2, 0, 0}, {0, 0, 1}, std::numbers::pi_v<float> * 0.f, {1, 1, 1}}.getTransform();
     pcos.push_back({model, glm::transpose(glm::inverse(model)), glm::vec4{1, 0, 0, 1}});
     // axes
-    model = makeModel({0, 0, 0}, std::numbers::pi_v<float> * 0.f, {1, 1, 1}, {1, 1, 1});
+    model = Transform{{0, 0, 0}, {1, 1, 1}, std::numbers::pi_v<float> * 0.f, {1, 1, 1}}.getTransform();
     pcos.push_back({model, glm::transpose(glm::inverse(model)), glm::vec4{1, 1, 1, 1}});
     // monkey
-    model = makeModel({2, 0, 0}, std::numbers::pi_v<float> * 0.f, {1, 1, 1}, {1, 1, 1});
+    model = Transform{{2, 0, 0}, {1, 1, 1}, std::numbers::pi_v<float> * 0.f , {1, 1, 1}}.getTransform();
     pcos.push_back({model, glm::transpose(glm::inverse(model)), glm::vec4{0, 0, 1, 1}});
   }
 
