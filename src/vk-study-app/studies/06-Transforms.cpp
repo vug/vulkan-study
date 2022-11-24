@@ -51,12 +51,13 @@ void TransformConstructionStudy::onInit(const vku::AppSettings appSettings, cons
     auto makeModel = [](const glm::vec3& pos, float angle, const glm::vec3& axis, const glm::vec3& scale) {
       return glm::translate(glm::mat4(1), pos) * glm::rotate(glm::mat4(1), angle, axis) * glm::scale(glm::mat4(1), scale);
     };
+    // box
     glm::mat4 model = makeModel({-2, 0, 0}, std::numbers::pi_v<float> * 0.f, {0, 0, 1}, {1, 1, 1});
     pcos.push_back({model, glm::transpose(glm::inverse(model)), glm::vec4{1, 0, 0, 1}});
-
+    // axes
     model = makeModel({0, 0, 0}, std::numbers::pi_v<float> * 0.f, {1, 1, 1}, {1, 1, 1});
-    pcos.push_back({model, glm::transpose(glm::inverse(model)), glm::vec4{0, 1, 0, 1}});
-
+    pcos.push_back({model, glm::transpose(glm::inverse(model)), glm::vec4{1, 1, 1, 1}});
+    // monkey
     model = makeModel({2, 0, 0}, std::numbers::pi_v<float> * 0.f, {1, 1, 1}, {1, 1, 1});
     pcos.push_back({model, glm::transpose(glm::inverse(model)), glm::vec4{0, 0, 1, 1}});
   }
@@ -131,7 +132,9 @@ void main()
 
   gl_Position = ubo.projectionFromWorldMatrix * worldPosition4;
 
-  v2f.color = pushConstants.color;
+  //v2f.color = pushConstants.color;
+  //v2f.color = inColor;
+  v2f.color = inColor * pushConstants.color;
 }
 )";
 
@@ -250,7 +253,7 @@ void main()
       &dynamicStateCreateInfo,  // *vk::PipelineDynamicStateCreateInfo
       *pipelineLayout,          // vk::PipelineLayout
       *vc.renderPass            // vk::RenderPass
-      //{}, // uint32_t subpass_ = {},
+                                //{}, // uint32_t subpass_ = {},
   );
 
   pipeline = std::make_unique<vk::raii::Pipeline>(vc.device, nullptr, graphicsPipelineCreateInfo);
