@@ -9,6 +9,7 @@
 #include <vivid/vivid.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/quaternion.hpp>
 #include <vulkan/vulkan_raii.hpp>
 
@@ -279,14 +280,31 @@ void main()
 void TransformConstructionStudy::onUpdate(float deltaTime, const vku::Window& win) {
   static float t = 0.0f;
 
-  ImGui::Begin("Debug");
+  ImGui::Begin("Scene");
+  ImGui::Text("Entities");
+  ImGui::DragFloat3("Box Pos", glm::value_ptr(entities[0].transform.position));
+  ImGui::DragFloat3("Axes Pos", glm::value_ptr(entities[1].transform.position));
+  ImGui::DragFloat3("Monkey Pos", glm::value_ptr(entities[2].transform.position));
+
+  const glm::vec3 up{0, 1, 0};
+  entities[1].transform.rotation = glm::normalize(glm::quatLookAt(entities[1].transform.position - entities[0].transform.position, up));
+  entities[2].transform.rotation = glm::normalize(glm::quatLookAt(entities[2].transform.position - entities[0].transform.position, up));
+
+  ImGui::Text("Axes Rot (Quat) {%.1f, %.1f, %.1f, %.1f}", entities[1].transform.rotation.x, entities[1].transform.rotation.y, entities[1].transform.rotation.z, entities[1].transform.rotation.w);
+  const glm::vec3 axis = glm::axis(entities[1].transform.rotation);
+  ImGui::Text("Axes Rot (AA) %.1f, {%.1f, %.1f, %.1f}", glm::angle(entities[1].transform.rotation), axis.x, axis.y, axis.z);
+  const glm::vec3 euler = glm::eulerAngles(entities[1].transform.rotation);
+  ImGui::Text("Axes Rot (Euler) {%.1f, %.1f, %.1f}", glm::angle(entities[1].transform.rotation), euler.x, euler.y, euler.z);
+  ImGui::Separator();
+
+  ImGui::Text("Camera");
   if (false) {
     static vku::FirstPersonCameraViewInputController cc(camera, win);
     cc.update(deltaTime);
   } else {
     static auto cc = [&]() { 
       vku::FirstPersonCameraViewOrbitingController ret{ camera }; 
-      ret.radius = 8.5f; ret.speed = 0.6f;
+      ret.radius = 8.5f; ret.speed = 0.0f;
       return ret; }();
     cc.update(deltaTime);
   }
