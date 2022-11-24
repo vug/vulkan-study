@@ -37,7 +37,7 @@ glm::mat4 Transform::getScaleMatrix() const {
 }
 
 glm::mat4 Transform::getTransform() const {
-  return getScaleMatrix() * getRotationMatrix() * getTranslateMatrix();
+  return getTranslateMatrix() * getRotationMatrix() * getScaleMatrix();
 }
 
 TransformConstructionStudy::PushConstants TransformConstructionStudy::Entity::getPushConstants() const {
