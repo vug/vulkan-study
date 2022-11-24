@@ -40,6 +40,12 @@ glm::mat4 Transform::getTransform() const {
   return getScaleMatrix() * getRotationMatrix() * getTranslateMatrix();
 }
 
+TransformConstructionStudy::PushConstants TransformConstructionStudy::Entity::getPushConstants() const {
+  PushConstants pc = TransformConstructionStudy::PushConstants{.worldFromObject = transform.getTransform(), .color = color};
+  pc.dualWorldFromObject = glm::transpose(glm::inverse(pc.worldFromObject));
+  return pc;
+}
+
 void TransformConstructionStudy::onInit(const vku::AppSettings appSettings, const vku::VulkanContext& vc) {
   std::cout << vivid::ansi::lightBlue << "Hi from Vivid at UniformsStudy" << vivid::ansi::reset << std::endl;
 
@@ -60,9 +66,9 @@ void TransformConstructionStudy::onInit(const vku::AppSettings appSettings, cons
       return mesh;
     };
 
-    meshes.push_back(insertMeshData(boxMeshData));
-    meshes.push_back(insertMeshData(axesMeshData));
-    meshes.push_back(insertMeshData(objMeshData));
+    entities.emplace_back(insertMeshData(boxMeshData), Transform{{-2, 0, 0}, {0, 0, 1}, std::numbers::pi_v<float> * 0.f, {1, 1, 1}}, glm::vec4{1, 0, 0, 1});
+    entities.emplace_back(insertMeshData(axesMeshData), Transform{{0, 0, 0}, {1, 1, 1}, std::numbers::pi_v<float> * 0.f, {1, 1, 1}}, glm::vec4{1, 1, 1, 1});
+    entities.emplace_back(insertMeshData(objMeshData), Transform{{2, 0, 0}, {1, 1, 1}, std::numbers::pi_v<float> * 0.f, {1, 1, 1}}, glm::vec4{0, 0, 1, 1});
 
     uint32_t vboSizeBytes = (uint32_t)(md.vertices.size() * sizeof(vku::DefaultVertex));
     vbo = vku::Buffer(vc, md.vertices.data(), vboSizeBytes, vk::BufferUsageFlagBits::eVertexBuffer);
@@ -70,16 +76,6 @@ void TransformConstructionStudy::onInit(const vku::AppSettings appSettings, cons
     uint32_t iboSizeBytes = (uint32_t)(md.indices.size() * sizeof(uint32_t));
     indexCount = (uint32_t)md.indices.size();
     ibo = vku::Buffer(vc, md.indices.data(), iboSizeBytes, vk::BufferUsageFlagBits::eIndexBuffer);
-
-    // box
-    glm::mat4 model = Transform{{-2, 0, 0}, {0, 0, 1}, std::numbers::pi_v<float> * 0.f, {1, 1, 1}}.getTransform();
-    pcos.push_back({model, glm::transpose(glm::inverse(model)), glm::vec4{1, 0, 0, 1}});
-    // axes
-    model = Transform{{0, 0, 0}, {1, 1, 1}, std::numbers::pi_v<float> * 0.f, {1, 1, 1}}.getTransform();
-    pcos.push_back({model, glm::transpose(glm::inverse(model)), glm::vec4{1, 1, 1, 1}});
-    // monkey
-    model = Transform{{2, 0, 0}, {1, 1, 1}, std::numbers::pi_v<float> * 0.f , {1, 1, 1}}.getTransform();
-    pcos.push_back({model, glm::transpose(glm::inverse(model)), glm::vec4{0, 0, 1, 1}});
   }
 
   //---- Uniform Data
@@ -318,9 +314,9 @@ void TransformConstructionStudy::recordCommandBuffer(const vku::VulkanContext& v
   vk::DeviceSize offsets = 0;
   cmdBuf.bindVertexBuffers(0, *vbo.buffer, offsets);
   cmdBuf.bindIndexBuffer(*ibo.buffer, 0, vk::IndexType::eUint32);
-  for (size_t ix = 0; ix < meshes.size(); ++ix) {
-    const PushConstants& pco = pcos[ix];
-    const Mesh& mesh = meshes[ix];
+  for (auto& e : entities) {
+    const PushConstants& pco = e.getPushConstants();
+    const Mesh& mesh = e.mesh;
     assert(sizeof(pco) <= vc.physicalDevice.getProperties().limits.maxPushConstantsSize);  // Push constant data too big
     cmdBuf.pushConstants<PushConstants>(*pipelineLayout, vk::ShaderStageFlagBits::eVertex, 0u, pco);
     cmdBuf.drawIndexed(mesh.size, 1, mesh.offset, 0, 0);

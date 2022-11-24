@@ -43,11 +43,18 @@ class TransformConstructionStudy : public vku::Study {
     const uint32_t size;
   };
 
+  struct Entity {
+    Mesh mesh;
+    Transform transform;
+    glm::vec4 color;
+
+    PushConstants getPushConstants() const;
+  };
+
  private:
   vku::Buffer vbo;
   vku::Buffer ibo;
-  std::vector<Mesh> meshes;
-  std::vector<PushConstants> pcos;
+  std::vector<Entity> entities;
   uint32_t indexCount;
   Uniforms uniforms;
   vku::UniformBuffer ubo;
