@@ -9,6 +9,7 @@
 #include <vivid/vivid.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/noise.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/quaternion.hpp>
 #include <vulkan/vulkan_raii.hpp>
@@ -282,7 +283,17 @@ void TransformConstructionStudy::onUpdate(float deltaTime, const vku::Window& wi
 
   ImGui::Begin("Scene");
   ImGui::Text("Entities");
-  ImGui::DragFloat3("Box Pos", glm::value_ptr(entities[0].transform.position));
+  {
+    static float r = 2.0f;
+    float theta = t * 0.5f;
+    float sx = r * std::cos(theta);
+    float sy = r * std::sin(theta);
+    entities[0].transform.position = glm::vec3{
+        glm::perlin(glm::vec3{sx, sy, -2}),
+        glm::perlin(glm::vec3{sx, sy, 0}),
+        glm::perlin(glm::vec3{sx, sy, 2})
+    } * 3.0f;
+  }  
   ImGui::DragFloat3("Axes Pos", glm::value_ptr(entities[1].transform.position));
   ImGui::DragFloat3("Monkey Pos", glm::value_ptr(entities[2].transform.position));
 
