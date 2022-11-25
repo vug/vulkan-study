@@ -22,4 +22,28 @@ glm::mat4 Transform::getScaleMatrix() const {
 glm::mat4 Transform::getTransform() const {
   return getTranslateMatrix() * getRotationMatrix() * getScaleMatrix();
 }
+
+glm::quat rotateTowards(glm::quat q1, glm::quat q2, float maxAngle) {
+  if (maxAngle < 0.00001f) 
+    return q1;
+
+  float cosTheta = glm::dot(q1, q2);
+
+  if (cosTheta > 0.99999f)
+    return q2;
+
+  // take shorter path on the sphere
+  if (cosTheta < 0) {
+    q1 *= -1.f;
+    cosTheta *= -1.f;
+  }
+  float angle = glm::acos(cosTheta);
+
+  if (angle < maxAngle)
+    return q2;
+
+  // because we make sure shorter path is taken above, we can use mix instead of slerp (which ensures shorter path)
+  const float m = maxAngle / angle;
+  return glm::mix(q1, q2, m);
+}
 }  // namespace vku

@@ -19,4 +19,6 @@ class Transform {
   glm::mat4 getScaleMatrix() const;
   glm::mat4 getTransform() const;
 };
+
+glm::quat rotateTowards(glm::quat q1, glm::quat q2, float maxAngle);
 }  // namespace vku

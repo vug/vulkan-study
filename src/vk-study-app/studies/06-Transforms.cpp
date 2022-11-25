@@ -261,7 +261,11 @@ void TransformConstructionStudy::onUpdate(float deltaTime, const vku::Window& wi
 
   ImGui::Begin("Scene");
   ImGui::Text("Entities");
-  {
+  static bool isBoxInteractive = false;
+  ImGui::Checkbox("Interactive Box", &isBoxInteractive);
+  if (isBoxInteractive) {
+    ImGui::DragFloat3("Box Pos", glm::value_ptr(entities[0].transform.position));
+  } else {
     static float r = 2.0f;
     float theta = t * 0.5f;
     float sx = r * std::cos(theta);
@@ -275,11 +279,24 @@ void TransformConstructionStudy::onUpdate(float deltaTime, const vku::Window& wi
   ImGui::DragFloat3("Axes Pos", glm::value_ptr(entities[1].transform.position));
   ImGui::DragFloat3("Monkey Pos", glm::value_ptr(entities[2].transform.position));
 
+  static bool shouldTurnInstantly = true;
+  ImGui::Checkbox("Instant Turn", &shouldTurnInstantly);
   const glm::vec3 up{0, 1, 0};
-  entities[1].transform.rotation = glm::normalize(glm::quatLookAt(entities[1].transform.position - entities[0].transform.position, up));
-  entities[2].transform.rotation = glm::normalize(glm::quatLookAt(entities[2].transform.position - entities[0].transform.position, up));
+  const glm::quat targetRotation1 = glm::normalize(glm::quatLookAt(entities[1].transform.position - entities[0].transform.position, up));
+  const glm::quat targetRotation2 = glm::normalize(glm::quatLookAt(entities[2].transform.position - entities[0].transform.position, up));
+  if (shouldTurnInstantly) {
+    entities[1].transform.rotation = targetRotation1;
+    entities[2].transform.rotation = targetRotation2;  
+  } else {
+    static float turningSpeed = 2.5f;
+    ImGui::SliderFloat("Turning Speed", &turningSpeed, 0.0f, 10.0f);
+    float maxAngle = turningSpeed * deltaTime;
+    ImGui::Text("maxAngle: %f", maxAngle);
+    entities[1].transform.rotation = vku::rotateTowards(entities[1].transform.rotation, targetRotation1, maxAngle);
+    entities[2].transform.rotation = vku::rotateTowards(entities[2].transform.rotation, targetRotation2, maxAngle);
+  }
 
-  ImGui::Text("Axes Rot (Quat) {%.1f, %.1f, %.1f, %.1f}", entities[1].transform.rotation.x, entities[1].transform.rotation.y, entities[1].transform.rotation.z, entities[1].transform.rotation.w);
+  ImGui::Text("Axes Rot (Quat) {%.1f, %.1f, %.1f, %.1f}, norm: %.2f", entities[1].transform.rotation.x, entities[1].transform.rotation.y, entities[1].transform.rotation.z, entities[1].transform.rotation.w, glm::length(entities[1].transform.rotation));
   const glm::vec3 axis = glm::axis(entities[1].transform.rotation);
   ImGui::Text("Axes Rot (AA) %.1f, {%.1f, %.1f, %.1f}", glm::angle(entities[1].transform.rotation), axis.x, axis.y, axis.z);
   const glm::vec3 euler = glm::eulerAngles(entities[1].transform.rotation);
