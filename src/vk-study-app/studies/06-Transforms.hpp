@@ -4,26 +4,12 @@
 
 #include "../vku/Buffer.hpp"
 #include "../vku/Camera.hpp"
+#include "../vku/Math.hpp"
 #include "../vku/UniformBuffer.hpp"
 
 #include <glm/mat4x4.hpp>
 
 #include <memory>
-
-class Transform {
- public:
-  glm::vec3 position;
-  glm::quat rotation;
-  glm::vec3 scale;
-
-  Transform(const glm::vec3& pos, const glm::quat& rot, const glm::vec3& sca);
-  Transform(const glm::vec3& pos, const glm::vec3 axis, const float angle, const glm::vec3& sca);
-
-  glm::mat4 getTranslateMatrix() const;
-  glm::mat4 getRotationMatrix() const;
-  glm::mat4 getScaleMatrix() const;
-  glm::mat4 getTransform() const;
-};
 
 class TransformConstructionStudy : public vku::Study {
   struct PushConstants {
@@ -45,7 +31,7 @@ class TransformConstructionStudy : public vku::Study {
 
   struct Entity {
     Mesh mesh;
-    Transform transform;
+    vku::Transform transform;
     glm::vec4 color;
 
     PushConstants getPushConstants() const;

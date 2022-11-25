@@ -20,28 +20,6 @@
 #include <ranges>
 #include <string>
 
-Transform::Transform(const glm::vec3& pos, const glm::quat& rot, const glm::vec3& sca)
-    : position{pos}, rotation{rot}, scale{sca} {}
-
-Transform::Transform(const glm::vec3& pos, const glm::vec3 axis, const float angle, const glm::vec3& sca)
-    : position{pos}, rotation{glm::angleAxis(angle, axis)}, scale{sca} {}
-
-glm::mat4 Transform::getTranslateMatrix() const {
-  return glm::translate(glm::mat4(1), position);
-}
-
-glm::mat4 Transform::getRotationMatrix() const {
-  return glm::toMat4(rotation);  // mat4_cast
-}
-
-glm::mat4 Transform::getScaleMatrix() const {
-  return glm::scale(glm::mat4(1), scale);
-}
-
-glm::mat4 Transform::getTransform() const {
-  return getTranslateMatrix() * getRotationMatrix() * getScaleMatrix();
-}
-
 TransformConstructionStudy::PushConstants TransformConstructionStudy::Entity::getPushConstants() const {
   PushConstants pc = TransformConstructionStudy::PushConstants{.worldFromObject = transform.getTransform(), .color = color};
   pc.dualWorldFromObject = glm::transpose(glm::inverse(pc.worldFromObject));
@@ -68,9 +46,9 @@ void TransformConstructionStudy::onInit(const vku::AppSettings appSettings, cons
       return mesh;
     };
 
-    entities.emplace_back(insertMeshData(boxMeshData), Transform{{-2, 0, 0}, {0, 0, 1}, std::numbers::pi_v<float> * 0.f, {1, 1, 1}}, glm::vec4{1, 0, 0, 1});
-    entities.emplace_back(insertMeshData(axesMeshData), Transform{{0, 0, 0}, {1, 1, 1}, std::numbers::pi_v<float> * 0.f, {1, 1, 1}}, glm::vec4{1, 1, 1, 1});
-    entities.emplace_back(insertMeshData(objMeshData), Transform{{2, 0, 0}, {1, 1, 1}, std::numbers::pi_v<float> * 0.f, {1, 1, 1}}, glm::vec4{0, 0, 1, 1});
+    entities.emplace_back(insertMeshData(boxMeshData), vku::Transform{{-2, 0, 0}, {0, 0, 1}, std::numbers::pi_v<float> * 0.f, {1, 1, 1}}, glm::vec4{1, 0, 0, 1});
+    entities.emplace_back(insertMeshData(axesMeshData), vku::Transform{{0, 0, 0}, {1, 1, 1}, std::numbers::pi_v<float> * 0.f, {1, 1, 1}}, glm::vec4{1, 1, 1, 1});
+    entities.emplace_back(insertMeshData(objMeshData), vku::Transform{{2, 0, 0}, {1, 1, 1}, std::numbers::pi_v<float> * 0.f, {1, 1, 1}}, glm::vec4{0, 0, 1, 1});
 
     uint32_t vboSizeBytes = (uint32_t)(md.vertices.size() * sizeof(vku::DefaultVertex));
     vbo = vku::Buffer(vc, md.vertices.data(), vboSizeBytes, vk::BufferUsageFlagBits::eVertexBuffer);

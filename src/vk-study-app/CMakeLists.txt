@@ -4,6 +4,7 @@ add_executable(${APP}
   main.cpp
   vku/SpirvHelper.hpp vku/SpirvHelper.cpp
   vku/utils.hpp vku/utils.cpp
+  vku/Math.hpp vku/Math.cpp
   vku/VulkanContext.hpp vku/VulkanContext.cpp
   vku/Window.hpp vku/Window.cpp
   vku/Image.hpp vku/Image.cpp
@@ -21,7 +22,8 @@ add_executable(${APP}
   studies/03-Vertices.hpp studies/03-Vertices.cpp
   studies/04-Uniforms.hpp studies/04-Uniforms.cpp
   studies/05-Instanced.hpp studies/05-Instanced.cpp
- "studies/06-Transforms.cpp")
+  studies/06-Transforms.hpp studies/06-Transforms.cpp
+)
 
 # One way of finding include directory of a library
 get_target_property(glfw_interface_includes glfw INTERFACE_INCLUDE_DIRECTORIES)
