@@ -32,30 +32,39 @@ void TransformConstructionStudy::onInit(const vku::AppSettings appSettings, cons
   //---- Vertex Data
   const vivid::ColorMap cmap = vivid::ColorMap::Preset::Viridis;
   vku::MeshData boxMeshData = vku::makeBox({0.2f, 0.5f, 0.7f});
-  // vku::MeshData torusMeshData = vku::makeTorus(1.f, 17, .5f, 6);
-  // vku::MeshData quadMeshData = vku::makeQuad({ 1, 1 });
   vku::MeshData axesMeshData = vku::makeAxes();
   vku::MeshData objMeshData = vku::loadOBJ(vku::assetsRootFolder / "models/suzanne.obj");
 
   {
-    vku::MeshData md;  // allMeshesData
+    vku::MeshData allMeshesData;
     auto insertMeshData = [&](const vku::MeshData& newMesh) -> Mesh {
-      Mesh mesh = {static_cast<uint32_t>(md.indices.size()), static_cast<uint32_t>(newMesh.indices.size())};
-      std::ranges::copy(newMesh.vertices, std::back_inserter(md.vertices));
-      std::ranges::transform(newMesh.indices, std::back_inserter(md.indices), [&](uint32_t ix) { return ix + mesh.offset; });
+      Mesh mesh = {static_cast<uint32_t>(allMeshesData.indices.size()), static_cast<uint32_t>(newMesh.indices.size())};
+      std::ranges::copy(newMesh.vertices, std::back_inserter(allMeshesData.vertices));
+      std::ranges::transform(newMesh.indices, std::back_inserter(allMeshesData.indices), [&](uint32_t ix) { return ix + mesh.offset; });
       return mesh;
     };
 
-    entities.emplace_back(insertMeshData(boxMeshData), vku::Transform{{-2, 0, 0}, {0, 0, 1}, std::numbers::pi_v<float> * 0.f, {1, 1, 1}}, glm::vec4{1, 0, 0, 1});
-    entities.emplace_back(insertMeshData(axesMeshData), vku::Transform{{0, 0, 0}, {1, 1, 1}, std::numbers::pi_v<float> * 0.f, {1, 1, 1}}, glm::vec4{1, 1, 1, 1});
-    entities.emplace_back(insertMeshData(objMeshData), vku::Transform{{2, 0, 0}, {1, 1, 1}, std::numbers::pi_v<float> * 0.f, {1, 1, 1}}, glm::vec4{0, 0, 1, 1});
+    meshes.emplace_back(insertMeshData(boxMeshData));
+    meshes.emplace_back(insertMeshData(axesMeshData));
+    meshes.emplace_back(insertMeshData(objMeshData));
+    entities.emplace_back(meshes[MeshId::Box], vku::Transform{{-2, 0, 0}, {0, 0, 1}, std::numbers::pi_v<float> * 0.f, {1, 1, 1}}, glm::vec4{1, 0, 0, 1});
+    entities.emplace_back(meshes[MeshId::Axes], vku::Transform{{0, 0, 0}, {1, 1, 1}, std::numbers::pi_v<float> * 0.f, {1, 1, 1}}, glm::vec4{1, 1, 1, 1});
 
-    uint32_t vboSizeBytes = (uint32_t)(md.vertices.size() * sizeof(vku::DefaultVertex));
-    vbo = vku::Buffer(vc, md.vertices.data(), vboSizeBytes, vk::BufferUsageFlagBits::eVertexBuffer);
+    const int numMonkeys = 10;
+    const float pi = std::numbers::pi_v<float>;
+    for (int i = 0; i < numMonkeys; ++i) {
+      entities.emplace_back(
+          meshes[MeshId::Monkey],
+          vku::Transform{glm::vec3{std::cos(i * 2.0f * pi / numMonkeys), 0, std::sin(i * 2.0f * pi / numMonkeys)} * 3.0f, {}, 0, glm::vec3{1, 1, 1} * 0.75f},
+          glm::vec4{0, 0, 1, 1});
+    }
 
-    uint32_t iboSizeBytes = (uint32_t)(md.indices.size() * sizeof(uint32_t));
-    indexCount = (uint32_t)md.indices.size();
-    ibo = vku::Buffer(vc, md.indices.data(), iboSizeBytes, vk::BufferUsageFlagBits::eIndexBuffer);
+    uint32_t vboSizeBytes = (uint32_t)(allMeshesData.vertices.size() * sizeof(vku::DefaultVertex));
+    vbo = vku::Buffer(vc, allMeshesData.vertices.data(), vboSizeBytes, vk::BufferUsageFlagBits::eVertexBuffer);
+
+    uint32_t iboSizeBytes = (uint32_t)(allMeshesData.indices.size() * sizeof(uint32_t));
+    indexCount = (uint32_t)allMeshesData.indices.size();
+    ibo = vku::Buffer(vc, allMeshesData.indices.data(), iboSizeBytes, vk::BufferUsageFlagBits::eIndexBuffer);
   }
 
   //---- Uniform Data
@@ -271,29 +280,31 @@ void TransformConstructionStudy::onUpdate(float deltaTime, const vku::Window& wi
     float sx = r * std::cos(theta);
     float sy = r * std::sin(theta);
     entities[0].transform.position = glm::vec3{
-        glm::perlin(glm::vec3{sx, sy, -2}),
-        glm::perlin(glm::vec3{sx, sy, 0}),
-        glm::perlin(glm::vec3{sx, sy, 2})
-    } * 3.0f;
-  }  
+                                         glm::perlin(glm::vec3{sx, sy, -2}),
+                                         glm::perlin(glm::vec3{sx, sy, 0}),
+                                         glm::perlin(glm::vec3{sx, sy, 2})} *
+                                     3.0f;
+  }
   ImGui::DragFloat3("Axes Pos", glm::value_ptr(entities[1].transform.position));
   ImGui::DragFloat3("Monkey Pos", glm::value_ptr(entities[2].transform.position));
 
   static bool shouldTurnInstantly = true;
   ImGui::Checkbox("Instant Turn", &shouldTurnInstantly);
   const glm::vec3 up{0, 1, 0};
-  const glm::quat targetRotation1 = glm::normalize(glm::quatLookAt(entities[1].transform.position - entities[0].transform.position, up));
-  const glm::quat targetRotation2 = glm::normalize(glm::quatLookAt(entities[2].transform.position - entities[0].transform.position, up));
   if (shouldTurnInstantly) {
-    entities[1].transform.rotation = targetRotation1;
-    entities[2].transform.rotation = targetRotation2;  
+    for (size_t ix = 1; ix < entities.size(); ++ix) {
+      const glm::quat targetRotation = glm::normalize(glm::quatLookAt(entities[ix].transform.position - entities[0].transform.position, up));
+      entities[ix].transform.rotation = targetRotation;
+    }
   } else {
     static float turningSpeed = 2.5f;
     ImGui::SliderFloat("Turning Speed", &turningSpeed, 0.0f, 10.0f);
     float maxAngle = turningSpeed * deltaTime;
     ImGui::Text("maxAngle: %f", maxAngle);
-    entities[1].transform.rotation = vku::rotateTowards(entities[1].transform.rotation, targetRotation1, maxAngle);
-    entities[2].transform.rotation = vku::rotateTowards(entities[2].transform.rotation, targetRotation2, maxAngle);
+    for (size_t ix = 1; ix < entities.size(); ++ix) {
+      const glm::quat targetRotation = glm::normalize(glm::quatLookAt(entities[ix].transform.position - entities[0].transform.position, up));
+      entities[ix].transform.rotation = vku::rotateTowards(entities[ix].transform.rotation, targetRotation, maxAngle);
+    }
   }
 
   ImGui::Text("Axes Rot (Quat) {%.1f, %.1f, %.1f, %.1f}, norm: %.2f", entities[1].transform.rotation.x, entities[1].transform.rotation.y, entities[1].transform.rotation.z, entities[1].transform.rotation.w, glm::length(entities[1].transform.rotation));

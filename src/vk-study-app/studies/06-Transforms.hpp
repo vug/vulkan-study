@@ -37,9 +37,16 @@ class TransformConstructionStudy : public vku::Study {
     PushConstants getPushConstants() const;
   };
 
+  struct MeshId {
+    static const size_t Box = 0;
+    static const size_t Axes = 1;
+    static const size_t Monkey = 2;
+  };
+
  private:
   vku::Buffer vbo;
   vku::Buffer ibo;
+  std::vector<Mesh> meshes;
   std::vector<Entity> entities;
   uint32_t indexCount;
   Uniforms uniforms;
