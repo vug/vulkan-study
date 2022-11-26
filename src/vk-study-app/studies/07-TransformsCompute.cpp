@@ -78,15 +78,18 @@ void TransformGPUConstructionStudy::onInit(const vku::AppSettings appSettings, c
   // create UBO and connect it to a Uniforms instance
   ubo = vku::UniformBuffer(vc, &uniforms, sizeof(Uniforms));
 
-  //---- Descriptor Set
-  vk::DescriptorSetLayoutBinding layoutBinding = {0, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eVertex};
-  vk::raii::DescriptorSetLayout descriptorSetLayout = vk::raii::DescriptorSetLayout(vc.device, {{}, 1, &layoutBinding});
+  //---- Descriptor Set - Graphics
+  {
+    const std::array<vk::DescriptorSetLayoutBinding, 1> layoutBindings = {
+        vk::DescriptorSetLayoutBinding{0, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eVertex}};
+    const vk::DescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo({}, layoutBindings);
+    const vk::raii::DescriptorSetLayout descriptorSetLayout = vk::raii::DescriptorSetLayout(vc.device, descriptorSetLayoutCreateInfo);
   vk::DescriptorSetAllocateInfo allocateInfo = vk::DescriptorSetAllocateInfo(*vc.descriptorPool, 1, &(*descriptorSetLayout));
-  descriptorSets = vk::raii::DescriptorSets(vc.device, allocateInfo);
+    graphicsDescriptorSets = vk::raii::DescriptorSets(vc.device, allocateInfo);
 
   // Binding 0 : Uniform buffer
   vk::WriteDescriptorSet writeDescriptorSet;
-  writeDescriptorSet.dstSet = *descriptorSets[0];
+    writeDescriptorSet.dstSet = *graphicsDescriptorSets[0];
   writeDescriptorSet.descriptorCount = 1;
   writeDescriptorSet.descriptorType = vk::DescriptorType::eUniformBuffer;
   writeDescriptorSet.pBufferInfo = &ubo.descriptor;
@@ -264,9 +267,9 @@ void main()
       &multisampleStateCreateInfo,
       appSettings.hasPresentDepth ? &depthStencilStateCreateInfo : nullptr,
       &colorBlendStateCreateInfo,
-      &dynamicStateCreateInfo,  // *vk::PipelineDynamicStateCreateInfo
+      &dynamicStateCreateInfo,      // *vk::PipelineDynamicStateCreateInfo
       *pipelineLayoutPushConstant,  // vk::PipelineLayout
-      *vc.renderPass            // vk::RenderPass
+      *vc.renderPass                // vk::RenderPass
                                 //{}, // uint32_t subpass_ = {},
   );
 
@@ -535,7 +538,7 @@ void TransformGPUConstructionStudy::recordCommandBuffer(const vku::VulkanContext
   cmdBuf.bindVertexBuffers(0, *vbo.buffer, offsets);
   cmdBuf.bindIndexBuffer(*ibo.buffer, 0, vk::IndexType::eUint32);
 
-  cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelineLayoutPushConstant, 0, *descriptorSets[0], nullptr);
+  cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelineLayoutPushConstant, 0, *graphicsDescriptorSets[0], nullptr);
   cmdBuf.bindPipeline(vk::PipelineBindPoint::eGraphics, **pipelinePushConstant);
   for (auto& e : entities) {
     const PushConstants& pco = e.getPushConstants();
@@ -546,7 +549,7 @@ void TransformGPUConstructionStudy::recordCommandBuffer(const vku::VulkanContext
   }
 
   cmdBuf.bindVertexBuffers(1, *instanceBuffer.buffer, offsets);
-  cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelineLayoutInstance, 0, *descriptorSets[0], nullptr);
+  cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelineLayoutInstance, 0, *graphicsDescriptorSets[0], nullptr);
   cmdBuf.bindPipeline(vk::PipelineBindPoint::eGraphics, **pipelineInstance);
   cmdBuf.drawIndexed(indexCount, numMonkeyInstances, 0, 0, 0);
 

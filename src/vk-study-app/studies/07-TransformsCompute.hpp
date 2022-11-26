@@ -58,7 +58,7 @@ class TransformGPUConstructionStudy : public vku::Study {
   uint32_t indexCount;
   Uniforms uniforms;
   vku::UniformBuffer ubo;
-  vk::raii::DescriptorSets descriptorSets = nullptr;
+  vk::raii::DescriptorSets graphicsDescriptorSets = nullptr;
   vk::raii::PipelineLayout pipelineLayoutPushConstant = nullptr;
   std::unique_ptr<vk::raii::Pipeline> pipelinePushConstant;
   uint32_t numMonkeyInstances;
