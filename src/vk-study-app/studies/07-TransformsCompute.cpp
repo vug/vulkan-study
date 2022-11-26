@@ -78,11 +78,9 @@ void TransformGPUConstructionStudy::onInit(const vku::AppSettings appSettings, c
   // create UBO and connect it to a Uniforms instance
   ubo = vku::UniformBuffer(vc, &uniforms, sizeof(Uniforms));
 
-  //---- Descriptor Set Layout
+  //---- Descriptor Set
   vk::DescriptorSetLayoutBinding layoutBinding = {0, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eVertex};
   vk::raii::DescriptorSetLayout descriptorSetLayout = vk::raii::DescriptorSetLayout(vc.device, {{}, 1, &layoutBinding});
-
-  //---- Descriptor Set
   vk::DescriptorSetAllocateInfo allocateInfo = vk::DescriptorSetAllocateInfo(*vc.descriptorPool, 1, &(*descriptorSetLayout));
   descriptorSets = vk::raii::DescriptorSets(vc.device, allocateInfo);
 
@@ -96,7 +94,11 @@ void TransformGPUConstructionStudy::onInit(const vku::AppSettings appSettings, c
 
   vc.device.updateDescriptorSets(writeDescriptorSet, nullptr);
 
-  //---- Pipeline
+  initPipelineWithPushConstant(appSettings, vc, descriptorSetLayout);
+  initPipelineWithInstances(appSettings, vc, descriptorSetLayout);
+}
+
+void TransformGPUConstructionStudy::initPipelineWithPushConstant(const vku::AppSettings appSettings, const vku::VulkanContext& vc, const vk::raii::DescriptorSetLayout& descriptorSetLayout) {
   const std::string vertexShaderStr = R"(
 #version 450
 
@@ -270,6 +272,9 @@ void main()
 
   pipeline = std::make_unique<vk::raii::Pipeline>(vc.device, nullptr, graphicsPipelineCreateInfo);
   assert(pipeline->getConstructorSuccessCode() == vk::Result::eSuccess);
+}
+
+void TransformGPUConstructionStudy::initPipelineWithInstances(const vku::AppSettings appSettings, const vku::VulkanContext& vc, const vk::raii::DescriptorSetLayout& descriptorSetLayout) {
 }
 
 void TransformGPUConstructionStudy::onUpdate(float deltaTime, const vku::Window& win) {

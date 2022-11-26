@@ -71,4 +71,8 @@ class TransformGPUConstructionStudy : public vku::Study {
   void onUpdate(float deltaTime, const vku::Window& win) final;
   void recordCommandBuffer(const vku::VulkanContext& vc, const vku::FrameDrawer& frameDrawer) final;
   void onDeinit() final;
+
+ private:
+  void initPipelineWithPushConstant(const vku::AppSettings appSettings, const vku::VulkanContext& vc, const vk::raii::DescriptorSetLayout& descriptorSetLayout);
+  void initPipelineWithInstances(const vku::AppSettings appSettings, const vku::VulkanContext& vc, const vk::raii::DescriptorSetLayout& descriptorSetLayout);
 };
