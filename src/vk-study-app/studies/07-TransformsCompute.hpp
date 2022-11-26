@@ -18,6 +18,12 @@ class TransformGPUConstructionStudy : public vku::Study {
     glm::vec4 color;
   };
 
+  struct InstanceData {
+    glm::mat4x4 worldFromObject;
+    glm::mat4x4 dualWorldFromObject;
+    glm::vec4 color;
+  };
+
   struct Uniforms {
     glm::mat4 viewFromWorld;
     glm::mat4 projectionFromView;
@@ -46,6 +52,7 @@ class TransformGPUConstructionStudy : public vku::Study {
  private:
   vku::Buffer vbo;
   vku::Buffer ibo;
+  vku::Buffer instanceBuffer;
   std::vector<Mesh> meshes;
   std::vector<Entity> entities;
   uint32_t indexCount;

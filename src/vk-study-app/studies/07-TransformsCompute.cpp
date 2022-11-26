@@ -49,13 +49,22 @@ void TransformGPUConstructionStudy::onInit(const vku::AppSettings appSettings, c
     entities.emplace_back(meshes[MeshId::Axes], vku::Transform{{0, 0, 0}, {1, 1, 1}, std::numbers::pi_v<float> * 0.f, {1, 1, 1}}, glm::vec4{1, 1, 1, 1});
 
     const int numMonkeys = 10;
+    std::vector<InstanceData> monkeyInstances(numMonkeys);
     const float pi = std::numbers::pi_v<float>;
     for (int i = 0; i < numMonkeys; ++i) {
-      entities.emplace_back(
-          meshes[MeshId::Monkey],
-          vku::Transform{glm::vec3{std::cos(i * 2.0f * pi / numMonkeys), 0, std::sin(i * 2.0f * pi / numMonkeys)} * 3.0f, {}, 0, glm::vec3{1, 1, 1} * 0.75f},
-          glm::vec4{0, 0, 1, 1});
+      const auto transform = vku::Transform{
+          glm::vec3{std::cos(i * 2.0f * pi / numMonkeys), 0, std::sin(i * 2.0f * pi / numMonkeys)} * 3.0f,
+          {},
+          0,
+          glm::vec3{1, 1, 1} * 0.75f};
+      const glm::mat4 model = transform.getTransform();
+      monkeyInstances[i] = InstanceData{
+          .worldFromObject = model,
+          .dualWorldFromObject = glm::transpose(glm::inverse(model)),
+          .color = glm::vec4{0, 0, 1, 1},
+      };
     }
+    instanceBuffer = vku::Buffer(vc, monkeyInstances.data(), static_cast<uint32_t>(monkeyInstances.size() * sizeof(InstanceData)), vk::BufferUsageFlagBits::eVertexBuffer);
 
     uint32_t vboSizeBytes = (uint32_t)(allMeshesData.vertices.size() * sizeof(vku::DefaultVertex));
     vbo = vku::Buffer(vc, allMeshesData.vertices.data(), vboSizeBytes, vk::BufferUsageFlagBits::eVertexBuffer);
@@ -284,7 +293,6 @@ void TransformGPUConstructionStudy::onUpdate(float deltaTime, const vku::Window&
                                      3.0f;
   }
   ImGui::DragFloat3("Axes Pos", glm::value_ptr(entities[1].transform.position));
-  ImGui::DragFloat3("Monkey Pos", glm::value_ptr(entities[2].transform.position));
 
   static bool shouldTurnInstantly = true;
   ImGui::Checkbox("Instant Turn", &shouldTurnInstantly);
