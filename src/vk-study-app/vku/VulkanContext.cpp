@@ -195,16 +195,13 @@ std::vector<vk::raii::Framebuffer> VulkanContext::constructFramebuffers() {
 }
 
 vk::raii::DescriptorPool VulkanContext::constructDescriptorPool() {
-  // This example only uses one descriptor type (uniform buffer) and only
-  // requests one descriptor of this type
-  const uint32_t numberOfUniformBuffers = 1;
-  std::array<vk::DescriptorPoolSize, 1> typeCounts = {vk::DescriptorPoolSize{vk::DescriptorType::eUniformBuffer, numberOfUniformBuffers}};
-  // For additional types you need to add new entries in the type count list
-  // E.g. for two combined image samplers :
-  // typeCounts[1].type = vk::DescriptorType::eCombinedImageSampler;
-  // typeCounts[1].descriptorCount = 2;
+  // Add additional descriptor types to this list or increase their amount when needed
+  std::array<vk::DescriptorPoolSize, 2> typeCounts = {
+    vk::DescriptorPoolSize{vk::DescriptorType::eUniformBuffer, 1},
+    vk::DescriptorPoolSize{vk::DescriptorType::eStorageBuffer, 1},
+  };
 
-  const uint32_t maxNumofRequestableDescriptorSets = 1;
+  const uint32_t maxNumofRequestableDescriptorSets = 2;
   vk::DescriptorPoolCreateInfo descriptorPoolInfo = {vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet, maxNumofRequestableDescriptorSets, typeCounts};
   return device.createDescriptorPool(descriptorPoolInfo);
 }
