@@ -14,6 +14,8 @@ namespace vku {
 StudyRunner::StudyRunner()
     : appSettings({
           .name = "A Vulkan Study Application",
+          .width = 1200,
+          .height = 1200,
           .hasPresentDepth = true,
       }),
       window(appSettings),
