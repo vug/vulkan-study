@@ -6,6 +6,7 @@
 #include "studies/04-Uniforms.hpp"
 #include "studies/05-Instanced.hpp"
 #include "studies/06-Transforms.hpp"
+#include "studies/07-TransformsCompute.hpp"
 
 #include <string>
 
@@ -16,7 +17,8 @@ int main() {
   // sr.pushStudy(std::make_unique<SecondStudy>());
   // sr.pushStudy(std::make_unique<UniformsStudy>());
   // sr.pushStudy(std::make_unique<InstancingStudy>());
-  sr.pushStudy(std::make_unique<TransformConstructionStudy>());
+  // sr.pushStudy(std::make_unique<TransformConstructionStudy>());
+  sr.pushStudy(std::make_unique<TransformGPUConstructionStudy>());
   int ret = sr.run();
   // sr.popStudy(study0); // Example of removal
   return ret;

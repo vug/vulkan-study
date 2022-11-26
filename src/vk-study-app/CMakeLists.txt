@@ -23,6 +23,7 @@ add_executable(${APP}
   studies/04-Uniforms.hpp studies/04-Uniforms.cpp
   studies/05-Instanced.hpp studies/05-Instanced.cpp
   studies/06-Transforms.hpp studies/06-Transforms.cpp
+  studies/07-TransformsCompute.hpp studies/07-TransformsCompute.cpp
 )
 
 # One way of finding include directory of a library
