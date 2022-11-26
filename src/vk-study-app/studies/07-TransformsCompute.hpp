@@ -59,8 +59,11 @@ class TransformGPUConstructionStudy : public vku::Study {
   Uniforms uniforms;
   vku::UniformBuffer ubo;
   vk::raii::DescriptorSets descriptorSets = nullptr;
-  vk::raii::PipelineLayout pipelineLayout = nullptr;
-  std::unique_ptr<vk::raii::Pipeline> pipeline;
+  vk::raii::PipelineLayout pipelineLayoutPushConstant = nullptr;
+  std::unique_ptr<vk::raii::Pipeline> pipelinePushConstant;
+  uint32_t numMonkeyInstances;
+  vk::raii::PipelineLayout pipelineLayoutInstance = nullptr;
+  std::unique_ptr<vk::raii::Pipeline> pipelineInstance;
   vku::FirstPersonPerspectiveCamera camera;
 
  public:
