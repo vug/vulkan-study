@@ -3,7 +3,7 @@
 #include "VulkanContext.hpp"
 
 namespace vku {
-Buffer::Buffer(const VulkanContext& vc, void* srcData, uint32_t sizeBytes, vk::BufferUsageFlagBits usage) {
+Buffer::Buffer(const VulkanContext& vc, void* srcData, uint32_t sizeBytes, vk::BufferUsageFlags usage) {
   //---- Vertex Data Upload via Staging buffers
   // Static data like vertex and index buffer should be stored on the device memory
   // for optimal (and fastest) access by the GPU

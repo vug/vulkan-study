@@ -11,6 +11,6 @@ struct Buffer {
   vk::raii::DeviceMemory memory = nullptr;
 
   Buffer() = default;
-  Buffer(const VulkanContext& vc, void* srcData, uint32_t sizeBytes, vk::BufferUsageFlagBits usage);
+  Buffer(const VulkanContext& vc, void* srcData, uint32_t sizeBytes, vk::BufferUsageFlags usage);
 };
 }  // namespace vku
