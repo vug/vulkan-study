@@ -23,8 +23,10 @@ VulkanContext::VulkanContext(vku::Window& window, const AppSettings& appSettings
       swapchainImageViews(constructSwapchainImageViews()),
       graphicsQueue{device, vkbDevice.get_queue(vkb::QueueType::graphics).value()},
       presentQueue{device, vkbDevice.get_queue(vkb::QueueType::present).value()},
+      computeQueue{device, vkbDevice.get_queue(vkb::QueueType::compute).value()},
       graphicsQueueFamilyIndex(vkbDevice.get_queue_index(vkb::QueueType::graphics).value()),
       presentQueueFamilyIndex(vkbDevice.get_queue_index(vkb::QueueType::present).value()),
+      computeQueueFamilyIndex(vkbDevice.get_queue_index(vkb::QueueType::compute).value()),
       renderPass(constructRenderPass()),
       framebuffers(constructFramebuffers()),
       commandPool(device, vk::CommandPoolCreateInfo(vk::CommandPoolCreateFlagBits::eResetCommandBuffer, graphicsQueueFamilyIndex)),
@@ -197,8 +199,8 @@ std::vector<vk::raii::Framebuffer> VulkanContext::constructFramebuffers() {
 vk::raii::DescriptorPool VulkanContext::constructDescriptorPool() {
   // Add additional descriptor types to this list or increase their amount when needed
   std::array<vk::DescriptorPoolSize, 2> typeCounts = {
-    vk::DescriptorPoolSize{vk::DescriptorType::eUniformBuffer, 1},
-    vk::DescriptorPoolSize{vk::DescriptorType::eStorageBuffer, 1},
+      vk::DescriptorPoolSize{vk::DescriptorType::eUniformBuffer, 1},
+      vk::DescriptorPoolSize{vk::DescriptorType::eStorageBuffer, 1},
   };
 
   const uint32_t maxNumofRequestableDescriptorSets = 2;

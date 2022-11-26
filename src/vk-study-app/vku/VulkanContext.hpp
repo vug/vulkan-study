@@ -63,8 +63,10 @@ class VulkanContext {
   std::vector<vk::raii::ImageView> swapchainImageViews;
   vk::raii::Queue graphicsQueue;
   vk::raii::Queue presentQueue;
+  vk::raii::Queue computeQueue;
   uint32_t graphicsQueueFamilyIndex;
   uint32_t presentQueueFamilyIndex;
+  uint32_t computeQueueFamilyIndex;
   vk::raii::RenderPass renderPass;
   std::vector<vk::raii::Framebuffer> framebuffers;
   vk::raii::CommandPool commandPool;
