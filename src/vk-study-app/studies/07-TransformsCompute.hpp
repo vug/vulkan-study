@@ -12,27 +12,15 @@
 #include <memory>
 
 class TransformGPUConstructionStudy : public vku::Study {
+  struct Mesh {
+    uint32_t offset;
+    uint32_t size;
+  };
+
   struct PushConstants {
     glm::mat4x4 worldFromObject;
     glm::mat4x4 dualWorldFromObject;
     glm::vec4 color;
-  };
-
-  struct InstanceData {
-    glm::mat4x4 worldFromObject;
-    glm::mat4x4 dualWorldFromObject;
-    glm::vec4 color;
-  };
-
-  struct Uniforms {
-    glm::mat4 viewFromWorld;
-    glm::mat4 projectionFromView;
-    glm::mat4 projectionFromWorld;
-  };
-
-  struct Mesh {
-    uint32_t offset;
-    uint32_t size;
   };
 
   struct Entity {
@@ -43,10 +31,26 @@ class TransformGPUConstructionStudy : public vku::Study {
     PushConstants getPushConstants() const;
   };
 
+  struct EntityUniforms {
+    glm::mat4 viewFromWorld;
+    glm::mat4 projectionFromView;
+    glm::mat4 projectionFromWorld;
+  };
+
   struct MeshId {
     static const size_t Box = 0;
     static const size_t Axes = 1;
     static const size_t Monkey = 2;
+  };
+
+  struct InstanceData {
+    glm::mat4x4 worldFromObject;
+    glm::mat4x4 dualWorldFromObject;
+    glm::vec4 color;
+  };
+
+  struct ComputeUniforms {
+    glm::vec4 targetPosition;
   };
 
  private:
@@ -56,8 +60,8 @@ class TransformGPUConstructionStudy : public vku::Study {
   std::vector<Mesh> meshes;
   std::vector<Entity> entities;
   uint32_t indexCount;
-  Uniforms uniforms;
-  vku::UniformBuffer ubo;
+  EntityUniforms entityUniforms;
+  vku::UniformBuffer entityUniformBuffer;
   vk::raii::DescriptorSets graphicsDescriptorSets = nullptr;
   vk::raii::DescriptorSets computeDescriptorSets = nullptr;
   // for rendering entities

@@ -80,7 +80,7 @@ void TransformGPUConstructionStudy::onInit(const vku::AppSettings appSettings, c
 
   //---- Uniform Data
   // create UBO and connect it to a Uniforms instance
-  ubo = vku::UniformBuffer(vc, &uniforms, sizeof(Uniforms));
+  entityUniformBuffer = vku::UniformBuffer(vc, &entityUniforms, sizeof(EntityUniforms));
 
   //---- Descriptor Set - Graphics
   {
@@ -96,7 +96,7 @@ void TransformGPUConstructionStudy::onInit(const vku::AppSettings appSettings, c
     writeDescriptorSet.dstSet = *graphicsDescriptorSets[0];
     writeDescriptorSet.descriptorCount = 1;
     writeDescriptorSet.descriptorType = vk::DescriptorType::eUniformBuffer;
-    writeDescriptorSet.pBufferInfo = &ubo.descriptor;
+    writeDescriptorSet.pBufferInfo = &entityUniformBuffer.descriptor;
     writeDescriptorSet.dstBinding = 0;
 
     vc.device.updateDescriptorSets(writeDescriptorSet, nullptr);
@@ -608,11 +608,11 @@ void TransformGPUConstructionStudy::onUpdate(float deltaTime, const vku::Window&
   }
   ImGui::SliderFloat("FoV", &camera.fov, 15, 180, "%.1f");  // TODO: PerspectiveCameraController, OrthographicCameraController
 
-  uniforms.viewFromWorld = camera.getViewFromWorld();
-  uniforms.projectionFromView = camera.getProjectionFromView();
-  uniforms.projectionFromWorld = uniforms.projectionFromView * uniforms.viewFromWorld;
+  entityUniforms.viewFromWorld = camera.getViewFromWorld();
+  entityUniforms.projectionFromView = camera.getProjectionFromView();
+  entityUniforms.projectionFromWorld = entityUniforms.projectionFromView * entityUniforms.viewFromWorld;
 
-  ubo.update();  // don't forget to call update after uniform data changes
+  entityUniformBuffer.update();  // don't forget to call update after uniform data changes
   t += deltaTime;
 
   ImGui::Text(std::format("yaw: {}, pitch: {}\n", camera.yaw, camera.pitch).c_str());
