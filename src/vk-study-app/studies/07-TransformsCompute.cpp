@@ -31,6 +31,7 @@ void TransformGPUConstructionStudy::onInit(const vku::AppSettings appSettings, c
 
   //---- Vertex Data
   const vivid::ColorMap cmap = vivid::ColorMap::Preset::Viridis;
+  uint32_t instanceBufferSize{};
   {
     vku::MeshData allMeshesData;
     auto insertMeshData = [&](const vku::MeshData& newMesh) -> Mesh {
@@ -64,7 +65,10 @@ void TransformGPUConstructionStudy::onInit(const vku::AppSettings appSettings, c
           .color = glm::vec4{0, 0, 1, 1},
       };
     }
-    instanceBuffer = vku::Buffer(vc, monkeyInstances.data(), static_cast<uint32_t>(monkeyInstances.size() * sizeof(InstanceData)), vk::BufferUsageFlagBits::eVertexBuffer);
+    instanceBufferSize = static_cast<uint32_t>(monkeyInstances.size() * sizeof(InstanceData));
+    instanceBuffer = vku::Buffer(vc, monkeyInstances.data(),
+                                 instanceBufferSize,
+                                 vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eStorageBuffer);
 
     uint32_t vboSizeBytes = (uint32_t)(allMeshesData.vertices.size() * sizeof(vku::DefaultVertex));
     vbo = vku::Buffer(vc, allMeshesData.vertices.data(), vboSizeBytes, vk::BufferUsageFlagBits::eVertexBuffer);
@@ -84,21 +88,47 @@ void TransformGPUConstructionStudy::onInit(const vku::AppSettings appSettings, c
         vk::DescriptorSetLayoutBinding{0, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eVertex}};
     const vk::DescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo({}, layoutBindings);
     const vk::raii::DescriptorSetLayout descriptorSetLayout = vk::raii::DescriptorSetLayout(vc.device, descriptorSetLayoutCreateInfo);
-  vk::DescriptorSetAllocateInfo allocateInfo = vk::DescriptorSetAllocateInfo(*vc.descriptorPool, 1, &(*descriptorSetLayout));
+    vk::DescriptorSetAllocateInfo allocateInfo = vk::DescriptorSetAllocateInfo(*vc.descriptorPool, 1, &(*descriptorSetLayout));
     graphicsDescriptorSets = vk::raii::DescriptorSets(vc.device, allocateInfo);
 
-  // Binding 0 : Uniform buffer
-  vk::WriteDescriptorSet writeDescriptorSet;
+    // Binding 0 : Uniform buffer
+    vk::WriteDescriptorSet writeDescriptorSet;
     writeDescriptorSet.dstSet = *graphicsDescriptorSets[0];
-  writeDescriptorSet.descriptorCount = 1;
-  writeDescriptorSet.descriptorType = vk::DescriptorType::eUniformBuffer;
-  writeDescriptorSet.pBufferInfo = &ubo.descriptor;
-  writeDescriptorSet.dstBinding = 0;
+    writeDescriptorSet.descriptorCount = 1;
+    writeDescriptorSet.descriptorType = vk::DescriptorType::eUniformBuffer;
+    writeDescriptorSet.pBufferInfo = &ubo.descriptor;
+    writeDescriptorSet.dstBinding = 0;
 
-  vc.device.updateDescriptorSets(writeDescriptorSet, nullptr);
+    vc.device.updateDescriptorSets(writeDescriptorSet, nullptr);
+    initPipelineWithPushConstant(appSettings, vc, descriptorSetLayout);
+    initPipelineWithInstances(appSettings, vc, descriptorSetLayout);
+  }
 
-  initPipelineWithPushConstant(appSettings, vc, descriptorSetLayout);
-  initPipelineWithInstances(appSettings, vc, descriptorSetLayout);
+  //---- Descriptor Set - Compute
+  {
+    // Define only one resource (a Storage Buffer) to be bound at binding point 0 and be used at a compute shader
+    // layout(std140, binding = 0) buffer buf;
+    const std::array<vk::DescriptorSetLayoutBinding, 1> layoutBindings = {
+        vk::DescriptorSetLayoutBinding{0, vk::DescriptorType::eStorageBuffer, 1, vk::ShaderStageFlagBits::eCompute}};
+    const vk::raii::DescriptorSetLayout descriptorSetLayout = vk::raii::DescriptorSetLayout(
+        vc.device, vk::DescriptorSetLayoutCreateInfo({}, layoutBindings));
+    // Allocate descriptor set from the pool
+    vk::DescriptorSetAllocateInfo allocateInfo = vk::DescriptorSetAllocateInfo(*vc.descriptorPool, 1, &(*descriptorSetLayout));
+    computeDescriptorSets = vk::raii::DescriptorSets(vc.device, allocateInfo);
+
+    vk::DescriptorBufferInfo descriptorBufferInfo(*instanceBuffer.buffer, 0, instanceBufferSize);
+
+    // Binding 0 : Storage Buffer
+    vk::WriteDescriptorSet writeDescriptorSet;
+    writeDescriptorSet.dstSet = *computeDescriptorSets[0];
+    writeDescriptorSet.descriptorCount = 1;
+    writeDescriptorSet.descriptorType = vk::DescriptorType::eStorageBuffer;
+    writeDescriptorSet.pBufferInfo = &descriptorBufferInfo;  // storage buffer descriptor info here
+    writeDescriptorSet.dstBinding = 0;
+
+    vc.device.updateDescriptorSets(writeDescriptorSet, nullptr);
+    initPipelineWithCompute(appSettings, vc, descriptorSetLayout);
+  }
 }
 
 void TransformGPUConstructionStudy::initPipelineWithPushConstant(const vku::AppSettings appSettings, const vku::VulkanContext& vc, const vk::raii::DescriptorSetLayout& descriptorSetLayout) {
@@ -270,7 +300,7 @@ void main()
       &dynamicStateCreateInfo,      // *vk::PipelineDynamicStateCreateInfo
       *pipelineLayoutPushConstant,  // vk::PipelineLayout
       *vc.renderPass                // vk::RenderPass
-                                //{}, // uint32_t subpass_ = {},
+                                    //{}, // uint32_t subpass_ = {},
   );
 
   pipelinePushConstant = std::make_unique<vk::raii::Pipeline>(vc.device, nullptr, graphicsPipelineCreateInfo);
@@ -457,6 +487,66 @@ void main()
   assert(pipelineInstance->getConstructorSuccessCode() == vk::Result::eSuccess);
 }
 
+void TransformGPUConstructionStudy::initPipelineWithCompute(const vku::AppSettings appSettings, const vku::VulkanContext& vc, const vk::raii::DescriptorSetLayout& descriptorSetLayout) {
+  const std::string computeShaderStr = R"(
+#version 450
+
+#extension GL_ARB_separate_shader_objects : enable
+#extension GL_ARB_shading_language_420pack : enable
+
+layout (local_size_x = 10, local_size_y = 1, local_size_z = 1 ) in;
+
+struct Transform {
+  mat4 worldFromObject;
+  mat4 dualWorldFromObject;
+  vec4 color;
+};
+
+layout (std140, binding = 0) buffer buf
+{
+  Transform transforms[];
+};
+
+void main() 
+{
+  const int numMonkeyInstances = 10;
+  const float pi = 3.14159265358979f;
+  const uint ix = gl_GlobalInvocationID.x;
+
+  // TODO: take box position as input and calculate and update monkey rotations
+
+  //vec3 trans = vec3(cos(ix * 2.0f * pi / numMonkeyInstances), 0, sin(ix * 2.0f * pi / numMonkeyInstances)) * 3.0f;
+  //mat4 model = mat4(1);
+  //model[3][0] = trans.x;
+  //model[3][1] = trans.y;
+  //model[3][2] = trans.z;
+  //transforms[ix].worldFromObject = model;
+  //transforms[ix].dualWorldFromObject = transpose(inverse(model));
+  //transforms[ix].color = vec4(0, 1, 1, 1);
+
+  // TODO: Remove. Temporarily only moving monkeys in a direction with fixed speed to demonstrate compute shader is active
+  mat4 incr = mat4(0);
+  incr[3][0] = 0.001f;
+  incr[3][1] = 0.0f;
+  incr[3][2] = 0.0f;
+
+  transforms[ix].worldFromObject = transforms[ix].worldFromObject + incr;
+}
+)";
+
+  vk::raii::ShaderModule computeShader = vku::spirv::makeShaderModule(vc.device, vk::ShaderStageFlagBits::eCompute, computeShaderStr);
+
+  vk::PipelineLayoutCreateInfo pipelineLayoutCreateInfo;
+  pipelineLayoutCreateInfo.setSetLayouts(*descriptorSetLayout);
+  pipelineLayoutCompute = {vc.device, pipelineLayoutCreateInfo};  // { flags, descriptorSetLayout }
+
+  vk::PipelineShaderStageCreateInfo shaderStageCreateInfo({}, vk::ShaderStageFlagBits::eCompute, *computeShader, "main");
+
+  pipelineCompute = std::make_unique<vk::raii::Pipeline>(vc.device, nullptr, 
+    vk::ComputePipelineCreateInfo({}, shaderStageCreateInfo, *pipelineLayoutCompute));
+  assert(pipelineCompute->getConstructorSuccessCode() == vk::Result::eSuccess);
+}
+
 void TransformGPUConstructionStudy::onUpdate(float deltaTime, const vku::Window& win) {
   static float t = 0.0f;
 
@@ -533,11 +623,20 @@ void TransformGPUConstructionStudy::recordCommandBuffer(const vku::VulkanContext
   const vk::RenderPassBeginInfo renderPassBeginInfo(*vc.renderPass, *frameDrawer.framebuffer, vk::Rect2D{{0, 0}, vc.swapchainExtent}, {});
 
   const vk::raii::CommandBuffer& cmdBuf = frameDrawer.commandBuffer;
+
+  // compute monkey transforms
+  cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eCompute, *pipelineLayoutCompute, 0, *computeDescriptorSets[0], nullptr);
+  cmdBuf.bindPipeline(vk::PipelineBindPoint::eCompute, **pipelineCompute);
+  cmdBuf.dispatch(10, 1, 1);
+  vk::MemoryBarrier memBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eVertexAttributeRead);
+  cmdBuf.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eVertexInput, {}, memBarrier, nullptr, nullptr);
+
   cmdBuf.beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
   vk::DeviceSize offsets = 0;
   cmdBuf.bindVertexBuffers(0, *vbo.buffer, offsets);
   cmdBuf.bindIndexBuffer(*ibo.buffer, 0, vk::IndexType::eUint32);
 
+  // Draw entities
   cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelineLayoutPushConstant, 0, *graphicsDescriptorSets[0], nullptr);
   cmdBuf.bindPipeline(vk::PipelineBindPoint::eGraphics, **pipelinePushConstant);
   for (auto& e : entities) {
@@ -548,6 +647,7 @@ void TransformGPUConstructionStudy::recordCommandBuffer(const vku::VulkanContext
     cmdBuf.drawIndexed(mesh.size, 1, mesh.offset, 0, 0);
   }
 
+  // Draw monkey instances
   cmdBuf.bindVertexBuffers(1, *instanceBuffer.buffer, offsets);
   cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelineLayoutInstance, 0, *graphicsDescriptorSets[0], nullptr);
   cmdBuf.bindPipeline(vk::PipelineBindPoint::eGraphics, **pipelineInstance);

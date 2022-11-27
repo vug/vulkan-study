@@ -59,11 +59,17 @@ class TransformGPUConstructionStudy : public vku::Study {
   Uniforms uniforms;
   vku::UniformBuffer ubo;
   vk::raii::DescriptorSets graphicsDescriptorSets = nullptr;
+  vk::raii::DescriptorSets computeDescriptorSets = nullptr;
+  // for rendering entities
   vk::raii::PipelineLayout pipelineLayoutPushConstant = nullptr;
   std::unique_ptr<vk::raii::Pipeline> pipelinePushConstant;
+  // for rendering monkey instances
   uint32_t numMonkeyInstances;
   vk::raii::PipelineLayout pipelineLayoutInstance = nullptr;
   std::unique_ptr<vk::raii::Pipeline> pipelineInstance;
+  // for computing monkey transforms
+  vk::raii::PipelineLayout pipelineLayoutCompute = nullptr;
+  std::unique_ptr<vk::raii::Pipeline> pipelineCompute;
   vku::FirstPersonPerspectiveCamera camera;
 
  public:
@@ -78,4 +84,5 @@ class TransformGPUConstructionStudy : public vku::Study {
  private:
   void initPipelineWithPushConstant(const vku::AppSettings appSettings, const vku::VulkanContext& vc, const vk::raii::DescriptorSetLayout& descriptorSetLayout);
   void initPipelineWithInstances(const vku::AppSettings appSettings, const vku::VulkanContext& vc, const vk::raii::DescriptorSetLayout& descriptorSetLayout);
+  void initPipelineWithCompute(const vku::AppSettings appSettings, const vku::VulkanContext& vc, const vk::raii::DescriptorSetLayout& descriptorSetLayout);
 };
