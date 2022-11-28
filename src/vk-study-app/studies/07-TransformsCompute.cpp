@@ -81,6 +81,7 @@ void TransformGPUConstructionStudy::onInit(const vku::AppSettings appSettings, c
   //---- Uniform Data
   // create UBO and connect it to a Uniforms instance
   entityUniformBuffer = vku::UniformBuffer(vc, &entityUniforms, sizeof(EntityUniforms));
+  computeUniformBuffer = vku::UniformBuffer(vc, &computeUniforms, sizeof(ComputeUniforms));
 
   //---- Descriptor Set - Graphics
   {
@@ -608,15 +609,20 @@ void TransformGPUConstructionStudy::onUpdate(float deltaTime, const vku::Window&
   }
   ImGui::SliderFloat("FoV", &camera.fov, 15, 180, "%.1f");  // TODO: PerspectiveCameraController, OrthographicCameraController
 
+  //
   entityUniforms.viewFromWorld = camera.getViewFromWorld();
   entityUniforms.projectionFromView = camera.getProjectionFromView();
   entityUniforms.projectionFromWorld = entityUniforms.projectionFromView * entityUniforms.viewFromWorld;
-
   entityUniformBuffer.update();  // don't forget to call update after uniform data changes
-  t += deltaTime;
+
+  //
+  computeUniforms.targetPosition = glm::vec4(entities[0].transform.position, 0);
+  computeUniformBuffer.update();
 
   ImGui::Text(std::format("yaw: {}, pitch: {}\n", camera.yaw, camera.pitch).c_str());
   ImGui::End();
+
+  t += deltaTime;
 }
 
 void TransformGPUConstructionStudy::recordCommandBuffer(const vku::VulkanContext& vc, const vku::FrameDrawer& frameDrawer) {

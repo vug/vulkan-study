@@ -60,8 +60,12 @@ class TransformGPUConstructionStudy : public vku::Study {
   std::vector<Mesh> meshes;
   std::vector<Entity> entities;
   uint32_t indexCount;
+  //
   EntityUniforms entityUniforms;
   vku::UniformBuffer entityUniformBuffer;
+  //
+  ComputeUniforms computeUniforms;
+  vku::UniformBuffer computeUniformBuffer;
   vk::raii::DescriptorSets graphicsDescriptorSets = nullptr;
   vk::raii::DescriptorSets computeDescriptorSets = nullptr;
   // for rendering entities
