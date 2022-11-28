@@ -660,7 +660,7 @@ void TransformGPUConstructionStudy::recordCommandBuffer(const vku::VulkanContext
   // compute monkey transforms
   cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eCompute, *pipelineLayoutCompute, 0, *computeDescriptorSets[0], nullptr);
   cmdBuf.bindPipeline(vk::PipelineBindPoint::eCompute, **pipelineCompute);
-  cmdBuf.dispatch(10, 1, 1);
+  cmdBuf.dispatch(numMonkeyInstances, 1, 1);
   vk::MemoryBarrier memBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eVertexAttributeRead);
   cmdBuf.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eVertexInput, {}, memBarrier, nullptr, nullptr);
 
