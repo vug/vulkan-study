@@ -49,7 +49,7 @@ void TransformGPUConstructionStudy::onInit(const vku::AppSettings appSettings, c
     entities.emplace_back(meshes[MeshId::Box], vku::Transform{{-2, 0, 0}, {0, 0, 1}, std::numbers::pi_v<float> * 0.f, {1, 1, 1}}, glm::vec4{1, 0, 0, 1});
     entities.emplace_back(meshes[MeshId::Axes], vku::Transform{{0, 0, 0}, {1, 1, 1}, std::numbers::pi_v<float> * 0.f, {1, 1, 1}}, glm::vec4{1, 1, 1, 1});
 
-    numMonkeyInstances = 100;
+    numMonkeyInstances = 10'000;
     std::vector<InstanceData> monkeyInstances(numMonkeyInstances);
 
     std::default_random_engine rndGenerator(0);  // (unsigned)time(nullptr)
@@ -555,7 +555,13 @@ void main()
     vec4(0, 0, 0, 1)
   };
 
-  const mat4 model = translate * rotate;
+  // SCALE
+  mat4 scale = mat4(1);
+  scale[0][0] = 0.1f;
+  scale[1][1] = 0.1f;
+  scale[2][2] = 0.1f;
+
+  const mat4 model = translate * rotate * scale;
   transforms[ix].worldFromObject = model;
   transforms[ix].dualWorldFromObject = transpose(inverse(model));
   transforms[ix].color = vec4(0.1, 0.2, 1, 1);
@@ -593,7 +599,7 @@ void TransformGPUConstructionStudy::onUpdate(float deltaTime, const vku::Window&
                                          glm::perlin(glm::vec3{sx, sy, -2}),
                                          glm::perlin(glm::vec3{sx, sy, 0}),
                                          glm::perlin(glm::vec3{sx, sy, 2})} *
-                                     3.0f;
+                                     10.0f;
   }
   ImGui::DragFloat3("Axes Pos", glm::value_ptr(entities[1].transform.position));
 
