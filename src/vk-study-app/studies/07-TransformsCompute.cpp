@@ -522,37 +522,38 @@ layout (binding = 1) uniform Target
 	vec4 position;
 } target;
 
+
 void main() 
 {
-  const int numMonkeyInstances = 10;
+  const int numMonkeyInstances = 10; // TODO: get this via uniform buffer too
   const float pi = 3.14159265358979f;
   const uint ix = gl_GlobalInvocationID.x;
 
-  //vec3 trans = vec3(cos(ix * 2.0f * pi / numMonkeyInstances), 0, sin(ix * 2.0f * pi / numMonkeyInstances)) * 3.0f;
-  //mat4 model = mat4(1);
-  //model[3][0] = trans.x;
-  //model[3][1] = trans.y;
-  //model[3][2] = trans.z;
-  //transforms[ix].worldFromObject = model;
-  //transforms[ix].dualWorldFromObject = transpose(inverse(model));
-  //transforms[ix].color = vec4(0, 1, 1, 1);
+  const vec3 monkeyPos = vec3(transforms[ix].worldFromObject[3][0], transforms[ix].worldFromObject[3][1], transforms[ix].worldFromObject[3][2]);
+  const vec3 dir = normalize(target.position.xyz - monkeyPos);
 
-  // TODO: Remove. Temporarily only moving monkeys in a direction with fixed speed to demonstrate compute shader is active
-  //mat4 incr = mat4(0);
-  //incr[3][0] = 0.001f;
-  //incr[3][1] = 0.0f;
-  //incr[3][2] = 0.0f;
+  // TRANSLATE
+  mat4 translate = mat4(1);
+  translate[3][0] = monkeyPos.x;
+  translate[3][1] = monkeyPos.y;
+  translate[3][2] = monkeyPos.z;
 
-  vec3 monkeyPos = vec3(transforms[ix].worldFromObject[3][0], transforms[ix].worldFromObject[3][1], transforms[ix].worldFromObject[3][2]);
-  vec3 dir = normalize(target.position.xyz - monkeyPos);
+  // ROTATE
+  const vec3 up = vec3(0, 1, 0);
+  const vec3 zaxis = dir; // local forward
+  const vec3 xaxis = normalize(cross(zaxis, up)); // local right
+  const vec3 yaxis = cross(xaxis, zaxis); // local up
+  const mat4 rotate = {
+    vec4(xaxis.x, xaxis.y, xaxis.z, 0),
+    vec4(yaxis.x, yaxis.y, yaxis.z, 0),
+    vec4(zaxis.x, zaxis.y, zaxis.z, 0),
+    vec4(0, 0, 0, 1)
+  };
 
-  // TODO: Remove. Temporarily demonstrating that uniform bufer is functioning, we get target position here
-  monkeyPos += dir * 0.001;
-  transforms[ix].worldFromObject[3][0] = monkeyPos.x;
-  transforms[ix].worldFromObject[3][1] = monkeyPos.y;
-  transforms[ix].worldFromObject[3][2] = monkeyPos.z;
-
-  // TODO: calculate and update monkey rotations based on target position
+  const mat4 model = translate * rotate;
+  transforms[ix].worldFromObject = model;
+  transforms[ix].dualWorldFromObject = transpose(inverse(model));
+  transforms[ix].color = vec4(0.1, 0.2, 1, 1);
 }
 )";
 
