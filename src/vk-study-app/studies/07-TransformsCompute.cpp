@@ -62,7 +62,7 @@ void TransformGPUConstructionStudy::onInit(const vku::AppSettings appSettings, c
           glm::vec3{u(), u(), u()} * 10.0f,
           {},
           0,
-          glm::vec3{1}};
+          glm::vec3{0.1f, 0.1f, 0.1f}};
       const glm::mat4 model = transform.getTransform();
       monkeyInstances[i] = InstanceData{
           .worldFromObject = model,
@@ -528,23 +528,7 @@ layout (binding = 1) uniform Target
 	vec4 position;
 } target;
 
-
-void main() 
-{
-  const float pi = 3.14159265358979f;
-  const uint ix = gl_GlobalInvocationID.x;
-
-  const vec3 monkeyPos = vec3(transforms[ix].worldFromObject[3][0], transforms[ix].worldFromObject[3][1], transforms[ix].worldFromObject[3][2]);
-  const vec3 dir = normalize(target.position.xyz - monkeyPos);
-
-  // TRANSLATE
-  mat4 translate = mat4(1);
-  translate[3][0] = monkeyPos.x;
-  translate[3][1] = monkeyPos.y;
-  translate[3][2] = monkeyPos.z;
-
-  // ROTATE
-  const vec3 up = vec3(0, 1, 0);
+mat4 dirToRot(vec3 dir, vec3 up) {
   const vec3 zaxis = dir; // local forward
   const vec3 xaxis = normalize(cross(zaxis, up)); // local right
   const vec3 yaxis = cross(xaxis, zaxis); // local up
@@ -554,12 +538,41 @@ void main()
     vec4(zaxis.x, zaxis.y, zaxis.z, 0),
     vec4(0, 0, 0, 1)
   };
+  return rotate;
+}
+
+void main() 
+{
+  const float pi = 3.14159265358979f;
+  const uint ix = gl_GlobalInvocationID.x;
+
+  const mat4 M = transforms[ix].worldFromObject;
+
+  // Extract Translation
+  const vec3 inPos = vec3(M[3][0], M[3][1], M[3][2]);
+  const vec3 dir = normalize(target.position.xyz - inPos);
+
+  // Extract Scale
+  const float sx = length(vec3(M[0][0], M[0][1], M[0][2]));
+  const float sy = length(vec3(M[1][0], M[1][1], M[1][2]));
+  const float sz = length(vec3(M[2][0], M[2][1], M[2][2]));
+  const vec3 inScale = vec3(sx, sy, sz);
+
+  // TRANSLATE
+  mat4 translate = mat4(1);
+  translate[3][0] = inPos.x;
+  translate[3][1] = inPos.y;
+  translate[3][2] = inPos.z;
+
+  // ROTATE
+  const vec3 up = vec3(0, 1, 0);
+  const mat4 rotate = dirToRot(dir, up);
 
   // SCALE
   mat4 scale = mat4(1);
-  scale[0][0] = 0.1f;
-  scale[1][1] = 0.1f;
-  scale[2][2] = 0.1f;
+  scale[0][0] = inScale.x;
+  scale[1][1] = inScale.y;
+  scale[2][2] = inScale.z;
 
   const mat4 model = translate * rotate * scale;
   transforms[ix].worldFromObject = model;
