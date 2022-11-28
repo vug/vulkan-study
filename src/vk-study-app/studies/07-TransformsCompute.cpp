@@ -56,7 +56,6 @@ void TransformGPUConstructionStudy::onInit(const vku::AppSettings appSettings, c
     std::uniform_real_distribution<float> uniformDist(-1.0f, 1.0f);
     const auto& u = [&rndGenerator, &uniformDist]() { return uniformDist(rndGenerator); };
 
-
     const float pi = std::numbers::pi_v<float>;
     for (int i = 0; i < numMonkeyInstances; ++i) {
       const auto transform = vku::Transform{
@@ -433,11 +432,12 @@ void main()
   std::array<vk::Rect2D, 1> scissors = {vk::Rect2D{vk::Offset2D{0, 0}, vc.swapchainExtent}};
   vk::PipelineViewportStateCreateInfo viewportStateCreateInfo({}, viewports, scissors);
 
+  // TODO: fix obj loading. Looks like face orientations are incorrect? I had to cull front faces. :-O
   vk::PipelineRasterizationStateCreateInfo rasterizationStateCreateInfo({},                                // flags
                                                                         false,                             // depthClampEnable
                                                                         false,                             // rasterizerDiscardEnable
                                                                         vk::PolygonMode::eFill,            // polygonMode
-                                                                        vk::CullModeFlagBits::eNone,       // cullMode {eBack}
+                                                                        vk::CullModeFlagBits::eFront,      // cullMode {eBack}
                                                                         vk::FrontFace::eCounterClockwise,  // frontFace
                                                                         false,                             // depthBiasEnable
                                                                         0.0f,                              // depthBiasConstantFactor
@@ -570,8 +570,8 @@ void main()
 
   vk::PipelineShaderStageCreateInfo shaderStageCreateInfo({}, vk::ShaderStageFlagBits::eCompute, *computeShader, "main");
 
-  pipelineCompute = std::make_unique<vk::raii::Pipeline>(vc.device, nullptr, 
-    vk::ComputePipelineCreateInfo({}, shaderStageCreateInfo, *pipelineLayoutCompute));
+  pipelineCompute = std::make_unique<vk::raii::Pipeline>(vc.device, nullptr,
+                                                         vk::ComputePipelineCreateInfo({}, shaderStageCreateInfo, *pipelineLayoutCompute));
   assert(pipelineCompute->getConstructorSuccessCode() == vk::Result::eSuccess);
 }
 
