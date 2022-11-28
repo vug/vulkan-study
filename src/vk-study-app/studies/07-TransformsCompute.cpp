@@ -679,7 +679,7 @@ void TransformGPUConstructionStudy::recordCommandBuffer(const vku::VulkanContext
   cmdBuf.bindVertexBuffers(1, *instanceBuffer.buffer, offsets);
   cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelineLayoutInstance, 0, *graphicsDescriptorSets[0], nullptr);
   cmdBuf.bindPipeline(vk::PipelineBindPoint::eGraphics, **pipelineInstance);
-  cmdBuf.drawIndexed(indexCount, numMonkeyInstances, 0, 0, 0);
+  cmdBuf.drawIndexed(meshes[MeshId::Monkey].size, numMonkeyInstances, meshes[MeshId::Monkey].offset, 0, 0);
 
   cmdBuf.endRenderPass();
 }
