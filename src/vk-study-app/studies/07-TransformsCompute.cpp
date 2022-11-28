@@ -109,25 +109,34 @@ void TransformGPUConstructionStudy::onInit(const vku::AppSettings appSettings, c
   {
     // Define only one resource (a Storage Buffer) to be bound at binding point 0 and be used at a compute shader
     // layout(std140, binding = 0) buffer buf;
-    const std::array<vk::DescriptorSetLayoutBinding, 1> layoutBindings = {
-        vk::DescriptorSetLayoutBinding{0, vk::DescriptorType::eStorageBuffer, 1, vk::ShaderStageFlagBits::eCompute}};
+    const std::array<vk::DescriptorSetLayoutBinding, 2> layoutBindings = {
+        vk::DescriptorSetLayoutBinding{0, vk::DescriptorType::eStorageBuffer, 1, vk::ShaderStageFlagBits::eCompute},
+        vk::DescriptorSetLayoutBinding{1, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eCompute}};
     const vk::raii::DescriptorSetLayout descriptorSetLayout = vk::raii::DescriptorSetLayout(
         vc.device, vk::DescriptorSetLayoutCreateInfo({}, layoutBindings));
     // Allocate descriptor set from the pool
     vk::DescriptorSetAllocateInfo allocateInfo = vk::DescriptorSetAllocateInfo(*vc.descriptorPool, 1, &(*descriptorSetLayout));
     computeDescriptorSets = vk::raii::DescriptorSets(vc.device, allocateInfo);
 
-    vk::DescriptorBufferInfo descriptorBufferInfo(*instanceBuffer.buffer, 0, instanceBufferSize);
-
     // Binding 0 : Storage Buffer
-    vk::WriteDescriptorSet writeDescriptorSet;
-    writeDescriptorSet.dstSet = *computeDescriptorSets[0];
-    writeDescriptorSet.descriptorCount = 1;
-    writeDescriptorSet.descriptorType = vk::DescriptorType::eStorageBuffer;
-    writeDescriptorSet.pBufferInfo = &descriptorBufferInfo;  // storage buffer descriptor info here
-    writeDescriptorSet.dstBinding = 0;
+    vk::DescriptorBufferInfo descriptorBufferInfoStorage(*instanceBuffer.buffer, 0, instanceBufferSize);
+    vk::WriteDescriptorSet writeDescriptorSetStorage;
+    writeDescriptorSetStorage.dstSet = *computeDescriptorSets[0];
+    writeDescriptorSetStorage.descriptorCount = 1;
+    writeDescriptorSetStorage.descriptorType = vk::DescriptorType::eStorageBuffer;
+    writeDescriptorSetStorage.pBufferInfo = &descriptorBufferInfoStorage;
+    writeDescriptorSetStorage.dstBinding = 0;
+    vc.device.updateDescriptorSets(writeDescriptorSetStorage, nullptr);
 
-    vc.device.updateDescriptorSets(writeDescriptorSet, nullptr);
+    // Binding 1 : Uniform Buffer
+    vk::WriteDescriptorSet writeDescriptorSetUniform;
+    writeDescriptorSetUniform.dstSet = *computeDescriptorSets[0];
+    writeDescriptorSetUniform.descriptorCount = 1;
+    writeDescriptorSetUniform.descriptorType = vk::DescriptorType::eUniformBuffer;
+    writeDescriptorSetUniform.pBufferInfo = &computeUniformBuffer.descriptor;
+    writeDescriptorSetUniform.dstBinding = 1;
+    vc.device.updateDescriptorSets(writeDescriptorSetUniform, nullptr);
+
     initPipelineWithCompute(appSettings, vc, descriptorSetLayout);
   }
 }
@@ -508,13 +517,16 @@ layout (std140, binding = 0) buffer buf
   Transform transforms[];
 };
 
+layout (binding = 1) uniform Target 
+{
+	vec4 position;
+} target;
+
 void main() 
 {
   const int numMonkeyInstances = 10;
   const float pi = 3.14159265358979f;
   const uint ix = gl_GlobalInvocationID.x;
-
-  // TODO: take box position as input and calculate and update monkey rotations
 
   //vec3 trans = vec3(cos(ix * 2.0f * pi / numMonkeyInstances), 0, sin(ix * 2.0f * pi / numMonkeyInstances)) * 3.0f;
   //mat4 model = mat4(1);
@@ -526,12 +538,21 @@ void main()
   //transforms[ix].color = vec4(0, 1, 1, 1);
 
   // TODO: Remove. Temporarily only moving monkeys in a direction with fixed speed to demonstrate compute shader is active
-  mat4 incr = mat4(0);
-  incr[3][0] = 0.001f;
-  incr[3][1] = 0.0f;
-  incr[3][2] = 0.0f;
+  //mat4 incr = mat4(0);
+  //incr[3][0] = 0.001f;
+  //incr[3][1] = 0.0f;
+  //incr[3][2] = 0.0f;
 
-  transforms[ix].worldFromObject = transforms[ix].worldFromObject + incr;
+  vec3 monkeyPos = vec3(transforms[ix].worldFromObject[3][0], transforms[ix].worldFromObject[3][1], transforms[ix].worldFromObject[3][2]);
+  vec3 dir = normalize(target.position.xyz - monkeyPos);
+
+  // TODO: Remove. Temporarily demonstrating that uniform bufer is functioning, we get target position here
+  monkeyPos += dir * 0.001;
+  transforms[ix].worldFromObject[3][0] = monkeyPos.x;
+  transforms[ix].worldFromObject[3][1] = monkeyPos.y;
+  transforms[ix].worldFromObject[3][2] = monkeyPos.z;
+
+  // TODO: calculate and update monkey rotations based on target position
 }
 )";
 
