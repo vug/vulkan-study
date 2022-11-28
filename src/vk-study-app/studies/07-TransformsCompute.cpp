@@ -49,15 +49,21 @@ void TransformGPUConstructionStudy::onInit(const vku::AppSettings appSettings, c
     entities.emplace_back(meshes[MeshId::Box], vku::Transform{{-2, 0, 0}, {0, 0, 1}, std::numbers::pi_v<float> * 0.f, {1, 1, 1}}, glm::vec4{1, 0, 0, 1});
     entities.emplace_back(meshes[MeshId::Axes], vku::Transform{{0, 0, 0}, {1, 1, 1}, std::numbers::pi_v<float> * 0.f, {1, 1, 1}}, glm::vec4{1, 1, 1, 1});
 
-    numMonkeyInstances = 10;
+    numMonkeyInstances = 100;
     std::vector<InstanceData> monkeyInstances(numMonkeyInstances);
+
+    std::default_random_engine rndGenerator(0);  // (unsigned)time(nullptr)
+    std::uniform_real_distribution<float> uniformDist(-1.0f, 1.0f);
+    const auto& u = [&rndGenerator, &uniformDist]() { return uniformDist(rndGenerator); };
+
+
     const float pi = std::numbers::pi_v<float>;
     for (int i = 0; i < numMonkeyInstances; ++i) {
       const auto transform = vku::Transform{
-          glm::vec3{std::cos(i * 2.0f * pi / numMonkeyInstances), 0, std::sin(i * 2.0f * pi / numMonkeyInstances)} * 3.0f,
+          glm::vec3{u(), u(), u()} * 10.0f,
           {},
           0,
-          glm::vec3{1, 1, 1} * 0.75f};
+          glm::vec3{1}};
       const glm::mat4 model = transform.getTransform();
       monkeyInstances[i] = InstanceData{
           .worldFromObject = model,
@@ -525,7 +531,6 @@ layout (binding = 1) uniform Target
 
 void main() 
 {
-  const int numMonkeyInstances = 10; // TODO: get this via uniform buffer too
   const float pi = 3.14159265358979f;
   const uint ix = gl_GlobalInvocationID.x;
 
@@ -625,7 +630,7 @@ void TransformGPUConstructionStudy::onUpdate(float deltaTime, const vku::Window&
   } else {
     static auto cc = [&]() { 
       vku::FirstPersonCameraViewOrbitingController ret{ camera }; 
-      ret.radius = 8.5f; ret.speed = 0.0f;
+      ret.radius = 20.f; ret.speed = 0.1f;
       return ret; }();
     cc.update(deltaTime);
   }

@@ -71,7 +71,7 @@ void FirstPersonCameraViewOrbitingController::update(float deltaTime) {
   ImGui::SliderFloat("Theta", &theta, -std::numbers::pi_v<float> * 0.5, std::numbers::pi_v<float> * 0.5);
   ImGui::SliderFloat("Phi0", &phi0, -std::numbers::pi_v<float>, std::numbers::pi_v<float>);
   ImGui::SliderFloat("Speed", &speed, -2.f, 2.f);
-  ImGui::SliderFloat("Radius", &radius, 0.1f, 10.f);
+  ImGui::SliderFloat("Radius", &radius, 0.1f, 40.f);
 }
 
 // -----
