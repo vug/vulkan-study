@@ -190,7 +190,7 @@ void main()
   assert(pipeline->getConstructorSuccessCode() == vk::Result::eSuccess);
 }
 
-void UniformsStudy::onUpdate([[maybe_unused]] float deltaTime, [[maybe_unused]] const vku::Window& win) {}
+void UniformsStudy::onUpdate([[maybe_unused]] const vku::UpdateParams& params) {}
 
 void UniformsStudy::recordCommandBuffer(const vku::VulkanContext& vc, const vku::FrameDrawer& frameDrawer) {
   static float t = 0.0f;

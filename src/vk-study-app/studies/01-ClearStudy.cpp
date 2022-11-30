@@ -7,7 +7,7 @@
 
 void ClearStudy::onInit([[maybe_unused]] const vku::AppSettings appSettings, [[maybe_unused]] const vku::VulkanContext& vc) {}
 
-void ClearStudy::onUpdate([[maybe_unused]] float deltaTime, [[maybe_unused]] const vku::Window& win) {}
+void ClearStudy::onUpdate([[maybe_unused]] const vku::UpdateParams& params) {}
 
 void ClearStudy::recordCommandBuffer(const vku::VulkanContext& vc, const vku::FrameDrawer& frameDrawer) {
   const vk::RenderPassBeginInfo renderPassBeginInfo(*vc.renderPass, *frameDrawer.framebuffer, vk::Rect2D{{0, 0}, vc.swapchainExtent}, {});

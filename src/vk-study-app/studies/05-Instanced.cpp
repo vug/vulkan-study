@@ -256,16 +256,16 @@ void main()
   assert(pipeline->getConstructorSuccessCode() == vk::Result::eSuccess);
 }
 
-void InstancingStudy::onUpdate(float deltaTime, const vku::Window& win) {
+void InstancingStudy::onUpdate(const vku::UpdateParams& params) {
   static float t = 0.0f;
 
   ImGui::Begin("Debug");
   if (false) {
-    static vku::FirstPersonCameraViewInputController cc(camera, win);
-    cc.update(deltaTime);
+    static vku::FirstPersonCameraViewInputController cc(camera, params.win);
+    cc.update(params.deltaTime);
   } else {
     static vku::FirstPersonCameraViewOrbitingController cc(camera);
-    cc.update(deltaTime);
+    cc.update(params.deltaTime);
   }
   ImGui::SliderFloat("FoV", &camera.fov, 15, 180, "%.1f");  // TODO: PerspectiveCameraController, OrthographicCameraController
 
@@ -274,7 +274,7 @@ void InstancingStudy::onUpdate(float deltaTime, const vku::Window& win) {
   uniforms.projectionFromWorld = uniforms.projectionFromView * uniforms.viewFromWorld;
 
   ubo.update();  // don't forget to call update after uniform data changes
-  t += deltaTime;
+  t += params.deltaTime;
 
   ImGui::Text(std::format("yaw: {}, pitch: {}\n", camera.yaw, camera.pitch).c_str());
   ImGui::End();

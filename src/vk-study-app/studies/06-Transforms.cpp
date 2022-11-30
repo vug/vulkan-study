@@ -265,7 +265,7 @@ void main()
   assert(pipeline->getConstructorSuccessCode() == vk::Result::eSuccess);
 }
 
-void TransformConstructionStudy::onUpdate(float deltaTime, const vku::Window& win) {
+void TransformConstructionStudy::onUpdate(const vku::UpdateParams& params) {
   static float t = 0.0f;
 
   ImGui::Begin("Scene");
@@ -299,7 +299,7 @@ void TransformConstructionStudy::onUpdate(float deltaTime, const vku::Window& wi
   } else {
     static float turningSpeed = 2.5f;
     ImGui::SliderFloat("Turning Speed", &turningSpeed, 0.0f, 10.0f);
-    float maxAngle = turningSpeed * deltaTime;
+    float maxAngle = turningSpeed * params.deltaTime;
     ImGui::Text("maxAngle: %f", maxAngle);
     for (size_t ix = 1; ix < entities.size(); ++ix) {
       const glm::quat targetRotation = glm::normalize(glm::quatLookAt(entities[ix].transform.position - entities[0].transform.position, up));
@@ -316,14 +316,14 @@ void TransformConstructionStudy::onUpdate(float deltaTime, const vku::Window& wi
 
   ImGui::Text("Camera");
   if (false) {
-    static vku::FirstPersonCameraViewInputController cc(camera, win);
-    cc.update(deltaTime);
+    static vku::FirstPersonCameraViewInputController cc(camera, params.win);
+    cc.update(params.deltaTime);
   } else {
     static auto cc = [&]() { 
       vku::FirstPersonCameraViewOrbitingController ret{ camera }; 
       ret.radius = 8.5f; ret.speed = 0.0f;
       return ret; }();
-    cc.update(deltaTime);
+    cc.update(params.deltaTime);
   }
   ImGui::SliderFloat("FoV", &camera.fov, 15, 180, "%.1f");  // TODO: PerspectiveCameraController, OrthographicCameraController
 
@@ -332,7 +332,7 @@ void TransformConstructionStudy::onUpdate(float deltaTime, const vku::Window& wi
   uniforms.projectionFromWorld = uniforms.projectionFromView * uniforms.viewFromWorld;
 
   ubo.update();  // don't forget to call update after uniform data changes
-  t += deltaTime;
+  t += params.deltaTime;
 
   ImGui::Text(std::format("yaw: {}, pitch: {}\n", camera.yaw, camera.pitch).c_str());
   ImGui::End();

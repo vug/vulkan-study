@@ -242,7 +242,7 @@ FrameDrawer VulkanContext::drawFrameBegin() {
   } catch ([[maybe_unused]] vk::OutOfDateKHRError& e) {
     assert(result == vk::Result::eErrorOutOfDateKHR);  // to see whether result gets a wrong value as it happens with presentKHR
     recreateSwapchain();
-    return FrameDrawer{cmdBuf, imageIndex, swapchain.getImages()[imageIndex], framebuffers[imageIndex]};
+    return FrameDrawer{cmdBuf, imageIndex, swapchain.getImages()[imageIndex], currentFrame, framebuffers[imageIndex]};
   }
   assert(result == vk::Result::eSuccess);  // or vk::Result::eSuboptimalKHR
   assert(imageIndex < swapchain.getImages().size());
@@ -275,7 +275,7 @@ FrameDrawer VulkanContext::drawFrameBegin() {
   if (appSettings.hasPresentDepth)
     vku::setImageLayout(cmdBuf, *depthImages[imageIndex].image, swapchainDepthFormat, vk::ImageLayout::eUndefined, vk::ImageLayout::eDepthStencilAttachmentOptimal);
 
-  return FrameDrawer{cmdBuf, imageIndex, image, framebuffers[imageIndex]};
+  return FrameDrawer{cmdBuf, imageIndex, image, currentFrame, framebuffers[imageIndex]};
 }
 
 void VulkanContext::drawFrameEnd(const FrameDrawer& frameDrawer) {

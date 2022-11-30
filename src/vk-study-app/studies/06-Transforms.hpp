@@ -61,7 +61,7 @@ class TransformConstructionStudy : public vku::Study {
 
   inline std::string getName() final { return "VertexBuffer upload to GPU, bind to pipeline/shader."; }
   void onInit(const vku::AppSettings appSettings, const vku::VulkanContext& vc) final;
-  void onUpdate(float deltaTime, const vku::Window& win) final;
+  void onUpdate(const vku::UpdateParams& params) final;
   void recordCommandBuffer(const vku::VulkanContext& vc, const vku::FrameDrawer& frameDrawer) final;
   void onDeinit() final;
 };

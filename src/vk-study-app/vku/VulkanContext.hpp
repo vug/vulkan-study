@@ -15,6 +15,7 @@ struct FrameDrawer {
   const vk::raii::CommandBuffer& commandBuffer;
   const uint32_t imageIndex;  // if kept as a reference (i.e. uint32_t&) its value changes when command buffer methods are called
   const vk::Image image;      // same as above
+  const uint32_t frameNo;
   const vk::raii::Framebuffer& framebuffer;
 };
 
@@ -89,7 +90,7 @@ class VulkanContext {
   std::vector<vk::raii::Fence> commandBufferAvailableFences;  // aka commandBufferAvailableFences
   // Note that, having an array of each sync object is to allow recording of one frame while next one is being recorded
  public:
-  size_t currentFrame = 0;
+  uint32_t currentFrame = 0;
 
  private:
   vk::raii::Instance constructInstance();

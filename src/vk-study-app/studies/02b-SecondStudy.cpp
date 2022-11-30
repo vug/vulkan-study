@@ -121,7 +121,7 @@ void main () { outColor = vec4 (fragColor, 1.0); }
   assert(pipeline->getConstructorSuccessCode() == vk::Result::eSuccess);
 }
 
-void SecondStudy::onUpdate([[maybe_unused]] float deltaTime, [[maybe_unused]] const vku::Window& win) {}
+void SecondStudy::onUpdate([[maybe_unused]] const vku::UpdateParams& params) {}
 
 void SecondStudy::recordCommandBuffer(const vku::VulkanContext& vc, const vku::FrameDrawer& frameDrawer) {
   const vk::RenderPassBeginInfo renderPassBeginInfo(*vc.renderPass, *frameDrawer.framebuffer, vk::Rect2D{{0, 0}, vc.swapchainExtent}, {} /* OR clearValues */);

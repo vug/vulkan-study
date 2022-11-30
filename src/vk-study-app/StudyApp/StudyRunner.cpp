@@ -42,7 +42,7 @@ int StudyRunner::run() {
     const vku::FrameDrawer frameDrawer = vc.drawFrameBegin();
     imGuiHelper.Begin();
     for (auto& study : studies) {
-      study->onUpdate(frameDuration.count(), window);
+      study->onUpdate(vku::UpdateParams{.deltaTime = frameDuration.count(), .win = window, .frameInFlightNo = frameDrawer.frameNo});
       study->recordCommandBuffer(vc, frameDrawer);
       // TODO: might need to add some synchronization here. If layer order does not look correct uncomment below line.
       // vku::setImageLayout(frameDrawer.commandBuffer, frameDrawer.image, vc.swapchainColorFormat, vk::ImageLayout::eColorAttachmentOptimal, vk::ImageLayout::eColorAttachmentOptimal);
