@@ -29,9 +29,9 @@ class InstancingStudy : public vku::Study {
   uint32_t indexCount;
   vku::Buffer instanceBuffer;
   uint32_t instanceCount;
-  Uniforms uniforms;
-  vku::UniformBuffer ubo;
-  vk::raii::DescriptorSets descriptorSets = nullptr;
+  std::vector<Uniforms> uniforms;
+  std::vector<vku::UniformBuffer> ubos;
+  std::vector<vk::raii::DescriptorSets> descriptorSets;
   vk::raii::PipelineLayout pipelineLayout = nullptr;
   std::unique_ptr<vk::raii::Pipeline> pipeline;
   vku::FirstPersonPerspectiveCamera camera;

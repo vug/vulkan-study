@@ -54,27 +54,31 @@ void InstancingStudy::onInit(const vku::AppSettings appSettings, const vku::Vulk
   }
   instanceBuffer = vku::Buffer(vc, instances.data(), static_cast<uint32_t>(instances.size() * sizeof(InstanceData)), vk::BufferUsageFlagBits::eVertexBuffer);
 
-  //---- Uniform Data
-  // create UBO and connect it to a Uniforms instance
-  ubo = vku::UniformBuffer(vc, &uniforms, sizeof(Uniforms));
-
   //---- Descriptor Set Layout
   vk::DescriptorSetLayoutBinding layoutBinding = {0, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eVertex};
   vk::raii::DescriptorSetLayout descriptorSetLayout = vk::raii::DescriptorSetLayout(vc.device, {{}, 1, &layoutBinding});
 
-  //---- Descriptor Set
-  vk::DescriptorSetAllocateInfo allocateInfo = vk::DescriptorSetAllocateInfo(*vc.descriptorPool, 1, &(*descriptorSetLayout));
-  descriptorSets = vk::raii::DescriptorSets(vc.device, allocateInfo);
+  //---- Uniform Data
+  // create UBOs and connect them to a Uniforms instance
+  // Initialize all uniform structs initially because Uniform Buffers refer to the addresses of individual structs in the vector.
+  // And if the vector grows element addresses will change and ubo.update() will have a non-sensical srcData.
+  uniforms.resize(vc.MAX_FRAMES_IN_FLIGHT);
+  for (int i = 0; i < vc.MAX_FRAMES_IN_FLIGHT; i++) {
+    ubos.emplace_back(vc, &uniforms[i], static_cast<uint32_t>(sizeof(Uniforms)));
 
-  // Binding 0 : Uniform buffer
-  vk::WriteDescriptorSet writeDescriptorSet;
-  writeDescriptorSet.dstSet = *descriptorSets[0];
-  writeDescriptorSet.descriptorCount = 1;
-  writeDescriptorSet.descriptorType = vk::DescriptorType::eUniformBuffer;
-  writeDescriptorSet.pBufferInfo = &ubo.descriptor;
-  writeDescriptorSet.dstBinding = 0;
+    //---- Descriptor Set
+    vk::DescriptorSetAllocateInfo allocateInfo = vk::DescriptorSetAllocateInfo(*vc.descriptorPool, 1, &(*descriptorSetLayout));
+    descriptorSets.emplace_back(vc.device, allocateInfo);
 
-  vc.device.updateDescriptorSets(writeDescriptorSet, nullptr);
+    // Binding 0 : Uniform buffer
+    vk::WriteDescriptorSet writeDescriptorSet; // connects indiviudal concrete uniform buffer to descriptor set with the abstract layout that can refer to it
+    writeDescriptorSet.dstSet = *(descriptorSets[i][0]);
+    writeDescriptorSet.descriptorCount = 1;
+    writeDescriptorSet.descriptorType = vk::DescriptorType::eUniformBuffer;
+    writeDescriptorSet.pBufferInfo = &ubos[i].descriptor;
+    writeDescriptorSet.dstBinding = 0;
+    vc.device.updateDescriptorSets(writeDescriptorSet, nullptr);
+  }
 
   //---- Pipeline
   const std::string vertexShaderStr = R"(
@@ -269,11 +273,13 @@ void InstancingStudy::onUpdate(const vku::UpdateParams& params) {
   }
   ImGui::SliderFloat("FoV", &camera.fov, 15, 180, "%.1f");  // TODO: PerspectiveCameraController, OrthographicCameraController
 
-  uniforms.viewFromWorld = camera.getViewFromWorld();
-  uniforms.projectionFromView = camera.getProjectionFromView();
-  uniforms.projectionFromWorld = uniforms.projectionFromView * uniforms.viewFromWorld;
+  // Later will make UniformBuffer keep track of the data struct it represents
+  Uniforms& uni = uniforms[params.frameInFlightNo];
+  uni.viewFromWorld = camera.getViewFromWorld();
+  uni.projectionFromView = camera.getProjectionFromView();
+  uni.projectionFromWorld = uni.projectionFromView * uni.viewFromWorld;
 
-  ubo.update();  // don't forget to call update after uniform data changes
+  ubos[params.frameInFlightNo].update();  // upload uniform data to GPU after changing it
   t += params.deltaTime;
 
   ImGui::Text(std::format("yaw: {}, pitch: {}\n", camera.yaw, camera.pitch).c_str());
@@ -285,7 +291,7 @@ void InstancingStudy::recordCommandBuffer(const vku::VulkanContext& vc, const vk
 
   const vk::raii::CommandBuffer& cmdBuf = frameDrawer.commandBuffer;
   cmdBuf.beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
-  cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelineLayout, 0, *descriptorSets[0], nullptr);
+  cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelineLayout, 0, *descriptorSets[frameDrawer.frameNo][0], nullptr);
   cmdBuf.bindPipeline(vk::PipelineBindPoint::eGraphics, **pipeline);
 
   vk::DeviceSize offsets = 0;
