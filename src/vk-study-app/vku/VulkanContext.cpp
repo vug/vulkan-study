@@ -55,7 +55,8 @@ vk::raii::Instance VulkanContext::constructInstance() {
 
   vkb::SystemInfo systemInfo = vkb::SystemInfo::get_system_info().value();  // has methods about available layers and extensions
   for (const auto& ext : vulkanInstanceExtensions)
-    assert(systemInfo.is_extension_available(ext.c_str()));
+    if (!systemInfo.is_extension_available(ext.c_str()))
+      throw std::runtime_error("extension not available");
 
   vkbInstanceBuilder = new vkb::InstanceBuilder();
   vkbInstanceBuilder
