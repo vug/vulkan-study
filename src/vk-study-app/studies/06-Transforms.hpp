@@ -18,7 +18,7 @@ class TransformConstructionStudy : public vku::Study {
     glm::vec4 color;
   };
 
-  struct Uniforms {
+  struct PerFrameUniforms {
     glm::mat4 viewFromWorld;
     glm::mat4 projectionFromView;
     glm::mat4 projectionFromWorld;
@@ -43,15 +43,19 @@ class TransformConstructionStudy : public vku::Study {
     static const size_t Monkey = 2;
   };
 
+  struct PerFrameUniformDescriptor {
+    PerFrameUniforms uniforms;
+    vku::UniformBuffer ubo;
+    vk::raii::DescriptorSets descriptorSets = nullptr;
+  };
+
  private:
   vku::Buffer vbo;
   vku::Buffer ibo;
   std::vector<Mesh> meshes;
   std::vector<Entity> entities;
   uint32_t indexCount;
-  Uniforms uniforms;
-  vku::UniformBuffer ubo;
-  vk::raii::DescriptorSets descriptorSets = nullptr;
+  std::vector<PerFrameUniformDescriptor> perFrameData;
   vk::raii::PipelineLayout pipelineLayout = nullptr;
   std::unique_ptr<vk::raii::Pipeline> pipeline;
   vku::FirstPersonPerspectiveCamera camera;

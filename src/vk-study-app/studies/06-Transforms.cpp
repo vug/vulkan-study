@@ -67,27 +67,32 @@ void TransformConstructionStudy::onInit(const vku::AppSettings appSettings, cons
     ibo = vku::Buffer(vc, allMeshesData.indices.data(), iboSizeBytes, vk::BufferUsageFlagBits::eIndexBuffer);
   }
 
-  //---- Uniform Data
-  // create UBO and connect it to a Uniforms instance
-  ubo = vku::UniformBuffer(vc, &uniforms, sizeof(Uniforms));
-
   //---- Descriptor Set Layout
   vk::DescriptorSetLayoutBinding layoutBinding = {0, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eVertex};
   vk::raii::DescriptorSetLayout descriptorSetLayout = vk::raii::DescriptorSetLayout(vc.device, {{}, 1, &layoutBinding});
 
-  //---- Descriptor Set
-  vk::DescriptorSetAllocateInfo allocateInfo = vk::DescriptorSetAllocateInfo(*vc.descriptorPool, 1, &(*descriptorSetLayout));
-  descriptorSets = vk::raii::DescriptorSets(vc.device, allocateInfo);
+  //---- Uniform Data
+  perFrameData.resize(vc.MAX_FRAMES_IN_FLIGHT);
 
-  // Binding 0 : Uniform buffer
-  vk::WriteDescriptorSet writeDescriptorSet;
-  writeDescriptorSet.dstSet = *descriptorSets[0];
-  writeDescriptorSet.descriptorCount = 1;
-  writeDescriptorSet.descriptorType = vk::DescriptorType::eUniformBuffer;
-  writeDescriptorSet.pBufferInfo = &ubo.descriptor;
-  writeDescriptorSet.dstBinding = 0;
+  for (int i = 0; i < vc.MAX_FRAMES_IN_FLIGHT; i++) {
+    PerFrameUniformDescriptor& perFrame = perFrameData[i];
 
-  vc.device.updateDescriptorSets(writeDescriptorSet, nullptr);
+    // create UBO and connect it to a Uniforms instance
+    perFrame.ubo = vku::UniformBuffer(vc, &perFrame.uniforms, static_cast<uint32_t>(sizeof(PerFrameUniforms)));
+
+    //---- Descriptor Set
+    vk::DescriptorSetAllocateInfo allocateInfo = vk::DescriptorSetAllocateInfo(*vc.descriptorPool, 1, &(*descriptorSetLayout));
+    perFrame.descriptorSets = vk::raii::DescriptorSets(vc.device, allocateInfo);
+
+    // Binding 0 : Uniform buffer
+    vk::WriteDescriptorSet writeDescriptorSet;  // connects indiviudal concrete uniform buffer to descriptor set with the abstract layout that can refer to it
+    writeDescriptorSet.dstSet = *(perFrame.descriptorSets[0]);
+    writeDescriptorSet.descriptorCount = 1;
+    writeDescriptorSet.descriptorType = vk::DescriptorType::eUniformBuffer;
+    writeDescriptorSet.pBufferInfo = &perFrame.ubo.descriptor;
+    writeDescriptorSet.dstBinding = 0;
+    vc.device.updateDescriptorSets(writeDescriptorSet, nullptr);
+  }
 
   //---- Pipeline
   const std::string vertexShaderStr = R"(
@@ -327,11 +332,12 @@ void TransformConstructionStudy::onUpdate(const vku::UpdateParams& params) {
   }
   ImGui::SliderFloat("FoV", &camera.fov, 15, 180, "%.1f");  // TODO: PerspectiveCameraController, OrthographicCameraController
 
-  uniforms.viewFromWorld = camera.getViewFromWorld();
-  uniforms.projectionFromView = camera.getProjectionFromView();
-  uniforms.projectionFromWorld = uniforms.projectionFromView * uniforms.viewFromWorld;
+  PerFrameUniforms& uni = perFrameData[params.frameInFlightNo].uniforms;
+  uni.viewFromWorld = camera.getViewFromWorld();
+  uni.projectionFromView = camera.getProjectionFromView();
+  uni.projectionFromWorld = uni.projectionFromView * uni.viewFromWorld;
 
-  ubo.update();  // don't forget to call update after uniform data changes
+  perFrameData[params.frameInFlightNo].ubo.update();  // don't forget to call update after uniform data changes
   t += params.deltaTime;
 
   ImGui::Text(std::format("yaw: {}, pitch: {}\n", camera.yaw, camera.pitch).c_str());
@@ -343,7 +349,7 @@ void TransformConstructionStudy::recordCommandBuffer(const vku::VulkanContext& v
 
   const vk::raii::CommandBuffer& cmdBuf = frameDrawer.commandBuffer;
   cmdBuf.beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
-  cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelineLayout, 0, *descriptorSets[0], nullptr);
+  cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelineLayout, 0, *perFrameData[frameDrawer.frameNo].descriptorSets[0], nullptr);
   cmdBuf.bindPipeline(vk::PipelineBindPoint::eGraphics, **pipeline);
 
   vk::DeviceSize offsets = 0;
