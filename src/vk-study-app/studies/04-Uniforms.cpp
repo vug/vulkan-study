@@ -34,8 +34,8 @@ void UniformsStudy::onInit(const vku::AppSettings appSettings, const vku::Vulkan
 
   //---- Uniform Data
   // create UBO and connect it to a Uniforms instance
-  ubo = vku::UniformBuffer(vc, &uniforms, sizeof(Uniforms));
-  uniforms.projectionMatrix = glm::perspective(glm::radians(45.0f), (float)800 / (float)800, 0.1f, 256.0f);
+  ubo = vku::UniformBuffer<Uniforms>(vc);
+  ubo.src.projectionMatrix = glm::perspective(glm::radians(45.0f), (float)800 / (float)800, 0.1f, 256.0f);
   // will set the view and model matrices at every frame
 
   //---- Descriptor Set Layout
@@ -196,10 +196,10 @@ void UniformsStudy::recordCommandBuffer(const vku::VulkanContext& vc, const vku:
   static float t = 0.0f;
   const glm::vec3 up = {0, 1, 0};
   const float r{5.0f};
-  uniforms.viewMatrix = glm::lookAt(glm::vec3(r * std::cos(t), 0, r * std::sin(t)), glm::vec3(0, 0, 0), up);
+  ubo.src.viewMatrix = glm::lookAt(glm::vec3(r * std::cos(t), 0, r * std::sin(t)), glm::vec3(0, 0, 0), up);
   t += 0.001f;
 
-  uniforms.modelMatrix = glm::translate(glm::mat4(1), glm::vec3(0, std::sin(t) * 0.5f, 0));
+  ubo.src.modelMatrix = glm::translate(glm::mat4(1), glm::vec3(0, std::sin(t) * 0.5f, 0));
   ubo.update();  // don't forget to call update after uniform data changes
 
   const vk::RenderPassBeginInfo renderPassBeginInfo(*vc.renderPass, *frameDrawer.framebuffer, vk::Rect2D{{0, 0}, vc.swapchainExtent}, {});

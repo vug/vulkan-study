@@ -54,8 +54,7 @@ class TransformGPUConstructionStudy : public vku::Study {
   };
 
   struct PerFrameUniformDescriptor {
-    PerFrameUniforms uniforms;
-    vku::UniformBuffer ubo;
+    vku::UniformBuffer<PerFrameUniforms> ubo;
     vk::raii::DescriptorSets descriptorSets = nullptr;
   };
 
@@ -69,8 +68,7 @@ class TransformGPUConstructionStudy : public vku::Study {
   //
   std::vector<PerFrameUniformDescriptor> perFrameData;
   //
-  ComputeUniforms computeUniforms;
-  vku::UniformBuffer computeUniformBuffer;
+  vku::UniformBuffer<ComputeUniforms> computeUniformBuffer;
   vk::raii::DescriptorSets computeDescriptorSets = nullptr;
   // for rendering entities
   vk::raii::PipelineLayout pipelineLayoutPushConstant = nullptr;

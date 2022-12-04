@@ -89,24 +89,16 @@ void TransformGPUConstructionStudy::onInit(const vku::AppSettings appSettings, c
     vk::raii::DescriptorSetLayout descriptorSetLayout = vk::raii::DescriptorSetLayout(vc.device, {{}, 1, &layoutBinding});
 
     //---- Uniform Data
-    perFrameData.resize(vc.MAX_FRAMES_IN_FLIGHT);
-
     for (int i = 0; i < vc.MAX_FRAMES_IN_FLIGHT; i++) {
-      PerFrameUniformDescriptor& perFrame = perFrameData[i];
-
-      // create UBO and connect it to a Uniforms instance
-      perFrame.ubo = vku::UniformBuffer(vc, &perFrame.uniforms, static_cast<uint32_t>(sizeof(PerFrameUniforms)));
-
-      //---- Descriptor Set
       vk::DescriptorSetAllocateInfo allocateInfo = vk::DescriptorSetAllocateInfo(*vc.descriptorPool, 1, &(*descriptorSetLayout));
-      perFrame.descriptorSets = vk::raii::DescriptorSets(vc.device, allocateInfo);
+      perFrameData.emplace_back(vku::UniformBuffer<PerFrameUniforms>(vc), vk::raii::DescriptorSets(vc.device, allocateInfo));
 
       // Binding 0 : Uniform buffer
       vk::WriteDescriptorSet writeDescriptorSet;  // connects indiviudal concrete uniform buffer to descriptor set with the abstract layout that can refer to it
-      writeDescriptorSet.dstSet = *(perFrame.descriptorSets[0]);
+      writeDescriptorSet.dstSet = *(perFrameData.back().descriptorSets[0]);
       writeDescriptorSet.descriptorCount = 1;
       writeDescriptorSet.descriptorType = vk::DescriptorType::eUniformBuffer;
-      writeDescriptorSet.pBufferInfo = &perFrame.ubo.descriptor;
+      writeDescriptorSet.pBufferInfo = &perFrameData.back().ubo.descriptor;
       writeDescriptorSet.dstBinding = 0;
       vc.device.updateDescriptorSets(writeDescriptorSet, nullptr);
     }
@@ -116,7 +108,7 @@ void TransformGPUConstructionStudy::onInit(const vku::AppSettings appSettings, c
   }
 
   //---- Uniform Data
-  computeUniformBuffer = vku::UniformBuffer(vc, &computeUniforms, sizeof(ComputeUniforms));
+  computeUniformBuffer = vku::UniformBuffer<ComputeUniforms>(vc);
 
   //---- Descriptor Set - Compute
   {
@@ -664,14 +656,14 @@ void TransformGPUConstructionStudy::onUpdate(const vku::UpdateParams& params) {
   ImGui::SliderFloat("FoV", &camera.fov, 15, 180, "%.1f");  // TODO: PerspectiveCameraController, OrthographicCameraController
 
   //
-  PerFrameUniforms& uni = perFrameData[params.frameInFlightNo].uniforms;
+  PerFrameUniforms& uni = perFrameData[params.frameInFlightNo].ubo.src;
   uni.viewFromWorld = camera.getViewFromWorld();
   uni.projectionFromView = camera.getProjectionFromView();
   uni.projectionFromWorld = uni.projectionFromView * uni.viewFromWorld;
   perFrameData[params.frameInFlightNo].ubo.update();  // don't forget to call update after uniform data changes
 
   //
-  computeUniforms.targetPosition = glm::vec4(entities[0].transform.position, 0);
+  computeUniformBuffer.src.targetPosition = glm::vec4(entities[0].transform.position, 0);
   computeUniformBuffer.update();
 
   ImGui::Text(std::format("yaw: {}, pitch: {}\n", camera.yaw, camera.pitch).c_str());

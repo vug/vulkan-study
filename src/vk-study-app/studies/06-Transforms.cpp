@@ -78,7 +78,7 @@ void TransformConstructionStudy::onInit(const vku::AppSettings appSettings, cons
     PerFrameUniformDescriptor& perFrame = perFrameData[i];
 
     // create UBO and connect it to a Uniforms instance
-    perFrame.ubo = vku::UniformBuffer(vc, &perFrame.uniforms, static_cast<uint32_t>(sizeof(PerFrameUniforms)));
+    perFrame.ubo = vku::UniformBuffer<PerFrameUniforms>(vc);
 
     //---- Descriptor Set
     vk::DescriptorSetAllocateInfo allocateInfo = vk::DescriptorSetAllocateInfo(*vc.descriptorPool, 1, &(*descriptorSetLayout));
@@ -332,7 +332,7 @@ void TransformConstructionStudy::onUpdate(const vku::UpdateParams& params) {
   }
   ImGui::SliderFloat("FoV", &camera.fov, 15, 180, "%.1f");  // TODO: PerspectiveCameraController, OrthographicCameraController
 
-  PerFrameUniforms& uni = perFrameData[params.frameInFlightNo].uniforms;
+  PerFrameUniforms& uni = perFrameData[params.frameInFlightNo].ubo.src;
   uni.viewFromWorld = camera.getViewFromWorld();
   uni.projectionFromView = camera.getProjectionFromView();
   uni.projectionFromWorld = uni.projectionFromView * uni.viewFromWorld;

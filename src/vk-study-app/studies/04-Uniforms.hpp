@@ -20,8 +20,7 @@ class UniformsStudy : public vku::Study {
   vku::Buffer vbo;
   vku::Buffer ibo;
   uint32_t indexCount;
-  Uniforms uniforms;
-  vku::UniformBuffer ubo;
+  vku::UniformBuffer<Uniforms> ubo;
   vk::raii::DescriptorSets descriptorSets = nullptr;
   vk::raii::PipelineLayout pipelineLayout = nullptr;
   std::unique_ptr<vk::raii::Pipeline> pipeline;

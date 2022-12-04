@@ -44,8 +44,7 @@ class TransformConstructionStudy : public vku::Study {
   };
 
   struct PerFrameUniformDescriptor {
-    PerFrameUniforms uniforms;
-    vku::UniformBuffer ubo;
+    vku::UniformBuffer<PerFrameUniforms> ubo;
     vk::raii::DescriptorSets descriptorSets = nullptr;
   };
 

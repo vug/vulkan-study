@@ -60,11 +60,8 @@ void InstancingStudy::onInit(const vku::AppSettings appSettings, const vku::Vulk
 
   //---- Uniform Data
   // create UBOs and connect them to a Uniforms instance
-  // Initialize all uniform structs initially because Uniform Buffers refer to the addresses of individual structs in the vector.
-  // And if the vector grows element addresses will change and ubo.update() will have a non-sensical srcData.
-  uniforms.resize(vc.MAX_FRAMES_IN_FLIGHT);
   for (int i = 0; i < vc.MAX_FRAMES_IN_FLIGHT; i++) {
-    ubos.emplace_back(vc, &uniforms[i], static_cast<uint32_t>(sizeof(Uniforms)));
+    ubos.emplace_back<vku::UniformBuffer<Uniforms>>(vc);
 
     //---- Descriptor Set
     vk::DescriptorSetAllocateInfo allocateInfo = vk::DescriptorSetAllocateInfo(*vc.descriptorPool, 1, &(*descriptorSetLayout));
@@ -274,7 +271,7 @@ void InstancingStudy::onUpdate(const vku::UpdateParams& params) {
   ImGui::SliderFloat("FoV", &camera.fov, 15, 180, "%.1f");  // TODO: PerspectiveCameraController, OrthographicCameraController
 
   // Later will make UniformBuffer keep track of the data struct it represents
-  Uniforms& uni = uniforms[params.frameInFlightNo];
+  Uniforms& uni = ubos[params.frameInFlightNo].src;
   uni.viewFromWorld = camera.getViewFromWorld();
   uni.projectionFromView = camera.getProjectionFromView();
   uni.projectionFromWorld = uni.projectionFromView * uni.viewFromWorld;
