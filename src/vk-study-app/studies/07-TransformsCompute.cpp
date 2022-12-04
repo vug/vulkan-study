@@ -82,32 +82,41 @@ void TransformGPUConstructionStudy::onInit(const vku::AppSettings appSettings, c
     ibo = vku::Buffer(vc, allMeshesData.indices.data(), iboSizeBytes, vk::BufferUsageFlagBits::eIndexBuffer);
   }
 
-  //---- Uniform Data
-  // create UBO and connect it to a Uniforms instance
-  entityUniformBuffer = vku::UniformBuffer(vc, &entityUniforms, sizeof(EntityUniforms));
-  computeUniformBuffer = vku::UniformBuffer(vc, &computeUniforms, sizeof(ComputeUniforms));
-
-  //---- Descriptor Set - Graphics
+  //---- Graphics
   {
-    const std::array<vk::DescriptorSetLayoutBinding, 1> layoutBindings = {
-        vk::DescriptorSetLayoutBinding{0, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eVertex}};
-    const vk::DescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo({}, layoutBindings);
-    const vk::raii::DescriptorSetLayout descriptorSetLayout = vk::raii::DescriptorSetLayout(vc.device, descriptorSetLayoutCreateInfo);
-    vk::DescriptorSetAllocateInfo allocateInfo = vk::DescriptorSetAllocateInfo(*vc.descriptorPool, 1, &(*descriptorSetLayout));
-    graphicsDescriptorSets = vk::raii::DescriptorSets(vc.device, allocateInfo);
+    // Descriptor Set Layout
+    vk::DescriptorSetLayoutBinding layoutBinding = {0, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eVertex};
+    vk::raii::DescriptorSetLayout descriptorSetLayout = vk::raii::DescriptorSetLayout(vc.device, {{}, 1, &layoutBinding});
 
-    // Binding 0 : Uniform buffer
-    vk::WriteDescriptorSet writeDescriptorSet;
-    writeDescriptorSet.dstSet = *graphicsDescriptorSets[0];
-    writeDescriptorSet.descriptorCount = 1;
-    writeDescriptorSet.descriptorType = vk::DescriptorType::eUniformBuffer;
-    writeDescriptorSet.pBufferInfo = &entityUniformBuffer.descriptor;
-    writeDescriptorSet.dstBinding = 0;
+    //---- Uniform Data
+    perFrameData.resize(vc.MAX_FRAMES_IN_FLIGHT);
 
-    vc.device.updateDescriptorSets(writeDescriptorSet, nullptr);
+    for (int i = 0; i < vc.MAX_FRAMES_IN_FLIGHT; i++) {
+      PerFrameUniformDescriptor& perFrame = perFrameData[i];
+
+      // create UBO and connect it to a Uniforms instance
+      perFrame.ubo = vku::UniformBuffer(vc, &perFrame.uniforms, static_cast<uint32_t>(sizeof(PerFrameUniforms)));
+
+      //---- Descriptor Set
+      vk::DescriptorSetAllocateInfo allocateInfo = vk::DescriptorSetAllocateInfo(*vc.descriptorPool, 1, &(*descriptorSetLayout));
+      perFrame.descriptorSets = vk::raii::DescriptorSets(vc.device, allocateInfo);
+
+      // Binding 0 : Uniform buffer
+      vk::WriteDescriptorSet writeDescriptorSet;  // connects indiviudal concrete uniform buffer to descriptor set with the abstract layout that can refer to it
+      writeDescriptorSet.dstSet = *(perFrame.descriptorSets[0]);
+      writeDescriptorSet.descriptorCount = 1;
+      writeDescriptorSet.descriptorType = vk::DescriptorType::eUniformBuffer;
+      writeDescriptorSet.pBufferInfo = &perFrame.ubo.descriptor;
+      writeDescriptorSet.dstBinding = 0;
+      vc.device.updateDescriptorSets(writeDescriptorSet, nullptr);
+    }
+
     initPipelineWithPushConstant(appSettings, vc, descriptorSetLayout);
     initPipelineWithInstances(appSettings, vc, descriptorSetLayout);
   }
+
+  //---- Uniform Data
+  computeUniformBuffer = vku::UniformBuffer(vc, &computeUniforms, sizeof(ComputeUniforms));
 
   //---- Descriptor Set - Compute
   {
@@ -655,10 +664,11 @@ void TransformGPUConstructionStudy::onUpdate(const vku::UpdateParams& params) {
   ImGui::SliderFloat("FoV", &camera.fov, 15, 180, "%.1f");  // TODO: PerspectiveCameraController, OrthographicCameraController
 
   //
-  entityUniforms.viewFromWorld = camera.getViewFromWorld();
-  entityUniforms.projectionFromView = camera.getProjectionFromView();
-  entityUniforms.projectionFromWorld = entityUniforms.projectionFromView * entityUniforms.viewFromWorld;
-  entityUniformBuffer.update();  // don't forget to call update after uniform data changes
+  PerFrameUniforms& uni = perFrameData[params.frameInFlightNo].uniforms;
+  uni.viewFromWorld = camera.getViewFromWorld();
+  uni.projectionFromView = camera.getProjectionFromView();
+  uni.projectionFromWorld = uni.projectionFromView * uni.viewFromWorld;
+  perFrameData[params.frameInFlightNo].ubo.update();  // don't forget to call update after uniform data changes
 
   //
   computeUniforms.targetPosition = glm::vec4(entities[0].transform.position, 0);
@@ -688,7 +698,7 @@ void TransformGPUConstructionStudy::recordCommandBuffer(const vku::VulkanContext
   cmdBuf.bindIndexBuffer(*ibo.buffer, 0, vk::IndexType::eUint32);
 
   // Draw entities
-  cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelineLayoutPushConstant, 0, *graphicsDescriptorSets[0], nullptr);
+  cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelineLayoutPushConstant, 0, *perFrameData[frameDrawer.frameNo].descriptorSets[0], nullptr);
   cmdBuf.bindPipeline(vk::PipelineBindPoint::eGraphics, **pipelinePushConstant);
   for (auto& e : entities) {
     const PushConstants& pco = e.getPushConstants();
@@ -700,7 +710,7 @@ void TransformGPUConstructionStudy::recordCommandBuffer(const vku::VulkanContext
 
   // Draw monkey instances
   cmdBuf.bindVertexBuffers(1, *instanceBuffer.buffer, offsets);
-  cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelineLayoutInstance, 0, *graphicsDescriptorSets[0], nullptr);
+  cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelineLayoutInstance, 0, *perFrameData[frameDrawer.frameNo].descriptorSets[0], nullptr);
   cmdBuf.bindPipeline(vk::PipelineBindPoint::eGraphics, **pipelineInstance);
   cmdBuf.drawIndexed(meshes[MeshId::Monkey].size, numMonkeyInstances, meshes[MeshId::Monkey].offset, 0, 0);
 

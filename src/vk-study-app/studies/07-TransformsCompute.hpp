@@ -31,12 +31,6 @@ class TransformGPUConstructionStudy : public vku::Study {
     PushConstants getPushConstants() const;
   };
 
-  struct EntityUniforms {
-    glm::mat4 viewFromWorld;
-    glm::mat4 projectionFromView;
-    glm::mat4 projectionFromWorld;
-  };
-
   struct MeshId {
     static const size_t Box = 0;
     static const size_t Axes = 1;
@@ -53,6 +47,18 @@ class TransformGPUConstructionStudy : public vku::Study {
     glm::vec4 targetPosition;
   };
 
+  struct PerFrameUniforms {
+    glm::mat4 viewFromWorld;
+    glm::mat4 projectionFromView;
+    glm::mat4 projectionFromWorld;
+  };
+
+  struct PerFrameUniformDescriptor {
+    PerFrameUniforms uniforms;
+    vku::UniformBuffer ubo;
+    vk::raii::DescriptorSets descriptorSets = nullptr;
+  };
+
  private:
   vku::Buffer vbo;
   vku::Buffer ibo;
@@ -61,12 +67,10 @@ class TransformGPUConstructionStudy : public vku::Study {
   std::vector<Entity> entities;
   uint32_t indexCount;
   //
-  EntityUniforms entityUniforms;
-  vku::UniformBuffer entityUniformBuffer;
+  std::vector<PerFrameUniformDescriptor> perFrameData;
   //
   ComputeUniforms computeUniforms;
   vku::UniformBuffer computeUniformBuffer;
-  vk::raii::DescriptorSets graphicsDescriptorSets = nullptr;
   vk::raii::DescriptorSets computeDescriptorSets = nullptr;
   // for rendering entities
   vk::raii::PipelineLayout pipelineLayoutPushConstant = nullptr;
