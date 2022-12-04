@@ -199,11 +199,11 @@ std::vector<vk::raii::Framebuffer> VulkanContext::constructFramebuffers() {
 vk::raii::DescriptorPool VulkanContext::constructDescriptorPool() {
   // Add additional descriptor types to this list or increase their amount when needed
   std::array<vk::DescriptorPoolSize, 2> typeCounts = {
-      vk::DescriptorPoolSize{vk::DescriptorType::eUniformBuffer, 1},
-      vk::DescriptorPoolSize{vk::DescriptorType::eStorageBuffer, 1},
+      vk::DescriptorPoolSize{vk::DescriptorType::eUniformBuffer, 10},
+      vk::DescriptorPoolSize{vk::DescriptorType::eStorageBuffer, 10},
   };
 
-  const uint32_t maxNumofRequestableDescriptorSets = 2;
+  const uint32_t maxNumofRequestableDescriptorSets = 3;
   vk::DescriptorPoolCreateInfo descriptorPoolInfo = {vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet, maxNumofRequestableDescriptorSets, typeCounts};
   return device.createDescriptorPool(descriptorPoolInfo);
 }
