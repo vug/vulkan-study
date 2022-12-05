@@ -43,17 +43,19 @@ class UniformBuffer {
 
     dstData = dev.mapMemory(*memory, 0, memAlloc.allocationSize, vk::MemoryMapFlags());
     memcpy(dstData, &src, sizeBytes);
-    // TODO: call unmap at destructor. (adding a destructor makes generates an issue with vk::raii::Buffer's some functions missing)
-    // 'vk::raii::Buffer& vk::raii::Buffer::operator=(const vk::raii::Buffer& buf)': function was explicitly deleted
-    // dev.unmapMemory(*memory);
   }
 
   void update() const {
     memcpy(dstData, &src, sizeBytes);
   }
+
+  void unmap() {
+    // I don't think that unmap needs to be called at destruction
+    dev.unmapMemory(*memory);
+  }
 };
 
-  template <typename TUniformStruct>
+template <typename TUniformStruct>
 class UniformDescriptor {
  public:
   vku::UniformBuffer<TUniformStruct> ubo;
