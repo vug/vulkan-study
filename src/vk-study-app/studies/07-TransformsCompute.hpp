@@ -47,15 +47,10 @@ class TransformGPUConstructionStudy : public vku::Study {
     glm::vec4 targetPosition;
   };
 
-  struct PerFrameUniforms {
+  struct PerFrameUniform {
     glm::mat4 viewFromWorld;
     glm::mat4 projectionFromView;
     glm::mat4 projectionFromWorld;
-  };
-
-  struct PerFrameUniformDescriptor {
-    vku::UniformBuffer<PerFrameUniforms> ubo;
-    vk::raii::DescriptorSets descriptorSets = nullptr;
   };
 
  private:
@@ -66,7 +61,7 @@ class TransformGPUConstructionStudy : public vku::Study {
   std::vector<Entity> entities;
   uint32_t indexCount;
   //
-  std::vector<PerFrameUniformDescriptor> perFrameData;
+  std::vector<vku::UniformDescriptor<PerFrameUniform>> perFrameUniform;
   //
   vku::UniformBuffer<ComputeUniforms> computeUniformBuffer;
   vk::raii::DescriptorSets computeDescriptorSets = nullptr;

@@ -84,30 +84,19 @@ void TransformGPUConstructionStudy::onInit(const vku::AppSettings appSettings, c
 
   //---- Graphics
   {
-    // Descriptor Set Layout
-    vk::DescriptorSetLayoutBinding layoutBinding = {0, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eVertex};
-    vk::raii::DescriptorSetLayout descriptorSetLayout = vk::raii::DescriptorSetLayout(vc.device, {{}, 1, &layoutBinding});
+    // Per Frame Descriptor Set Layout
+    const vk::DescriptorSetLayoutBinding layoutBinding{0, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eVertex};
+    const vk::DescriptorSetLayoutCreateInfo layoutCreateInfo{{}, 1, &layoutBinding};
+    const vk::raii::DescriptorSetLayout descriptorSetLayout{vc.device, layoutCreateInfo};
 
-    //---- Uniform Data
-    for (int i = 0; i < vc.MAX_FRAMES_IN_FLIGHT; i++) {
-      vk::DescriptorSetAllocateInfo allocateInfo = vk::DescriptorSetAllocateInfo(*vc.descriptorPool, 1, &(*descriptorSetLayout));
-      perFrameData.emplace_back(vku::UniformBuffer<PerFrameUniforms>(vc), vk::raii::DescriptorSets(vc.device, allocateInfo));
-
-      // Binding 0 : Uniform buffer
-      vk::WriteDescriptorSet writeDescriptorSet;  // connects indiviudal concrete uniform buffer to descriptor set with the abstract layout that can refer to it
-      writeDescriptorSet.dstSet = *(perFrameData.back().descriptorSets[0]);
-      writeDescriptorSet.descriptorCount = 1;
-      writeDescriptorSet.descriptorType = vk::DescriptorType::eUniformBuffer;
-      writeDescriptorSet.pBufferInfo = &perFrameData.back().ubo.descriptor;
-      writeDescriptorSet.dstBinding = 0;
-      vc.device.updateDescriptorSets(writeDescriptorSet, nullptr);
-    }
+    for (int i = 0; i < vc.MAX_FRAMES_IN_FLIGHT; i++)
+      perFrameUniform.emplace_back(vc, descriptorSetLayout, layoutBinding.binding);
 
     initPipelineWithPushConstant(appSettings, vc, descriptorSetLayout);
     initPipelineWithInstances(appSettings, vc, descriptorSetLayout);
   }
 
-  //---- Uniform Data
+  //---- Compute Uniform Data
   computeUniformBuffer = vku::UniformBuffer<ComputeUniforms>(vc);
 
   //---- Descriptor Set - Compute
@@ -656,11 +645,11 @@ void TransformGPUConstructionStudy::onUpdate(const vku::UpdateParams& params) {
   ImGui::SliderFloat("FoV", &camera.fov, 15, 180, "%.1f");  // TODO: PerspectiveCameraController, OrthographicCameraController
 
   //
-  PerFrameUniforms& uni = perFrameData[params.frameInFlightNo].ubo.src;
+  PerFrameUniform& uni = perFrameUniform[params.frameInFlightNo].getStructRef();
   uni.viewFromWorld = camera.getViewFromWorld();
   uni.projectionFromView = camera.getProjectionFromView();
   uni.projectionFromWorld = uni.projectionFromView * uni.viewFromWorld;
-  perFrameData[params.frameInFlightNo].ubo.update();  // don't forget to call update after uniform data changes
+  perFrameUniform[params.frameInFlightNo].upload();  // don't forget to call upload after uniform data changes
 
   //
   computeUniformBuffer.src.targetPosition = glm::vec4(entities[0].transform.position, 0);
@@ -690,7 +679,7 @@ void TransformGPUConstructionStudy::recordCommandBuffer(const vku::VulkanContext
   cmdBuf.bindIndexBuffer(*ibo.buffer, 0, vk::IndexType::eUint32);
 
   // Draw entities
-  cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelineLayoutPushConstant, 0, *perFrameData[frameDrawer.frameNo].descriptorSets[0], nullptr);
+  cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelineLayoutPushConstant, 0, *perFrameUniform[frameDrawer.frameNo].descriptorSets[0], nullptr);
   cmdBuf.bindPipeline(vk::PipelineBindPoint::eGraphics, **pipelinePushConstant);
   for (auto& e : entities) {
     const PushConstants& pco = e.getPushConstants();
@@ -702,7 +691,7 @@ void TransformGPUConstructionStudy::recordCommandBuffer(const vku::VulkanContext
 
   // Draw monkey instances
   cmdBuf.bindVertexBuffers(1, *instanceBuffer.buffer, offsets);
-  cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelineLayoutInstance, 0, *perFrameData[frameDrawer.frameNo].descriptorSets[0], nullptr);
+  cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelineLayoutInstance, 0, *perFrameUniform[frameDrawer.frameNo].descriptorSets[0], nullptr);
   cmdBuf.bindPipeline(vk::PipelineBindPoint::eGraphics, **pipelineInstance);
   cmdBuf.drawIndexed(meshes[MeshId::Monkey].size, numMonkeyInstances, meshes[MeshId::Monkey].offset, 0, 0);
 

@@ -52,4 +52,36 @@ class UniformBuffer {
     memcpy(dstData, &src, sizeBytes);
   }
 };
+
+  template <typename TUniformStruct>
+class UniformDescriptor {
+ public:
+  vku::UniformBuffer<TUniformStruct> ubo;
+  vk::raii::DescriptorSets descriptorSets = nullptr;
+
+  UniformDescriptor(const vku::VulkanContext& vc, const vk::raii::DescriptorSetLayout& descriptorSetLayout, uint32_t binding)
+      : ubo(vku::UniformBuffer<TUniformStruct>(vc)) {
+    vk::DescriptorSetAllocateInfo allocateInfo{*vc.descriptorPool, 1, &(*descriptorSetLayout)};
+    descriptorSets = vk::raii::DescriptorSets(vc.device, allocateInfo);
+
+    // Binding 0 : Uniform buffer
+    vk::WriteDescriptorSet writeDescriptorSet;  // connects indiviudal concrete uniform buffer to descriptor set with the abstract layout that can refer to it
+    writeDescriptorSet.dstSet = *(descriptorSets[0]);
+    writeDescriptorSet.descriptorCount = 1;
+    writeDescriptorSet.descriptorType = vk::DescriptorType::eUniformBuffer;
+    writeDescriptorSet.pBufferInfo = &ubo.descriptor;
+    writeDescriptorSet.dstBinding = binding;
+    vc.device.updateDescriptorSets(writeDescriptorSet, nullptr);
+  }
+
+  TUniformStruct& getStructRef() {
+    return ubo.src;
+  }
+
+  // call after changing struct members to upload it to GPU memory
+  void upload() {
+    ubo.update();
+  }
+};
+
 }  // namespace vku
