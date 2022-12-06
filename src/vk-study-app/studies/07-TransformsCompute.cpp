@@ -50,7 +50,7 @@ void TransformGPUConstructionStudy::onInit(const vku::AppSettings appSettings, c
     entities.emplace_back(meshes[MeshId::Box], vku::Transform{{-2, 0, 0}, {0, 0, 1}, std::numbers::pi_v<float> * 0.f, {1, 1, 1}}, glm::vec4{1, 0, 0, 1});
     entities.emplace_back(meshes[MeshId::Axes], vku::Transform{{0, 0, 0}, {1, 1, 1}, std::numbers::pi_v<float> * 0.f, {1, 1, 1}}, glm::vec4{1, 1, 1, 1});
 
-    numMonkeyInstances = 10'000;
+    numMonkeyInstances = 50'000;
     std::vector<InstanceData> monkeyInstances(numMonkeyInstances);
     std::vector<vku::TransformGPU> monkeyTransformsToGPU(numMonkeyInstances);
 
@@ -63,7 +63,7 @@ void TransformGPUConstructionStudy::onInit(const vku::AppSettings appSettings, c
           glm::vec3{u(), u(), u()} * 10.0f,
           {},
           0,
-          glm::vec3{0.1f, 0.1f, 0.1f}};
+          glm::vec3{1.0f} * 0.05f};
       monkeyTransformsToGPU[i] = transform.toGPULayout();
       const glm::mat4 model = transform.getTransform();
       monkeyInstances[i] = InstanceData{
@@ -251,7 +251,7 @@ void main()
                                                                         false,                             // depthClampEnable
                                                                         false,                             // rasterizerDiscardEnable
                                                                         vk::PolygonMode::eFill,            // polygonMode
-                                                                        vk::CullModeFlagBits::eNone,       // cullMode {eBack}
+                                                                        vk::CullModeFlagBits::eBack,       // cullMode {eBack}
                                                                         vk::FrontFace::eCounterClockwise,  // frontFace
                                                                         false,                             // depthBiasEnable
                                                                         0.0f,                              // depthBiasConstantFactor
@@ -435,7 +435,7 @@ void main()
                                                                         false,                             // depthClampEnable
                                                                         false,                             // rasterizerDiscardEnable
                                                                         vk::PolygonMode::eFill,            // polygonMode
-                                                                        vk::CullModeFlagBits::eFront,      // cullMode {eBack}
+                                                                        vk::CullModeFlagBits::eBack,       // cullMode {eBack}
                                                                         vk::FrontFace::eCounterClockwise,  // frontFace
                                                                         false,                             // depthBiasEnable
                                                                         0.0f,                              // depthBiasConstantFactor
@@ -555,7 +555,68 @@ vec4 rotToQuat(mat4 rot) {
 	q.x = (rot[2][1] - rot[1][2]) / w4 ;
 	q.y = (rot[0][2] - rot[2][0]) / w4 ;
 	q.z = (rot[1][0] - rot[0][1]) / w4 ;
-  return q;
+	//q.x = (rot[1][2] - rot[2][1]) / w4 ;
+	//q.y = (rot[2][0] - rot[0][2]) / w4 ;
+	//q.z = (rot[0][1] - rot[1][0]) / w4 ;
+  return normalize(q);
+
+  //float tr = rot[0][0] + rot[1][1] + rot[2][2];
+  //vec4 q;
+  //if (tr > 0) { 
+  //  float S = sqrt(tr+1.0) * 2; // S=4*qw 
+  //  float qw = 0.25 * S;
+  //  float qx = (rot[2][1] - rot[1][2]) / S;
+  //  float qy = (rot[0][2] - rot[2][0]) / S; 
+  //  float qz = (rot[1][0] - rot[0][1]) / S; 
+  //  q = vec4(qx, qy, qz, qw);
+  //} else if ((rot[0][0] > rot[1][1]) && (rot[0][0] > rot[2][2])) { 
+  //  float S = sqrt(1.0 + rot[0][0] - rot[1][1] - rot[2][2]) * 2; // S=4*qx 
+  //  float qw = (rot[2][1] - rot[1][2]) / S;
+  //  float qx = 0.25 * S;
+  //  float qy = (rot[0][1] + rot[1][0]) / S; 
+  //  float qz = (rot[0][2] + rot[2][0]) / S; 
+  //  q = vec4(qx, qy, qz, qw);
+  //} else if (rot[1][1] > rot[2][2]) { 
+  //  float S = sqrt(1.0 + rot[1][1] - rot[0][0] - rot[2][2]) * 2; // S=4*qy
+  //  float qw = (rot[0][2] - rot[2][0]) / S;
+  //  float qx = (rot[0][1] + rot[1][0]) / S; 
+  //  float qy = 0.25 * S;
+  //  float qz = (rot[1][2] + rot[2][1]) / S; 
+  //  q = vec4(qx, qy, qz, qw);
+  //} else { 
+  //  float S = sqrt(1.0 + rot[2][2] - rot[0][0] - rot[1][1]) * 2; // S=4*qz
+  //  float qw = (rot[1][0] - rot[0][1]) / S;
+  //  float qx = (rot[0][2] + rot[2][0]) / S;
+  //  float qy = (rot[1][2] + rot[2][1]) / S;
+  //  float qz = 0.25 * S;
+  //  q = normalize(vec4(qx, qy, qz, qw));
+  //}
+  //return q;
+}
+
+// turn quaternion1 towards q2 at most by the amount of maxAngle
+vec4 rotateTowards(vec4 q1, vec4 q2, float maxAngle) {
+  if (maxAngle < 0.00001f)
+    return q1;
+
+  float cosTheta = dot(q1, q2);
+
+  if (cosTheta > 0.99999f)
+    return q2;
+
+  // take shorter path on the sphere
+  if (cosTheta < 0) {
+    q1 *= -1.f;
+    cosTheta *= -1.f;
+  }
+  float angle = acos(cosTheta);
+
+  if (angle < maxAngle)
+    return q2;
+
+  // because we make sure shorter path is taken above, we can use mix instead of slerp (which ensures shorter path)
+  const float m = maxAngle / angle;
+  return normalize(mix(q1, q2, m));
 }
 
 // not sure. from https://stackoverflow.com/questions/52413464/look-at-quaternion-using-up-vector
@@ -572,7 +633,8 @@ vec4 dirToQuat(vec3 dir, vec3 up) {
     q.x = (U.z - F.y) * s;
     q.y = (F.x - R.z) * s;
     q.z = (R.y - U.x) * s;
-  } else {
+  } 
+  else {
     if (R.x > U.y && R.x > F.z) {
       float s = 2.0 * sqrt(1.0 + R.x - U.y - F.z);
       q.w = (U.z - F.y) / s;
@@ -610,20 +672,139 @@ mat4 quatToRot(vec4 q){
  
   // one of them is made of column vectors other row vectors. not sure which one is which.
   const mat4 rot1 = {
-    vec4(1 - 2 * ( yy + zz ), 2 * ( xy - zw ), 2 * ( xz + yw ), 0),
-    vec4(2 * ( xy + zw ), 1 - 2 * ( xx + zz ), 2 * ( yz - xw ), 0),
-    vec4(2 * ( xz - yw ), 2 * ( yz + xw ), 1 - 2 * ( xx + yy ), 0),
-    vec4(0, 0, 0, 1)
+    vec4(1 - 2 * ( yy + zz ),     2 * ( xy - zw ),     2 * ( xz + yw ), 0),
+    vec4(    2 * ( xy + zw ), 1 - 2 * ( xx + zz ),     2 * ( yz - xw ), 0),
+    vec4(    2 * ( xz - yw ),     2 * ( yz + xw ), 1 - 2 * ( xx + yy ), 0),
+    vec4(                  0,                   0,                   0, 1)
   };
 
-  const mat4 rot2 = {
-    vec4(1 - 2 * ( yy + zz ), 2 * ( xy + zw ), 2 * ( xz - yw ), 0),
-    vec4(2 * ( xy - zw ), 1 - 2 * ( xx + zz ), 2 * ( yz + xw ), 0),
-    vec4(2 * ( xz + yw ), 2 * ( yz - xw ), 1 - 2 * ( xx + yy ), 0),
-    vec4(0, 0, 0, 1)
-  };
+  //const mat4 rot2 = {
+  //  vec4(1 - 2 * ( yy + zz ),     2 * ( xy + zw ),     2 * ( xz - yw ), 0),
+  //  vec4(    2 * ( xy - zw ), 1 - 2 * ( xx + zz ),     2 * ( yz + xw ), 0),
+  //  vec4(    2 * ( xz + yw ),     2 * ( yz - xw ), 1 - 2 * ( xx + yy ), 0),
+  //  vec4(                  0,                   0,                   0, 1)
+  //};
 
-  return rot2;
+  return rot1;
+}
+
+vec4 axisAngleToQuat(vec3 axis, float angle) {
+  const float half_angle = angle * 0.5;
+  const vec4 q = vec4(
+    axis.x * sin(half_angle),
+    axis.y * sin(half_angle),
+    axis.z * sin(half_angle),
+    cos(half_angle)
+  );
+  return q;
+}
+
+vec4 quatConj(vec4 q) { 
+  return vec4(-q.x, -q.y, -q.z, q.w); 
+}
+
+vec4 quatInv(vec4 q) {
+  float norm = length(q);
+  vec4 invQ = quatConj(q) / norm;
+  return invQ;
+}
+
+vec4 quatMult(vec4 q1, vec4 q2) { 
+  vec4 qr;
+  qr.x = (q1.w * q2.x) + (q1.x * q2.w) + (q1.y * q2.z) - (q1.z * q2.y);
+  qr.y = (q1.w * q2.y) - (q1.x * q2.z) + (q1.y * q2.w) + (q1.z * q2.x);
+  qr.z = (q1.w * q2.z) + (q1.x * q2.y) - (q1.y * q2.x) + (q1.z * q2.w);
+  qr.w = (q1.w * q2.w) - (q1.x * q2.x) - (q1.y * q2.y) - (q1.z * q2.z);
+  return qr;
+}
+
+// from https://gist.github.com/mattatz/40a91588d5fb38240403f198a938a593
+#define QUATERNION_IDENTITY vec4(0, 0, 0, 1)
+vec4 q_look_at(vec3 forward, vec3 up)
+{
+    vec3 right = normalize(cross(forward, up));
+    up = normalize(cross(forward, right));
+
+    float m00 = right.x;
+    float m01 = right.y;
+    float m02 = right.z;
+    float m10 = up.x;
+    float m11 = up.y;
+    float m12 = up.z;
+    float m20 = forward.x;
+    float m21 = forward.y;
+    float m22 = forward.z;
+
+    float num8 = (m00 + m11) + m22;
+    vec4 q = QUATERNION_IDENTITY;
+    if (num8 > 0.0)
+    {
+        float num = sqrt(num8 + 1.0);
+        q.w = num * 0.5;
+        num = 0.5 / num;
+        q.x = (m12 - m21) * num;
+        q.y = (m20 - m02) * num;
+        q.z = (m01 - m10) * num;
+        return q;
+    }
+
+    if ((m00 >= m11) && (m00 >= m22))
+    {
+        float num7 = sqrt(((1.0 + m00) - m11) - m22);
+        float num4 = 0.5 / num7;
+        q.x = 0.5 * num7;
+        q.y = (m01 + m10) * num4;
+        q.z = (m02 + m20) * num4;
+        q.w = (m12 - m21) * num4;
+        return q;
+    }
+
+    if (m11 > m22)
+    {
+        float num6 = sqrt(((1.0 + m11) - m00) - m22);
+        float num3 = 0.5 / num6;
+        q.x = (m10 + m01) * num3;
+        q.y = 0.5 * num6;
+        q.z = (m21 + m12) * num3;
+        q.w = (m20 - m02) * num3;
+        return q;
+    }
+
+    float num5 = sqrt(((1.0 + m22) - m00) - m11);
+    float num2 = 0.5 / num5;
+    q.x = (m20 + m02) * num2;
+    q.y = (m21 + m12) * num2;
+    q.z = 0.5 * num5;
+    q.w = (m01 - m10) * num2;
+    return q;
+}
+
+// from: https://gist.github.com/mattatz/40a91588d5fb38240403f198a938a593
+mat4 quaternion_to_matrix(vec4 quat)
+{
+    mat4 m = mat4(vec4(0, 0, 0, 0), vec4(0, 0, 0, 0), vec4(0, 0, 0, 0), vec4(0, 0, 0, 0));
+
+    float x = quat.x, y = quat.y, z = quat.z, w = quat.w;
+    float x2 = x + x, y2 = y + y, z2 = z + z;
+    float xx = x * x2, xy = x * y2, xz = x * z2;
+    float yy = y * y2, yz = y * z2, zz = z * z2;
+    float wx = w * x2, wy = w * y2, wz = w * z2;
+
+    m[0][0] = 1.0 - (yy + zz);
+    m[0][1] = xy - wz;
+    m[0][2] = xz + wy;
+
+    m[1][0] = xy + wz;
+    m[1][1] = 1.0 - (xx + zz);
+    m[1][2] = yz - wx;
+
+    m[2][0] = xz - wy;
+    m[2][1] = yz + wx;
+    m[2][2] = 1.0 - (xx + yy);
+
+    m[3][3] = 1.0;
+
+    return transpose(m); // needed to get correct orientations
 }
 
 
@@ -632,16 +813,13 @@ void main()
   const float pi = 3.14159265358979f;
   const uint ix = gl_GlobalInvocationID.x;
 
-  const mat4 M = transformMatrices[ix].worldFromObject;
-
   // Extract Translation
   const vec3 inPos = transforms[ix].position.xyz;
   const vec4 inRot = transforms[ix].rotation;
   const vec3 inScale = transforms[ix].scale.xyz;
 
-  const vec3 dir = normalize(target.position.xyz - inPos);
-
-
+  const vec3 targetDir = normalize(target.position.xyz - inPos);
+  const vec3 up = vec3(0, 1, 0);
 
   // TRANSLATE
   mat4 translate = mat4(1);
@@ -650,15 +828,13 @@ void main()
   translate[3][2] = inPos.z;
 
   // ROTATE
-  const vec3 up = vec3(0, 1, 0);
-
   // Method A: construct rotation quaternion from direction (and up), then rotation matrix from quaternion
-  //const vec4 rotateQ = dirToQuat(dir, up;
-  //const mat4 rotateM = quatToRot(rotateQ);
+  const vec4 targetRotQuat = q_look_at(targetDir, up);
+  //const mat4 targetRotMat = quaternion_to_matrix(targetRotQuat);
 
   // Method B: construct rotation matrix from direction, then rotation quaternion from matrix
-  const mat4 rotateM = dirToRot(dir, up);
-  const vec4 rotateQ = rotToQuat(rotateM);
+  //const mat4 targetRotMat = dirToRot(targetDir, up);
+  //const vec4 targetRotQuat = rotToQuat(targetRotMat);
 
   // SCALE
   mat4 scale = mat4(1);
@@ -666,9 +842,17 @@ void main()
   scale[1][1] = inScale.y;
   scale[2][2] = inScale.z;  
 
-  // updates, writes
-  transforms[ix].rotation = rotateQ;
+  // Instant rotation  
+  //const vec4 rotateQ = targetRotQuat;
+  // Finite-duration rotation
+  float maxAngle = 0.025f;
+  const vec4 rotateQ = rotateTowards(transforms[ix].rotation, targetRotQuat, maxAngle);
 
+  const mat4 rotateM = quaternion_to_matrix(rotateQ); // targetRotMat;
+
+  // Update transforms uniform
+  transforms[ix].rotation = rotateQ;
+  // Update transformMatrices uniform
   const mat4 model = translate * rotateM * scale;
   transformMatrices[ix].worldFromObject = model;
   transformMatrices[ix].dualWorldFromObject = transpose(inverse(model));
