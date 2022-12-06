@@ -101,35 +101,34 @@ void TransformGPUConstructionStudy::onInit(const vku::AppSettings appSettings, c
 
   //---- Descriptor Set - Compute
   {
-    // Define only one resource (a Storage Buffer) to be bound at binding point 0 and be used at a compute shader
-    // layout(std140, binding = 0) buffer buf;
-    const std::array<vk::DescriptorSetLayoutBinding, 2> layoutBindings = {
-        vk::DescriptorSetLayoutBinding{0, vk::DescriptorType::eStorageBuffer, 1, vk::ShaderStageFlagBits::eCompute},
-        vk::DescriptorSetLayoutBinding{1, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eCompute}};
-    const vk::raii::DescriptorSetLayout descriptorSetLayout = vk::raii::DescriptorSetLayout(
-        vc.device, vk::DescriptorSetLayoutCreateInfo({}, layoutBindings));
+    const std::array<vk::DescriptorSetLayoutBinding, 2> layoutBindings{
+        vk::DescriptorSetLayoutBinding{0, vk::DescriptorType::eStorageBuffer, 1, vk::ShaderStageFlagBits::eCompute},  // layout(set=0, binding=0) buffer buf;
+        vk::DescriptorSetLayoutBinding{1, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eCompute},  // layout(set=0, binding=1)
+    };
+    const vk::DescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo{{}, layoutBindings};
+    const vk::raii::DescriptorSetLayout descriptorSetLayout{vc.device, descriptorSetLayoutCreateInfo};
+
     // Allocate descriptor set from the pool
     vk::DescriptorSetAllocateInfo allocateInfo = vk::DescriptorSetAllocateInfo(*vc.descriptorPool, 1, &(*descriptorSetLayout));
     computeDescriptorSets = vk::raii::DescriptorSets(vc.device, allocateInfo);
 
+    vk::WriteDescriptorSet writeDescriptorSet;
+    writeDescriptorSet.dstSet = *computeDescriptorSets[0];
+
     // Binding 0 : Storage Buffer
     vk::DescriptorBufferInfo descriptorBufferInfoStorage(*instanceBuffer.buffer, 0, instanceBufferSize);
-    vk::WriteDescriptorSet writeDescriptorSetStorage;
-    writeDescriptorSetStorage.dstSet = *computeDescriptorSets[0];
-    writeDescriptorSetStorage.descriptorCount = 1;
-    writeDescriptorSetStorage.descriptorType = vk::DescriptorType::eStorageBuffer;
-    writeDescriptorSetStorage.pBufferInfo = &descriptorBufferInfoStorage;
-    writeDescriptorSetStorage.dstBinding = 0;
-    vc.device.updateDescriptorSets(writeDescriptorSetStorage, nullptr);
+    writeDescriptorSet.descriptorCount = 1;
+    writeDescriptorSet.descriptorType = vk::DescriptorType::eStorageBuffer;
+    writeDescriptorSet.pBufferInfo = &descriptorBufferInfoStorage;
+    writeDescriptorSet.dstBinding = 0;
+    vc.device.updateDescriptorSets(writeDescriptorSet, nullptr);
 
     // Binding 1 : Uniform Buffer
-    vk::WriteDescriptorSet writeDescriptorSetUniform;
-    writeDescriptorSetUniform.dstSet = *computeDescriptorSets[0];
-    writeDescriptorSetUniform.descriptorCount = 1;
-    writeDescriptorSetUniform.descriptorType = vk::DescriptorType::eUniformBuffer;
-    writeDescriptorSetUniform.pBufferInfo = &computeUniformBuffer.descriptor;
-    writeDescriptorSetUniform.dstBinding = 1;
-    vc.device.updateDescriptorSets(writeDescriptorSetUniform, nullptr);
+    writeDescriptorSet.descriptorCount = 1;
+    writeDescriptorSet.descriptorType = vk::DescriptorType::eUniformBuffer;
+    writeDescriptorSet.pBufferInfo = &computeUniformBuffer.descriptor;
+    writeDescriptorSet.dstBinding = 1;  // dstBindingPrev + descriptorCountPrev;
+    vc.device.updateDescriptorSets(writeDescriptorSet, nullptr);
 
     initPipelineWithCompute(appSettings, vc, descriptorSetLayout);
   }
