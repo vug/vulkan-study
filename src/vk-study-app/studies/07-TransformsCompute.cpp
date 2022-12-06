@@ -130,7 +130,7 @@ void TransformGPUConstructionStudy::onInit(const vku::AppSettings appSettings, c
     writeDescriptorSet.descriptorCount = 2;
     writeDescriptorSet.descriptorType = vk::DescriptorType::eStorageBuffer;
     writeDescriptorSet.pBufferInfo = descriptorBufferInfosStorage.data();
-    writeDescriptorSet.dstBinding = 0; // {0, 1}
+    writeDescriptorSet.dstBinding = 0;  // {0, 1}
     vc.device.updateDescriptorSets(writeDescriptorSet, nullptr);
 
     // Binding 2: Uniform Buffer for target position
@@ -547,6 +547,86 @@ mat4 dirToRot(vec3 dir, vec3 up) {
   return rotate;
 }
 
+// from http://www.euclideanspace.com/maths/geometry/rotations/conversions/matrixToQuaternion/index.htm
+vec4 rotToQuat(mat4 rot) {
+  vec4 q = vec4(0);
+  q.w = sqrt(1.0 + rot[0][0] + rot[1][1] + rot[2][2]) / 2.0;
+  float w4 = (4.0 * q.w);
+	q.x = (rot[2][1] - rot[1][2]) / w4 ;
+	q.y = (rot[0][2] - rot[2][0]) / w4 ;
+	q.z = (rot[1][0] - rot[0][1]) / w4 ;
+  return q;
+}
+
+// not sure. from https://stackoverflow.com/questions/52413464/look-at-quaternion-using-up-vector
+vec4 dirToQuat(vec3 dir, vec3 up) {
+  vec4 q;
+  const vec3 F = dir; // local forward
+  const vec3 R = normalize(cross(F, up)); // local right
+  const vec3 U = cross(R, F); // local up
+
+  float trace = R.x + U.y + F.z;
+  if (trace > 0.0) {
+    float s = 0.5 / sqrt(trace + 1.0);
+    q.w = 0.25 / s;
+    q.x = (U.z - F.y) * s;
+    q.y = (F.x - R.z) * s;
+    q.z = (R.y - U.x) * s;
+  } else {
+    if (R.x > U.y && R.x > F.z) {
+      float s = 2.0 * sqrt(1.0 + R.x - U.y - F.z);
+      q.w = (U.z - F.y) / s;
+      q.x = 0.25 * s;
+      q.y = (U.x + R.y) / s;
+      q.z = (F.x + R.z) / s;
+    } else if (U.y > F.z) {
+      float s = 2.0 * sqrt(1.0 + U.y - R.x - F.z);
+      q.w = (F.x - R.z) / s;
+      q.x = (U.x + R.y) / s;
+      q.y = 0.25 * s;
+      q.z = (F.y + U.z) / s;
+    } else {
+      float s = 2.0 * sqrt(1.0 + F.z - R.x - U.y);
+      q.w = (R.y - U.x) / s;
+      q.x = (F.x + R.z) / s;
+      q.y = (F.y + U.z) / s;
+      q.z = 0.25 * s;
+    }
+  }
+  return q;
+}
+
+// not working properly. from http://www.euclideanspace.com/maths/geometry/rotations/conversions/quaternionToMatrix/index.htm and http://www.songho.ca/opengl/gl_quaternion.html
+mat4 quatToRot(vec4 q){
+  float xx      = q.x * q.x;
+  float xy      = q.x * q.y;
+  float xz      = q.x * q.z;
+  float xw      = q.x * q.w;
+  float yy      = q.y * q.y;
+  float yz      = q.y * q.z;
+  float yw      = q.y * q.w;
+  float zz      = q.z * q.z;
+  float zw      = q.z * q.w;
+ 
+  // one of them is made of column vectors other row vectors. not sure which one is which.
+  const mat4 rot1 = {
+    vec4(1 - 2 * ( yy + zz ), 2 * ( xy - zw ), 2 * ( xz + yw ), 0),
+    vec4(2 * ( xy + zw ), 1 - 2 * ( xx + zz ), 2 * ( yz - xw ), 0),
+    vec4(2 * ( xz - yw ), 2 * ( yz + xw ), 1 - 2 * ( xx + yy ), 0),
+    vec4(0, 0, 0, 1)
+  };
+
+  const mat4 rot2 = {
+    vec4(1 - 2 * ( yy + zz ), 2 * ( xy + zw ), 2 * ( xz - yw ), 0),
+    vec4(2 * ( xy - zw ), 1 - 2 * ( xx + zz ), 2 * ( yz + xw ), 0),
+    vec4(2 * ( xz + yw ), 2 * ( yz - xw ), 1 - 2 * ( xx + yy ), 0),
+    vec4(0, 0, 0, 1)
+  };
+
+  return rot2;
+}
+
+
 void main() 
 {
   const float pi = 3.14159265358979f;
@@ -555,14 +635,13 @@ void main()
   const mat4 M = transformMatrices[ix].worldFromObject;
 
   // Extract Translation
-  const vec3 inPos = vec3(M[3][0], M[3][1], M[3][2]);
+  const vec3 inPos = transforms[ix].position.xyz;
+  const vec4 inRot = transforms[ix].rotation;
+  const vec3 inScale = transforms[ix].scale.xyz;
+
   const vec3 dir = normalize(target.position.xyz - inPos);
 
-  // Extract Scale
-  const float sx = length(vec3(M[0][0], M[0][1], M[0][2]));
-  const float sy = length(vec3(M[1][0], M[1][1], M[1][2]));
-  const float sz = length(vec3(M[2][0], M[2][1], M[2][2]));
-  const vec3 inScale = vec3(sx, sy, sz);
+
 
   // TRANSLATE
   mat4 translate = mat4(1);
@@ -572,15 +651,25 @@ void main()
 
   // ROTATE
   const vec3 up = vec3(0, 1, 0);
-  const mat4 rotate = dirToRot(dir, up);
+
+  // Method A: construct rotation quaternion from direction (and up), then rotation matrix from quaternion
+  //const vec4 rotateQ = dirToQuat(dir, up;
+  //const mat4 rotateM = quatToRot(rotateQ);
+
+  // Method B: construct rotation matrix from direction, then rotation quaternion from matrix
+  const mat4 rotateM = dirToRot(dir, up);
+  const vec4 rotateQ = rotToQuat(rotateM);
 
   // SCALE
   mat4 scale = mat4(1);
   scale[0][0] = inScale.x;
   scale[1][1] = inScale.y;
-  scale[2][2] = inScale.z;
+  scale[2][2] = inScale.z;  
 
-  const mat4 model = translate * rotate * scale;
+  // updates, writes
+  transforms[ix].rotation = rotateQ;
+
+  const mat4 model = translate * rotateM * scale;
   transformMatrices[ix].worldFromObject = model;
   transformMatrices[ix].dualWorldFromObject = transpose(inverse(model));
   transformMatrices[ix].color = vec4(0.1, 0.2, 1, 1);
