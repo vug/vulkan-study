@@ -32,6 +32,7 @@ void TransformGPUConstructionStudy::onInit(const vku::AppSettings appSettings, c
   //---- Vertex Data
   const vivid::ColorMap cmap = vivid::ColorMap::Preset::Viridis;
   uint32_t instanceBufferSize{};
+  uint32_t transformBufferSize{};
   {
     vku::MeshData allMeshesData;
     auto insertMeshData = [&](const vku::MeshData& newMesh) -> Mesh {
@@ -51,17 +52,19 @@ void TransformGPUConstructionStudy::onInit(const vku::AppSettings appSettings, c
 
     numMonkeyInstances = 10'000;
     std::vector<InstanceData> monkeyInstances(numMonkeyInstances);
+    std::vector<vku::TransformGPU> monkeyTransformsToGPU(numMonkeyInstances);
 
     std::default_random_engine rndGenerator(0);  // (unsigned)time(nullptr)
     std::uniform_real_distribution<float> uniformDist(-1.0f, 1.0f);
     const auto& u = [&rndGenerator, &uniformDist]() { return uniformDist(rndGenerator); };
 
     for (uint32_t i = 0; i < numMonkeyInstances; ++i) {
-      const auto transform = vku::Transform{
+      const vku::Transform transform = vku::Transform{
           glm::vec3{u(), u(), u()} * 10.0f,
           {},
           0,
           glm::vec3{0.1f, 0.1f, 0.1f}};
+      monkeyTransformsToGPU[i] = transform.toGPULayout();
       const glm::mat4 model = transform.getTransform();
       monkeyInstances[i] = InstanceData{
           .worldFromObject = model,
@@ -73,6 +76,9 @@ void TransformGPUConstructionStudy::onInit(const vku::AppSettings appSettings, c
     instanceBuffer = vku::Buffer(vc, monkeyInstances.data(),
                                  instanceBufferSize,
                                  vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eStorageBuffer);
+
+    transformBufferSize = static_cast<uint32_t>(monkeyTransformsToGPU.size() * sizeof(vku::TransformGPU));
+    transformBuffer = vku::Buffer(vc, monkeyTransformsToGPU.data(), transformBufferSize, vk::BufferUsageFlagBits::eStorageBuffer);
 
     uint32_t vboSizeBytes = (uint32_t)(allMeshesData.vertices.size() * sizeof(vku::DefaultVertex));
     vbo = vku::Buffer(vc, allMeshesData.vertices.data(), vboSizeBytes, vk::BufferUsageFlagBits::eVertexBuffer);
@@ -101,9 +107,10 @@ void TransformGPUConstructionStudy::onInit(const vku::AppSettings appSettings, c
 
   //---- Descriptor Set - Compute
   {
-    const std::array<vk::DescriptorSetLayoutBinding, 2> layoutBindings{
-        vk::DescriptorSetLayoutBinding{0, vk::DescriptorType::eStorageBuffer, 1, vk::ShaderStageFlagBits::eCompute},  // layout(set=0, binding=0) buffer buf;
-        vk::DescriptorSetLayoutBinding{1, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eCompute},  // layout(set=0, binding=1)
+    const std::array<vk::DescriptorSetLayoutBinding, 3> layoutBindings{
+        vk::DescriptorSetLayoutBinding{0, vk::DescriptorType::eStorageBuffer, 1, vk::ShaderStageFlagBits::eCompute},  // layout(set=0, binding=0) buffer buf; // transforms
+        vk::DescriptorSetLayoutBinding{1, vk::DescriptorType::eStorageBuffer, 1, vk::ShaderStageFlagBits::eCompute},  // layout(set=0, binding=1) buffer buf; // transformMatrices
+        vk::DescriptorSetLayoutBinding{2, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eCompute},  // layout(set=0, binding=2)
     };
     const vk::DescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo{{}, layoutBindings};
     const vk::raii::DescriptorSetLayout descriptorSetLayout{vc.device, descriptorSetLayoutCreateInfo};
@@ -115,19 +122,22 @@ void TransformGPUConstructionStudy::onInit(const vku::AppSettings appSettings, c
     vk::WriteDescriptorSet writeDescriptorSet;
     writeDescriptorSet.dstSet = *computeDescriptorSets[0];
 
-    // Binding 0 : Storage Buffer
-    vk::DescriptorBufferInfo descriptorBufferInfoStorage(*instanceBuffer.buffer, 0, instanceBufferSize);
-    writeDescriptorSet.descriptorCount = 1;
+    // Binding 0 and 1: Storage Buffer for transforms and transform matrices
+    std::array<vk::DescriptorBufferInfo, 2> descriptorBufferInfosStorage{
+        vk::DescriptorBufferInfo(*transformBuffer.buffer, 0, transformBufferSize),
+        vk::DescriptorBufferInfo(*instanceBuffer.buffer, 0, instanceBufferSize),
+    };
+    writeDescriptorSet.descriptorCount = 2;
     writeDescriptorSet.descriptorType = vk::DescriptorType::eStorageBuffer;
-    writeDescriptorSet.pBufferInfo = &descriptorBufferInfoStorage;
-    writeDescriptorSet.dstBinding = 0;
+    writeDescriptorSet.pBufferInfo = descriptorBufferInfosStorage.data();
+    writeDescriptorSet.dstBinding = 0; // {0, 1}
     vc.device.updateDescriptorSets(writeDescriptorSet, nullptr);
 
-    // Binding 1 : Uniform Buffer
+    // Binding 2: Uniform Buffer for target position
     writeDescriptorSet.descriptorCount = 1;
     writeDescriptorSet.descriptorType = vk::DescriptorType::eUniformBuffer;
     writeDescriptorSet.pBufferInfo = &computeUniformBuffer.descriptor;
-    writeDescriptorSet.dstBinding = 1;  // dstBindingPrev + descriptorCountPrev;
+    writeDescriptorSet.dstBinding = 2;  // dstBindingPrev + descriptorCountPrev;
     vc.device.updateDescriptorSets(writeDescriptorSet, nullptr);
 
     initPipelineWithCompute(appSettings, vc, descriptorSetLayout);
@@ -501,18 +511,26 @@ void TransformGPUConstructionStudy::initPipelineWithCompute(const vku::AppSettin
 layout (local_size_x = 10, local_size_y = 1, local_size_z = 1 ) in;
 
 struct Transform {
+  vec4 position;
+  vec4 rotation;
+  vec4 scale;
+};
+
+struct TransformMatrices {
   mat4 worldFromObject;
   mat4 dualWorldFromObject;
   vec4 color;
 };
 
-layout (std140, binding = 0) buffer buf
-{
+layout (std140, set = 0, binding = 0) buffer buf0 {
   Transform transforms[];
 };
 
-layout (binding = 1) uniform Target 
-{
+layout (std140, set = 0, binding = 1) buffer buf1 {
+  TransformMatrices transformMatrices[];
+};
+
+layout (set = 0, binding = 2) uniform Target {
 	vec4 position;
 } target;
 
@@ -534,7 +552,7 @@ void main()
   const float pi = 3.14159265358979f;
   const uint ix = gl_GlobalInvocationID.x;
 
-  const mat4 M = transforms[ix].worldFromObject;
+  const mat4 M = transformMatrices[ix].worldFromObject;
 
   // Extract Translation
   const vec3 inPos = vec3(M[3][0], M[3][1], M[3][2]);
@@ -563,9 +581,9 @@ void main()
   scale[2][2] = inScale.z;
 
   const mat4 model = translate * rotate * scale;
-  transforms[ix].worldFromObject = model;
-  transforms[ix].dualWorldFromObject = transpose(inverse(model));
-  transforms[ix].color = vec4(0.1, 0.2, 1, 1);
+  transformMatrices[ix].worldFromObject = model;
+  transformMatrices[ix].dualWorldFromObject = transpose(inverse(model));
+  transformMatrices[ix].color = vec4(0.1, 0.2, 1, 1);
 }
 )";
 

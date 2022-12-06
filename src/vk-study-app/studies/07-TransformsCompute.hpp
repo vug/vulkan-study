@@ -57,6 +57,7 @@ class TransformGPUConstructionStudy : public vku::Study {
   vku::Buffer vbo;
   vku::Buffer ibo;
   vku::Buffer instanceBuffer;
+  vku::Buffer transformBuffer;
   std::vector<Mesh> meshes;
   std::vector<Entity> entities;
   uint32_t indexCount;
