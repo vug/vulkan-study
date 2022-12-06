@@ -5,6 +5,13 @@
 #include <glm/vec3.hpp>
 
 namespace vku {
+
+struct TransformGPU {
+  glm::vec4 position;
+  glm::quat rotation;
+  glm::vec4 scale;
+};
+
 class Transform {
  public:
   glm::vec3 position;
@@ -18,6 +25,7 @@ class Transform {
   glm::mat4 getRotationMatrix() const;
   glm::mat4 getScaleMatrix() const;
   glm::mat4 getTransform() const;
+  TransformGPU toGPULayout() const;
 };
 
 glm::quat rotateTowards(glm::quat q1, glm::quat q2, float maxAngle);

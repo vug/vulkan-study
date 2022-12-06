@@ -23,8 +23,16 @@ glm::mat4 Transform::getTransform() const {
   return getTranslateMatrix() * getRotationMatrix() * getScaleMatrix();
 }
 
+TransformGPU Transform::toGPULayout() const {
+  return TransformGPU{
+      .position = glm::vec4(position, 1.f),
+      .rotation = rotation,
+      .scale = glm::vec4(scale, 1.f),
+  };
+}
+
 glm::quat rotateTowards(glm::quat q1, glm::quat q2, float maxAngle) {
-  if (maxAngle < 0.00001f) 
+  if (maxAngle < 0.00001f)
     return q1;
 
   float cosTheta = glm::dot(q1, q2);
