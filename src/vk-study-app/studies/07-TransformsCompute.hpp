@@ -50,6 +50,7 @@ class TransformGPUConstructionStudy : public vku::Study {
   };
 
   struct PerFrameUniform {
+    glm::vec4 cameraPositionWorld;
     glm::mat4 viewFromWorld;
     glm::mat4 projectionFromView;
     glm::mat4 projectionFromWorld;

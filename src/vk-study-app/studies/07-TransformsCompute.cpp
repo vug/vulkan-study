@@ -91,7 +91,7 @@ void TransformGPUConstructionStudy::onInit(const vku::AppSettings appSettings, c
   //---- Graphics
   {
     // Per Frame Descriptor Set Layout
-    const vk::DescriptorSetLayoutBinding layoutBinding{0, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eVertex};
+    const vk::DescriptorSetLayoutBinding layoutBinding{0, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment};
     const vk::DescriptorSetLayoutCreateInfo layoutCreateInfo{{}, 1, &layoutBinding};
     const vk::raii::DescriptorSetLayout descriptorSetLayout{vc.device, layoutCreateInfo};
 
@@ -165,8 +165,8 @@ layout(push_constant) uniform PushConstants
 } pushConstants;
 
 
-layout (binding = 0) uniform UBO 
-{
+layout (binding = 0) uniform UBO {
+  vec4 cameraPositionWorld;
 	mat4 viewFromWorldMatrix;
   mat4 projectionFromViewMatrix;
   mat4 projectionFromWorldMatrix;
@@ -338,8 +338,8 @@ layout (location = 4) in mat4 instanceWorldFromObjectMatrix;
 layout (location = 8) in mat4 instanceDualWorldFromObjectMatrix;
 layout (location = 12) in vec4 instanceColor;
 
-layout (binding = 0) uniform UBO 
-{
+layout (binding = 0) uniform UBO {
+  vec4 cameraPositionWorld;
 	mat4 viewFromWorldMatrix;
   mat4 projectionFromViewMatrix;
   mat4 projectionFromWorldMatrix;
@@ -353,8 +353,7 @@ layout (location = 0) out struct {
 } v2f;
 
 
-void main() 
-{
+void main() {
   const mat4 transform = instanceWorldFromObjectMatrix; // {ubo.WorldFromObjectMatrix, instanceWorldFromObjectMatrix}
   const vec4 worldPosition4 = transform * vec4(inObjectPosition.xyz, 1.0);
   v2f.worldPosition = worldPosition4.xyz;
@@ -383,15 +382,34 @@ layout (location = 0) in struct {
     vec4 color;
 } v2f;
 
+layout (set = 0, binding = 0) uniform UBO {
+  vec4 cameraPositionWorld;
+	mat4 viewFromWorldMatrix;
+  mat4 projectionFromViewMatrix;
+  mat4 projectionFromWorldMatrix;
+} ubo;
+
 layout (location = 0) out vec4 outFragColor;
 
-void main() 
-{
-  vec3 lightPos = vec3(0, 0, 0);
-  vec3 fragToLightDir = normalize(lightPos - v2f.worldPosition); // not light to frag
-  float diffuse = max(dot(normalize(v2f.worldNormal), fragToLightDir), 0);  
+void main() {
+  // from vertex
+  const vec3 normal = normalize(v2f.worldNormal);
+  // from uniforms
+  const vec3 camPosWorld = ubo.cameraPositionWorld.xyz;
+  // frag constants
+  const vec3 lightPos = vec3(0, 0, 0);
+
+  // directions
+  const vec3 fragToCamDir = normalize(camPosWorld - v2f.worldPosition);
+  const vec3 fragToLightDir = normalize(lightPos - v2f.worldPosition); // not light to frag
+  const vec3 reflectionDir = reflect(-fragToLightDir, normal);
+
+  // illuminations
+  const float diffuse = max(dot(fragToLightDir, normal), 0);  
+  const float specular0 = max(dot(fragToCamDir, reflectionDir), 0);
+  const float specular = pow(specular0, 100); // TODO: parametrize "smoothness*100"
   
-  outFragColor = vec4(v2f.color.xyz, 1) * diffuse; // lit
+  outFragColor = vec4(v2f.color.xyz, 1) * (diffuse + specular); // lit
   //outFragColor = vec4(v2f.color.xyz, 1); // unlit
 }
 )";
@@ -937,6 +955,7 @@ void TransformGPUConstructionStudy::onUpdate(const vku::UpdateParams& params) {
 
   //
   PerFrameUniform& uni = perFrameUniform[params.frameInFlightNo].getStructRef();
+  uni.cameraPositionWorld = glm::vec4(camera.getPosition(), 0);
   uni.viewFromWorld = camera.getViewFromWorld();
   uni.projectionFromView = camera.getProjectionFromView();
   uni.projectionFromWorld = uni.projectionFromView * uni.viewFromWorld;
