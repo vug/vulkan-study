@@ -530,9 +530,11 @@ layout (std140, set = 0, binding = 1) buffer buf1 {
   TransformMatrices transformMatrices[];
 };
 
-layout (set = 0, binding = 2) uniform Target {
-	vec4 position;
-} target;
+layout (set = 0, binding = 2) uniform ComputeParameters {
+	vec4 targetPosition;
+  vec4 maxAngleToTurn;
+  
+} params;
 
 mat4 dirToRot(vec3 dir, vec3 up) {
   const vec3 zaxis = dir; // local forward
@@ -813,12 +815,15 @@ void main()
   const float pi = 3.14159265358979f;
   const uint ix = gl_GlobalInvocationID.x;
 
+  const float maxAngle = params.maxAngleToTurn.x;
+  const vec3 targetPosition = params.targetPosition.xyz;
+
   // Extract Translation
   const vec3 inPos = transforms[ix].position.xyz;
   const vec4 inRot = transforms[ix].rotation;
   const vec3 inScale = transforms[ix].scale.xyz;
 
-  const vec3 targetDir = normalize(target.position.xyz - inPos);
+  const vec3 targetDir = normalize(targetPosition - inPos);
   const vec3 up = vec3(0, 1, 0);
 
   // TRANSLATE
@@ -845,7 +850,6 @@ void main()
   // Instant rotation  
   //const vec4 rotateQ = targetRotQuat;
   // Finite-duration rotation
-  float maxAngle = 0.025f;
   const vec4 rotateQ = rotateTowards(transforms[ix].rotation, targetRotQuat, maxAngle);
 
   const mat4 rotateM = quaternion_to_matrix(rotateQ); // targetRotMat;
@@ -895,24 +899,20 @@ void TransformGPUConstructionStudy::onUpdate(const vku::UpdateParams& params) {
   }
   ImGui::DragFloat3("Axes Pos", glm::value_ptr(entities[1].transform.position));
 
+  static bool shouldTargetCamera = false;
+  ImGui::Checkbox("Target Camera?", &shouldTargetCamera);
+  const glm::vec3 targetPosition = shouldTargetCamera ? camera.getPosition() : entities[0].transform.position;
+
   static bool shouldTurnInstantly = true;
   ImGui::Checkbox("Instant Turn", &shouldTurnInstantly);
   const glm::vec3 up{0, 1, 0};
-  if (shouldTurnInstantly) {
-    for (size_t ix = 1; ix < entities.size(); ++ix) {
-      const glm::quat targetRotation = glm::normalize(glm::quatLookAt(entities[ix].transform.position - entities[0].transform.position, up));
-      entities[ix].transform.rotation = targetRotation;
-    }
-  } else {
+  //if (shouldTurnInstantly) {
+  //} else {
     static float turningSpeed = 2.5f;
     ImGui::SliderFloat("Turning Speed", &turningSpeed, 0.0f, 10.0f);
     float maxAngle = turningSpeed * params.deltaTime;
     ImGui::Text("maxAngle: %f", maxAngle);
-    for (size_t ix = 1; ix < entities.size(); ++ix) {
-      const glm::quat targetRotation = glm::normalize(glm::quatLookAt(entities[ix].transform.position - entities[0].transform.position, up));
-      entities[ix].transform.rotation = vku::rotateTowards(entities[ix].transform.rotation, targetRotation, maxAngle);
-    }
-  }
+  //}
 
   ImGui::Text("Axes Rot (Quat) {%.1f, %.1f, %.1f, %.1f}, norm: %.2f", entities[1].transform.rotation.x, entities[1].transform.rotation.y, entities[1].transform.rotation.z, entities[1].transform.rotation.w, glm::length(entities[1].transform.rotation));
   const glm::vec3 axis = glm::axis(entities[1].transform.rotation);
@@ -922,16 +922,17 @@ void TransformGPUConstructionStudy::onUpdate(const vku::UpdateParams& params) {
   ImGui::Separator();
 
   ImGui::Text("Camera");
-  if (false) {
-    static vku::FirstPersonCameraViewInputController cc(camera, params.win);
-    cc.update(params.deltaTime);
-  } else {
-    static auto cc = [&]() { 
+  static bool shouldUseFreeCamera = true;
+  ImGui::Checkbox("Free Camera?", &shouldUseFreeCamera);
+  static vku::FirstPersonCameraViewInputController freeCameraController(camera, params.win);
+  static auto orbitingCameraController = [&]() { 
       vku::FirstPersonCameraViewOrbitingController ret{ camera }; 
       ret.radius = 20.f; ret.speed = 0.1f;
       return ret; }();
-    cc.update(params.deltaTime);
-  }
+  if (shouldUseFreeCamera)
+    freeCameraController.update(params.deltaTime);
+  else
+    orbitingCameraController.update(params.deltaTime);
   ImGui::SliderFloat("FoV", &camera.fov, 15, 180, "%.1f");  // TODO: PerspectiveCameraController, OrthographicCameraController
 
   //
@@ -942,7 +943,8 @@ void TransformGPUConstructionStudy::onUpdate(const vku::UpdateParams& params) {
   perFrameUniform[params.frameInFlightNo].upload();  // don't forget to call upload after uniform data changes
 
   //
-  computeUniformBuffer.src.targetPosition = glm::vec4(entities[0].transform.position, 0);
+  computeUniformBuffer.src.targetPosition = glm::vec4(targetPosition, 0);
+  computeUniformBuffer.src.maxAngleToTurn = glm::vec4(maxAngle, 0, 0, 0);
   computeUniformBuffer.update();
 
   ImGui::Text(std::format("yaw: {}, pitch: {}\n", camera.yaw, camera.pitch).c_str());

@@ -45,6 +45,7 @@ class TransformGPUConstructionStudy : public vku::Study {
 
   struct ComputeUniforms {
     glm::vec4 targetPosition;
+    glm::vec4 maxAngleToTurn;
   };
 
   struct PerFrameUniform {
