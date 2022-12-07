@@ -533,7 +533,7 @@ layout (std140, set = 0, binding = 1) buffer buf1 {
 layout (set = 0, binding = 2) uniform ComputeParameters {
 	vec4 targetPosition;
   vec4 maxAngleToTurn;
-  
+  ivec4 shouldTurnInstantly;
 } params;
 
 mat4 dirToRot(vec3 dir, vec3 up) {
@@ -847,10 +847,10 @@ void main()
   scale[1][1] = inScale.y;
   scale[2][2] = inScale.z;  
 
-  // Instant rotation  
-  //const vec4 rotateQ = targetRotQuat;
-  // Finite-duration rotation
-  const vec4 rotateQ = rotateTowards(transforms[ix].rotation, targetRotQuat, maxAngle);
+  const bool shouldTurnInstantly = params.shouldTurnInstantly.x != 0;
+  const vec4 rotateQ = shouldTurnInstantly ? 
+    targetRotQuat :
+    rotateTowards(transforms[ix].rotation, targetRotQuat, maxAngle);
 
   const mat4 rotateM = quaternion_to_matrix(rotateQ); // targetRotMat;
 
@@ -906,13 +906,13 @@ void TransformGPUConstructionStudy::onUpdate(const vku::UpdateParams& params) {
   static bool shouldTurnInstantly = true;
   ImGui::Checkbox("Instant Turn", &shouldTurnInstantly);
   const glm::vec3 up{0, 1, 0};
-  //if (shouldTurnInstantly) {
-  //} else {
+  float maxAngle = 0;
+  if (!shouldTurnInstantly) {
     static float turningSpeed = 2.5f;
     ImGui::SliderFloat("Turning Speed", &turningSpeed, 0.0f, 10.0f);
-    float maxAngle = turningSpeed * params.deltaTime;
+    maxAngle = turningSpeed * params.deltaTime;
     ImGui::Text("maxAngle: %f", maxAngle);
-  //}
+  }
 
   ImGui::Text("Axes Rot (Quat) {%.1f, %.1f, %.1f, %.1f}, norm: %.2f", entities[1].transform.rotation.x, entities[1].transform.rotation.y, entities[1].transform.rotation.z, entities[1].transform.rotation.w, glm::length(entities[1].transform.rotation));
   const glm::vec3 axis = glm::axis(entities[1].transform.rotation);
@@ -945,6 +945,7 @@ void TransformGPUConstructionStudy::onUpdate(const vku::UpdateParams& params) {
   //
   computeUniformBuffer.src.targetPosition = glm::vec4(targetPosition, 0);
   computeUniformBuffer.src.maxAngleToTurn = glm::vec4(maxAngle, 0, 0, 0);
+  computeUniformBuffer.src.shouldTurnInstantly = glm::ivec4(static_cast<int>(shouldTurnInstantly), 0, 0, 0);
   computeUniformBuffer.update();
 
   ImGui::Text(std::format("yaw: {}, pitch: {}\n", camera.yaw, camera.pitch).c_str());
