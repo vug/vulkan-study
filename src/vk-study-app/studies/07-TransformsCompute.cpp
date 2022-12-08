@@ -91,14 +91,48 @@ void TransformGPUConstructionStudy::onInit(const vku::AppSettings appSettings, c
   //---- Graphics
   {
     std::vector<vk::raii::DescriptorSetLayout> descriptorSetLayoutsRaii;
-    // Per Frame Descriptor Set Layout
+    // set = 0 Per Frame Descriptor Set Layout
     {
-    const vk::DescriptorSetLayoutBinding layoutBinding{0, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment};
-    const vk::DescriptorSetLayoutCreateInfo layoutCreateInfo{{}, 1, &layoutBinding};
+      const std::array<vk::DescriptorSetLayoutBinding, 1> layoutBindings{
+          vk::DescriptorSetLayoutBinding{0, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment},
+      };
+      const vk::DescriptorSetLayoutCreateInfo layoutCreateInfo{{}, layoutBindings};
       descriptorSetLayoutsRaii.emplace_back(vc.device, layoutCreateInfo);
+    }
+    // Per Pass Descriptor Set Layout
+    {
 
-    for (int i = 0; i < vc.MAX_FRAMES_IN_FLIGHT; i++)
-        perFrameUniform.emplace_back(vc, descriptorSetLayoutsRaii.back(), layoutBinding.binding);
+    }
+    // Per Material Descriptor Set Layout
+    {
+    }
+
+    std::vector<vk::DescriptorSetLayout> descriptorSetLayouts;
+    std::ranges::transform(descriptorSetLayoutsRaii, std::back_inserter(descriptorSetLayouts), [&](const vk::raii::DescriptorSetLayout& dsRaii) { return *dsRaii; });
+
+    vk::DescriptorSetAllocateInfo allocateInfo{*vc.descriptorPool, descriptorSetLayouts};
+
+    descriptorSetsGraphics.reserve(vc.MAX_FRAMES_IN_FLIGHT);
+    for (int i = 0; i < vc.MAX_FRAMES_IN_FLIGHT; i++) {
+      perFrameUniform.emplace_back(vc);
+      // perMaterialUniform.emplace_back(vc);
+
+
+      descriptorSetsGraphics.emplace_back(vc.device, allocateInfo);
+      std::vector<vk::DescriptorSet> descriptorSets;
+      std::ranges::transform(descriptorSetsGraphics.back(), std::back_inserter(descriptorSets), [&](const vk::raii::DescriptorSet& dsRaii) { return *dsRaii; });
+
+      int set = -1;
+      int binding = -1;
+      set = 0;
+      binding = 0;
+      vk::WriteDescriptorSet writeDescriptorSet;  // connects indiviudal concrete uniform buffer to descriptor set with the abstract layout that can refer to it
+      writeDescriptorSet.dstSet = descriptorSets[0];
+      writeDescriptorSet.descriptorCount = 1;
+      writeDescriptorSet.descriptorType = vk::DescriptorType::eUniformBuffer;
+      writeDescriptorSet.pBufferInfo = &perFrameUniform.back().descriptor;
+      writeDescriptorSet.dstBinding = 0;
+      vc.device.updateDescriptorSets(writeDescriptorSet, nullptr);
     }
 
     // Per Material Descriptors
