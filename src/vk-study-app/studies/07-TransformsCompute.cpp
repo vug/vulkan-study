@@ -90,16 +90,23 @@ void TransformGPUConstructionStudy::onInit(const vku::AppSettings appSettings, c
 
   //---- Graphics
   {
+    std::vector<vk::raii::DescriptorSetLayout> descriptorSetLayoutsRaii;
     // Per Frame Descriptor Set Layout
+    {
     const vk::DescriptorSetLayoutBinding layoutBinding{0, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment};
     const vk::DescriptorSetLayoutCreateInfo layoutCreateInfo{{}, 1, &layoutBinding};
-    const vk::raii::DescriptorSetLayout descriptorSetLayout{vc.device, layoutCreateInfo};
+      descriptorSetLayoutsRaii.emplace_back(vc.device, layoutCreateInfo);
 
     for (int i = 0; i < vc.MAX_FRAMES_IN_FLIGHT; i++)
-      perFrameUniform.emplace_back(vc, descriptorSetLayout, layoutBinding.binding);
+        perFrameUniform.emplace_back(vc, descriptorSetLayoutsRaii.back(), layoutBinding.binding);
+    }
 
-    initPipelineWithPushConstant(appSettings, vc, descriptorSetLayout);
-    initPipelineWithInstances(appSettings, vc, descriptorSetLayout);
+    // Per Material Descriptors
+
+    std::vector<vk::DescriptorSetLayout> descriptorSetLayouts;
+    std::ranges::transform(descriptorSetLayoutsRaii, std::back_inserter(descriptorSetLayouts), [&](const vk::raii::DescriptorSetLayout& dsRaii) { return *dsRaii; });
+    initPipelineWithPushConstant(appSettings, vc, descriptorSetLayouts);
+    initPipelineWithInstances(appSettings, vc, descriptorSetLayouts);
   }
 
   //---- Compute Uniform Data
@@ -144,7 +151,7 @@ void TransformGPUConstructionStudy::onInit(const vku::AppSettings appSettings, c
   }
 }
 
-void TransformGPUConstructionStudy::initPipelineWithPushConstant(const vku::AppSettings appSettings, const vku::VulkanContext& vc, const vk::raii::DescriptorSetLayout& descriptorSetLayout) {
+void TransformGPUConstructionStudy::initPipelineWithPushConstant(const vku::AppSettings appSettings, const vku::VulkanContext& vc, const std::vector<vk::DescriptorSetLayout> descriptorSetLayouts) {
   const std::string vertexShaderStr = R"(
 #version 450
 
@@ -295,7 +302,7 @@ void main()
 
   vk::PushConstantRange pushConstant{vk::ShaderStageFlagBits::eVertex, 0, sizeof(PushConstants)};
   vk::PipelineLayoutCreateInfo pipelineLayoutCreateInfo;
-  pipelineLayoutCreateInfo.setSetLayouts(*descriptorSetLayout);
+  pipelineLayoutCreateInfo.setSetLayouts(descriptorSetLayouts);
   pipelineLayoutCreateInfo.setPushConstantRanges(pushConstant);
   pipelineLayoutPushConstant = {vc.device, pipelineLayoutCreateInfo};  // { flags, descriptorSetLayout }
 
@@ -320,7 +327,7 @@ void main()
   assert(pipelinePushConstant->getConstructorSuccessCode() == vk::Result::eSuccess);
 }
 
-void TransformGPUConstructionStudy::initPipelineWithInstances(const vku::AppSettings appSettings, const vku::VulkanContext& vc, const vk::raii::DescriptorSetLayout& descriptorSetLayout) {
+void TransformGPUConstructionStudy::initPipelineWithInstances(const vku::AppSettings appSettings, const vku::VulkanContext& vc, const std::vector<vk::DescriptorSetLayout> descriptorSetLayouts) {
   const std::string vertexShaderStr = R"(
 #version 450
 
@@ -496,7 +503,8 @@ void main() {
   vk::PipelineDynamicStateCreateInfo dynamicStateCreateInfo({}, dynamicStates);
 
   // vk::PipelineLayout pipelineLayout = (*vc.device).createPipelineLayout(vk::PipelineLayoutCreateInfo({}, 1, &descriptorSetLayout));
-  pipelineLayoutInstance = {vc.device, {{}, 1, &(*descriptorSetLayout)}};  // { flags, descriptorSetLayout }
+  const vk::PipelineLayoutCreateInfo pipelineLayoutCreateInfo{{}, descriptorSetLayouts};  // { flags, descriptorSetLayouts }
+  pipelineLayoutInstance = vk::raii::PipelineLayout{vc.device, pipelineLayoutCreateInfo};
 
   vk::GraphicsPipelineCreateInfo graphicsPipelineCreateInfo(
       {},
