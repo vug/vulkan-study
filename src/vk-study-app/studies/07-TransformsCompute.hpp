@@ -49,7 +49,7 @@ class TransformGPUConstructionStudy : public vku::Study {
     glm::ivec4 shouldTurnInstantly;
   };
 
-  struct PerFrameUniform {
+  struct PerPassUniform {
     glm::vec4 cameraPositionWorld;
     glm::mat4 viewFromWorld;
     glm::mat4 projectionFromView;
@@ -69,7 +69,7 @@ class TransformGPUConstructionStudy : public vku::Study {
   std::vector<Entity> entities;
   uint32_t indexCount;
   //
-  std::vector<vku::UniformBuffer<PerFrameUniform>> perFrameUniform;
+  std::vector<vku::UniformBuffer<PerPassUniform>> perPassUniform;
   std::vector<vku::UniformBuffer<MaterialUniform>> perMaterialUniform;
   std::vector<vk::raii::DescriptorSets> descriptorSetsGraphics;
   //

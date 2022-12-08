@@ -114,7 +114,7 @@ void TransformGPUConstructionStudy::onInit(const vku::AppSettings appSettings, c
 
     descriptorSetsGraphics.reserve(vc.MAX_FRAMES_IN_FLIGHT);
     for (int i = 0; i < vc.MAX_FRAMES_IN_FLIGHT; i++) {
-      perFrameUniform.emplace_back(vc);
+      perPassUniform.emplace_back(vc);
       perMaterialUniform.emplace_back(vc);
 
       descriptorSetsGraphics.emplace_back(vc.device, allocateInfo);
@@ -127,7 +127,7 @@ void TransformGPUConstructionStudy::onInit(const vku::AppSettings appSettings, c
       writeDescriptorSet.dstSet = descriptorSets[0];  // set = 0
       writeDescriptorSet.descriptorCount = 1;
       writeDescriptorSet.descriptorType = vk::DescriptorType::eUniformBuffer;
-      writeDescriptorSet.pBufferInfo = &perFrameUniform.back().descriptor;
+      writeDescriptorSet.pBufferInfo = &perPassUniform.back().descriptor;
       writeDescriptorSet.dstBinding = 0;  // binding = 0
       vc.device.updateDescriptorSets(writeDescriptorSet, nullptr);
 
@@ -207,12 +207,12 @@ layout(push_constant) uniform PushConstants
 } pushConstants;
 
 
-layout (binding = 0) uniform UBO {
+layout (binding = 0) uniform PerPass {
   vec4 cameraPositionWorld;
 	mat4 viewFromWorldMatrix;
   mat4 projectionFromViewMatrix;
   mat4 projectionFromWorldMatrix;
-} ubo;
+} perPass;
 
 layout (location = 0) out struct {
     vec3 worldPosition;
@@ -232,7 +232,7 @@ void main()
 
   v2f.objectNormal = inObjectNormal;
 
-  gl_Position = ubo.projectionFromWorldMatrix * worldPosition4;
+  gl_Position = perPass.projectionFromWorldMatrix * worldPosition4;
 
   //v2f.color = pushConstants.color;
   //v2f.color = inColor;
@@ -380,12 +380,12 @@ layout (location = 4) in mat4 instanceWorldFromObjectMatrix;
 layout (location = 8) in mat4 instanceDualWorldFromObjectMatrix;
 layout (location = 12) in vec4 instanceColor;
 
-layout (set = 0, binding = 0) uniform UBO {
+layout (set = 0, binding = 0) uniform PerPass {
   vec4 cameraPositionWorld;
 	mat4 viewFromWorldMatrix;
   mat4 projectionFromViewMatrix;
   mat4 projectionFromWorldMatrix;
-} ubo;
+} perPass;
 
 layout (location = 0) out struct {
     vec3 worldPosition;
@@ -396,7 +396,7 @@ layout (location = 0) out struct {
 
 
 void main() {
-  const mat4 transform = instanceWorldFromObjectMatrix; // {ubo.WorldFromObjectMatrix, instanceWorldFromObjectMatrix}
+  const mat4 transform = instanceWorldFromObjectMatrix; // {perPass.WorldFromObjectMatrix, instanceWorldFromObjectMatrix}
   const vec4 worldPosition4 = transform * vec4(inObjectPosition.xyz, 1.0);
   v2f.worldPosition = worldPosition4.xyz;
 
@@ -404,7 +404,7 @@ void main() {
 
   v2f.objectNormal = inObjectNormal;
 
-  gl_Position = ubo.projectionFromWorldMatrix * worldPosition4;
+  gl_Position = perPass.projectionFromWorldMatrix * worldPosition4;
 
   v2f.color = instanceColor;
   //v2f.color = inColor;
@@ -424,12 +424,12 @@ layout (location = 0) in struct {
     vec4 color;
 } v2f;
 
-layout (set = 0, binding = 0) uniform UBO {
+layout (set = 0, binding = 0) uniform PerPass {
   vec4 cameraPositionWorld;
 	mat4 viewFromWorldMatrix;
   mat4 projectionFromViewMatrix;
   mat4 projectionFromWorldMatrix;
-} ubo;
+} perPass;
 
 layout (set = 1, binding = 0) uniform PerMaterial {
   vec4 specularParams; // x: specularExponent/smoothness
@@ -441,7 +441,7 @@ void main() {
   // from vertex
   const vec3 normal = normalize(v2f.worldNormal);
   // from uniforms
-  const vec3 camPosWorld = ubo.cameraPositionWorld.xyz;
+  const vec3 camPosWorld = perPass.cameraPositionWorld.xyz;
   // frag constants
   const vec3 lightPos = vec3(0, 0, 0);
 
@@ -1001,12 +1001,12 @@ void TransformGPUConstructionStudy::onUpdate(const vku::UpdateParams& params) {
   ImGui::SliderFloat("FoV", &camera.fov, 15, 180, "%.1f");  // TODO: PerspectiveCameraController, OrthographicCameraController
 
   //
-  PerFrameUniform& uni = perFrameUniform[params.frameInFlightNo].src;
+  PerPassUniform& uni = perPassUniform[params.frameInFlightNo].src;
   uni.cameraPositionWorld = glm::vec4(camera.getPosition(), 0);
   uni.viewFromWorld = camera.getViewFromWorld();
   uni.projectionFromView = camera.getProjectionFromView();
   uni.projectionFromWorld = uni.projectionFromView * uni.viewFromWorld;
-  perFrameUniform[params.frameInFlightNo].update();  // don't forget to call upload after uniform data changes
+  perPassUniform[params.frameInFlightNo].update();  // don't forget to call upload after uniform data changes
 
   MaterialUniform& mat = perMaterialUniform[params.frameInFlightNo].src;
   static float specularExponent = mat.specularParams.x;
