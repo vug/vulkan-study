@@ -204,7 +204,7 @@ vk::raii::DescriptorPool VulkanContext::constructDescriptorPool() {
       vk::DescriptorPoolSize{vk::DescriptorType::eStorageBuffer, 10},
   };
 
-  const uint32_t maxNumofRequestableDescriptorSets = 3;
+  const uint32_t maxNumofRequestableDescriptorSets = 10; // 4*2 for graphics + 2 for compute
   vk::DescriptorPoolCreateInfo descriptorPoolInfo = {vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet, maxNumofRequestableDescriptorSets, typeCounts};
   return device.createDescriptorPool(descriptorPoolInfo);
 }

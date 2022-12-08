@@ -56,6 +56,10 @@ class TransformGPUConstructionStudy : public vku::Study {
     glm::mat4 projectionFromWorld;
   };
 
+  struct MaterialUniform {
+    glm::vec4 specularParams{5.0f, 0, 0, 0};  // x: specularExponent/smoothness
+  };
+
  private:
   vku::Buffer vbo;
   vku::Buffer ibo;
@@ -66,6 +70,7 @@ class TransformGPUConstructionStudy : public vku::Study {
   uint32_t indexCount;
   //
   std::vector<vku::UniformBuffer<PerFrameUniform>> perFrameUniform;
+  std::vector<vku::UniformBuffer<MaterialUniform>> perMaterialUniform;
   std::vector<vk::raii::DescriptorSets> descriptorSetsGraphics;
   //
   vku::UniformBuffer<ComputeUniforms> computeUniformBuffer;
