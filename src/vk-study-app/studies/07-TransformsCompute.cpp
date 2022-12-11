@@ -99,7 +99,15 @@ void TransformGPUConstructionStudy::onInit(const vku::AppSettings appSettings, c
       const vk::DescriptorSetLayoutCreateInfo layoutCreateInfo{{}, layoutBindings};
       descriptorSetLayoutsRaii.emplace_back(vc.device, layoutCreateInfo);
     }
-    // set = 1 Per Material Descriptor Set Layout
+    // set = 1 Per Pass Descriptor Set Layout
+    {
+      const std::array<vk::DescriptorSetLayoutBinding, 1> layoutBindings{
+          vk::DescriptorSetLayoutBinding{0, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment},
+      };
+      const vk::DescriptorSetLayoutCreateInfo layoutCreateInfo{{}, layoutBindings};
+      descriptorSetLayoutsRaii.emplace_back(vc.device, layoutCreateInfo);
+    }
+    // set = 2 Per Material Descriptor Set Layout
     {
       const std::array<vk::DescriptorSetLayoutBinding, 1> layoutBindings{
           vk::DescriptorSetLayoutBinding{0, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eFragment},
@@ -114,6 +122,7 @@ void TransformGPUConstructionStudy::onInit(const vku::AppSettings appSettings, c
 
     descriptorSetsGraphics.reserve(vc.MAX_FRAMES_IN_FLIGHT);
     for (int i = 0; i < vc.MAX_FRAMES_IN_FLIGHT; i++) {
+      perFrameUniform.emplace_back(vc);
       perPassUniform.emplace_back(vc);
       perMaterialUniform.emplace_back(vc);
 
@@ -127,12 +136,20 @@ void TransformGPUConstructionStudy::onInit(const vku::AppSettings appSettings, c
       writeDescriptorSet.dstSet = descriptorSets[0];  // set = 0
       writeDescriptorSet.descriptorCount = 1;
       writeDescriptorSet.descriptorType = vk::DescriptorType::eUniformBuffer;
+      writeDescriptorSet.pBufferInfo = &perFrameUniform.back().descriptor;
+      writeDescriptorSet.dstBinding = 0;  // binding = 0
+      vc.device.updateDescriptorSets(writeDescriptorSet, nullptr);
+
+      // per Pass uniform and descriptor connections
+      writeDescriptorSet.dstSet = descriptorSets[1];  // set = 1
+      writeDescriptorSet.descriptorCount = 1;
+      writeDescriptorSet.descriptorType = vk::DescriptorType::eUniformBuffer;
       writeDescriptorSet.pBufferInfo = &perPassUniform.back().descriptor;
       writeDescriptorSet.dstBinding = 0;  // binding = 0
       vc.device.updateDescriptorSets(writeDescriptorSet, nullptr);
 
       // per Material uniform and descriptor connections
-      writeDescriptorSet.dstSet = descriptorSets[1];  // set = 1
+      writeDescriptorSet.dstSet = descriptorSets[2];  // set = 2
       writeDescriptorSet.descriptorCount = 1;
       writeDescriptorSet.descriptorType = vk::DescriptorType::eUniformBuffer;
       writeDescriptorSet.pBufferInfo = &perMaterialUniform.back().descriptor;
@@ -206,8 +223,7 @@ layout(push_constant) uniform PushConstants
   vec4 color;
 } pushConstants;
 
-
-layout (binding = 0) uniform PerPass {
+layout (set = 1, binding = 0) uniform PerPass {
   vec4 cameraPositionWorld;
 	mat4 viewFromWorldMatrix;
   mat4 projectionFromViewMatrix;
@@ -380,7 +396,7 @@ layout (location = 4) in mat4 instanceWorldFromObjectMatrix;
 layout (location = 8) in mat4 instanceDualWorldFromObjectMatrix;
 layout (location = 12) in vec4 instanceColor;
 
-layout (set = 0, binding = 0) uniform PerPass {
+layout (set = 1, binding = 0) uniform PerPass {
   vec4 cameraPositionWorld;
 	mat4 viewFromWorldMatrix;
   mat4 projectionFromViewMatrix;
@@ -424,14 +440,19 @@ layout (location = 0) in struct {
     vec4 color;
 } v2f;
 
-layout (set = 0, binding = 0) uniform PerPass {
+layout (set = 0, binding = 0) uniform PerFrame {
+  vec4 time;
+  vec4 lightPos;
+} perFrame;
+
+layout (set = 1, binding = 0) uniform PerPass {
   vec4 cameraPositionWorld;
 	mat4 viewFromWorldMatrix;
   mat4 projectionFromViewMatrix;
   mat4 projectionFromWorldMatrix;
 } perPass;
 
-layout (set = 1, binding = 0) uniform PerMaterial {
+layout (set = 2, binding = 0) uniform PerMaterial {
   vec4 specularParams; // x: specularExponent/smoothness
 } perMaterial;
 
@@ -443,7 +464,7 @@ void main() {
   // from uniforms
   const vec3 camPosWorld = perPass.cameraPositionWorld.xyz;
   // frag constants
-  const vec3 lightPos = vec3(0, 0, 0);
+  const vec3 lightPos = perFrame.lightPos.xyz;
 
   // directions
   const vec3 fragToCamDir = normalize(camPosWorld - v2f.worldPosition);
@@ -541,8 +562,11 @@ void main() {
   std::array<vk::DynamicState, 2> dynamicStates = {vk::DynamicState::eViewport, vk::DynamicState::eScissor};
   vk::PipelineDynamicStateCreateInfo dynamicStateCreateInfo({}, dynamicStates);
 
-  // vk::PipelineLayout pipelineLayout = (*vc.device).createPipelineLayout(vk::PipelineLayoutCreateInfo({}, 1, &descriptorSetLayout));
-  const vk::PipelineLayoutCreateInfo pipelineLayoutCreateInfo{{}, descriptorSetLayouts};  // { flags, descriptorSetLayouts }
+  // Note that, thie pipeline/shaders do not use push constants but in order to make the two pipelines' (entities and instance) layouts compatible
+  // needed to add the push constants. See "Pipeline Layout Compatibility" https://registry.khronos.org/vulkan/specs/1.3-extensions/html/vkspec.html#descriptorsets-compatibility
+  vk::PushConstantRange pushConstantRange{vk::ShaderStageFlagBits::eVertex, 0, sizeof(PushConstants)};
+  const vk::PipelineLayoutCreateInfo pipelineLayoutCreateInfo{{}, descriptorSetLayouts, pushConstantRange};  // { flags, descriptorSetLayouts }
+
   pipelineLayoutInstance = vk::raii::PipelineLayout{vc.device, pipelineLayoutCreateInfo};
 
   vk::GraphicsPipelineCreateInfo graphicsPipelineCreateInfo(
@@ -1000,6 +1024,17 @@ void TransformGPUConstructionStudy::onUpdate(const vku::UpdateParams& params) {
     orbitingCameraController.update(params.deltaTime);
   ImGui::SliderFloat("FoV", &camera.fov, 15, 180, "%.1f");  // TODO: PerspectiveCameraController, OrthographicCameraController
 
+  ImGui::Separator();
+
+  ImGui::Text("Lights");
+  PerFrameUniform& frameUniform = perFrameUniform[params.frameInFlightNo].src;
+  static glm::vec3 pointLightPos{frameUniform.lightPos};
+  if (ImGui::DragFloat3("Point Light Pos", glm::value_ptr(pointLightPos))) {
+    frameUniform.lightPos = {pointLightPos, 0};
+    perFrameUniform[params.frameInFlightNo].update();
+  }
+
+
   //
   PerPassUniform& uni = perPassUniform[params.frameInFlightNo].src;
   uni.cameraPositionWorld = glm::vec4(camera.getPosition(), 0);
@@ -1028,10 +1063,8 @@ void TransformGPUConstructionStudy::onUpdate(const vku::UpdateParams& params) {
 }
 
 void TransformGPUConstructionStudy::recordCommandBuffer(const vku::VulkanContext& vc, const vku::FrameDrawer& frameDrawer) {
-  const vk::RenderPassBeginInfo renderPassBeginInfo(*vc.renderPass, *frameDrawer.framebuffer, vk::Rect2D{{0, 0}, vc.swapchainExtent}, {});
 
   const vk::raii::CommandBuffer& cmdBuf = frameDrawer.commandBuffer;
-
   // compute monkey transforms
   cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eCompute, *pipelineLayoutCompute, 0, *computeDescriptorSets[0], nullptr);
   cmdBuf.bindPipeline(vk::PipelineBindPoint::eCompute, **pipelineCompute);
@@ -1039,14 +1072,21 @@ void TransformGPUConstructionStudy::recordCommandBuffer(const vku::VulkanContext
   vk::MemoryBarrier memBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eVertexAttributeRead);
   cmdBuf.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eVertexInput, {}, memBarrier, nullptr, nullptr);
 
+  // Bind per-frame data
+  cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelineLayoutInstance, 0, *descriptorSetsGraphics[frameDrawer.frameNo][0], nullptr);
+
+  const vk::RenderPassBeginInfo renderPassBeginInfo(*vc.renderPass, *frameDrawer.framebuffer, vk::Rect2D{{0, 0}, vc.swapchainExtent}, {});
   cmdBuf.beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
+  // Bind per-pass data
+  cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelineLayoutInstance, 1, *descriptorSetsGraphics[frameDrawer.frameNo][1], nullptr);
+
   vk::DeviceSize offsets = 0;
   cmdBuf.bindVertexBuffers(0, *vbo.buffer, offsets);
   cmdBuf.bindIndexBuffer(*ibo.buffer, 0, vk::IndexType::eUint32);
-
   // Draw entities
-  cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelineLayoutPushConstant, 0, *descriptorSetsGraphics[frameDrawer.frameNo][0], nullptr);
   cmdBuf.bindPipeline(vk::PipelineBindPoint::eGraphics, **pipelinePushConstant);
+  // Don't need to bind again for pipelineLayoutPushConstant because it's compatible with pipelineLayoutInstance
+  //cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelineLayoutPushConstant, 1, *descriptorSetsGraphics[frameDrawer.frameNo][1], nullptr);
   for (auto& e : entities) {
     const PushConstants& pco = e.getPushConstants();
     const Mesh& mesh = e.mesh;
@@ -1057,9 +1097,9 @@ void TransformGPUConstructionStudy::recordCommandBuffer(const vku::VulkanContext
 
   // Draw monkey instances
   cmdBuf.bindVertexBuffers(1, *instanceBuffer.buffer, offsets);
-  cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelineLayoutInstance, 0, *descriptorSetsGraphics[frameDrawer.frameNo][0], nullptr);
   cmdBuf.bindPipeline(vk::PipelineBindPoint::eGraphics, **pipelineInstance);
-  cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelineLayoutInstance, 1, *descriptorSetsGraphics[frameDrawer.frameNo][1], nullptr);
+  // Bind per-material data
+  cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelineLayoutInstance, 2, *descriptorSetsGraphics[frameDrawer.frameNo][2], nullptr);
   cmdBuf.drawIndexed(meshes[MeshId::Monkey].size, numMonkeyInstances, meshes[MeshId::Monkey].offset, 0, 0);
 
   cmdBuf.endRenderPass();
