@@ -45,7 +45,7 @@ void TransformGPUConstructionStudy::onInit(const vku::AppSettings appSettings, c
     meshes.resize(3);
     meshes[MeshId::Box] = insertMeshData(vku::makeBox({0.2f, 0.5f, 0.7f}));
     meshes[MeshId::Axes] = insertMeshData(vku::makeAxes());
-    meshes[MeshId::Monkey] = insertMeshData(vku::loadOBJ(vku::assetsRootFolder / "models/suzanne.obj"));
+    meshes[MeshId::Monkey] = insertMeshData(vku::loadOBJ(vku::assetsRootFolder / "models/suzanne_smooth.obj"));
 
     entities.emplace_back(meshes[MeshId::Box], vku::Transform{{-2, 0, 0}, {0, 0, 1}, std::numbers::pi_v<float> * 0.f, {1, 1, 1}}, glm::vec4{1, 0, 0, 1});
     entities.emplace_back(meshes[MeshId::Axes], vku::Transform{{0, 0, 0}, {1, 1, 1}, std::numbers::pi_v<float> * 0.f, {1, 1, 1}}, glm::vec4{1, 1, 1, 1});
