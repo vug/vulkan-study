@@ -81,6 +81,8 @@ class TransformGPUConstructionStudy : public vku::Study {
   //
   vku::UniformBuffer<ComputeUniforms> computeUniformBuffer;
   vk::raii::DescriptorSets computeDescriptorSets = nullptr;
+  // for layout that's common to every pipeline (per frame and per pass data)
+  vk::raii::PipelineLayout pipelineLayoutPerFrameAndPass = nullptr;
   // for rendering entities
   vk::raii::PipelineLayout pipelineLayoutPushConstant = nullptr;
   std::unique_ptr<vk::raii::Pipeline> pipelinePushConstant;

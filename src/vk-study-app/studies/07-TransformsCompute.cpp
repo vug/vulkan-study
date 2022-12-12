@@ -107,6 +107,14 @@ void TransformGPUConstructionStudy::onInit(const vku::AppSettings appSettings, c
       const vk::DescriptorSetLayoutCreateInfo layoutCreateInfo{{}, layoutBindings};
       descriptorSetLayoutsRaii.emplace_back(vc.device, layoutCreateInfo);
     }
+    // init pipelineLayoutPerFrameAndPass
+    {
+      std::vector<vk::DescriptorSetLayout> descriptorSetLayoutsCommon;
+      std::ranges::transform(descriptorSetLayoutsRaii, std::back_inserter(descriptorSetLayoutsCommon), [&](const vk::raii::DescriptorSetLayout& dsRaii) { return *dsRaii; });
+      vk::PushConstantRange pushConstantRange{vk::ShaderStageFlagBits::eVertex, 0, sizeof(PushConstants)};
+      vk::PipelineLayoutCreateInfo pipelineLayoutCommoneCreateInfo({}, descriptorSetLayoutsCommon, pushConstantRange);
+      pipelineLayoutPerFrameAndPass = vk::raii::PipelineLayout(vc.device, pipelineLayoutCommoneCreateInfo);
+    }
     // set = 2 Per Material Descriptor Set Layout
     {
       const std::array<vk::DescriptorSetLayoutBinding, 1> layoutBindings{
@@ -1073,20 +1081,18 @@ void TransformGPUConstructionStudy::recordCommandBuffer(const vku::VulkanContext
   cmdBuf.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eVertexInput, {}, memBarrier, nullptr, nullptr);
 
   // Bind per-frame data
-  cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelineLayoutInstance, 0, *descriptorSetsGraphics[frameDrawer.frameNo][0], nullptr);
+  cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelineLayoutPerFrameAndPass, 0, *descriptorSetsGraphics[frameDrawer.frameNo][0], nullptr);
 
   const vk::RenderPassBeginInfo renderPassBeginInfo(*vc.renderPass, *frameDrawer.framebuffer, vk::Rect2D{{0, 0}, vc.swapchainExtent}, {});
   cmdBuf.beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
   // Bind per-pass data
-  cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelineLayoutInstance, 1, *descriptorSetsGraphics[frameDrawer.frameNo][1], nullptr);
+  cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelineLayoutPerFrameAndPass, 1, *descriptorSetsGraphics[frameDrawer.frameNo][1], nullptr);
 
   vk::DeviceSize offsets = 0;
   cmdBuf.bindVertexBuffers(0, *vbo.buffer, offsets);
   cmdBuf.bindIndexBuffer(*ibo.buffer, 0, vk::IndexType::eUint32);
   // Draw entities
   cmdBuf.bindPipeline(vk::PipelineBindPoint::eGraphics, **pipelinePushConstant);
-  // Don't need to bind again for pipelineLayoutPushConstant because it's compatible with pipelineLayoutInstance
-  //cmdBuf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelineLayoutPushConstant, 1, *descriptorSetsGraphics[frameDrawer.frameNo][1], nullptr);
   for (auto& e : entities) {
     const PushConstants& pco = e.getPushConstants();
     const Mesh& mesh = e.mesh;
