@@ -462,6 +462,9 @@ layout (set = 1, binding = 0) uniform PerPass {
 
 layout (set = 2, binding = 0) uniform PerMaterial {
   vec4 specularParams; // x: specularExponent/smoothness
+  vec4 goochCool;
+  vec4 goochWarm;
+  ivec4 shouldUseGooch;
 } perMaterial;
 
 layout (location = 0) out vec4 outFragColor;
@@ -471,8 +474,10 @@ void main() {
   const vec3 normal = normalize(v2f.worldNormal);
   // from uniforms
   const vec3 camPosWorld = perPass.cameraPositionWorld.xyz;
-  // frag constants
   const vec3 lightPos = perFrame.lightPos.xyz;
+  const vec3 goochCoolColor = perMaterial.goochCool.xyz;
+  const vec3 goochWarmColor = perMaterial.goochWarm.xyz;
+  const bool shouldUseGooch = perMaterial.shouldUseGooch.x != 0;
 
   // directions
   const vec3 fragToCamDir = normalize(camPosWorld - v2f.worldPosition);
@@ -480,11 +485,16 @@ void main() {
   const vec3 reflectionDir = reflect(-fragToLightDir, normal);
 
   // illuminations
-  const float diffuse = max(dot(fragToLightDir, normal), 0);  
+  const float diffuse = max(dot(fragToLightDir, normal), 0);
+  const float gooch = (1.0f + dot(fragToLightDir, normal)) * 0.5f;
+  const vec3 goochDiffuse = gooch * goochWarmColor + (1 - gooch) * goochCoolColor;
   const float specular0 = max(dot(fragToCamDir, reflectionDir), 0);
   const float specular = pow(specular0, perMaterial.specularParams.x);
   
-  outFragColor = vec4(v2f.color.xyz, 1) * (diffuse + specular); // lit
+  if (shouldUseGooch)
+    outFragColor = vec4(goochDiffuse + specular * vec3(1), 1); // lit
+  else
+    outFragColor = vec4(v2f.color.xyz, 1) * (diffuse + specular); // lit
   //outFragColor = vec4(v2f.color.xyz, 1); // unlit
 }
 )";
@@ -1031,6 +1041,7 @@ void TransformGPUConstructionStudy::onUpdate(const vku::UpdateParams& params) {
   else
     orbitingCameraController.update(params.deltaTime);
   ImGui::SliderFloat("FoV", &camera.fov, 15, 180, "%.1f");  // TODO: PerspectiveCameraController, OrthographicCameraController
+  ImGui::Text(std::format("yaw: {}, pitch: {}\n", camera.yaw, camera.pitch).c_str());
 
   ImGui::Separator();
 
@@ -1041,9 +1052,10 @@ void TransformGPUConstructionStudy::onUpdate(const vku::UpdateParams& params) {
     frameUniform.lightPos = {pointLightPos, 0};
     perFrameUniform[params.frameInFlightNo].update();
   }
+  ImGui::Separator();
 
 
-  //
+  // View / Projection matrix updates
   PerPassUniform& uni = perPassUniform[params.frameInFlightNo].src;
   uni.cameraPositionWorld = glm::vec4(camera.getPosition(), 0);
   uni.viewFromWorld = camera.getViewFromWorld();
@@ -1051,12 +1063,16 @@ void TransformGPUConstructionStudy::onUpdate(const vku::UpdateParams& params) {
   uni.projectionFromWorld = uni.projectionFromView * uni.viewFromWorld;
   perPassUniform[params.frameInFlightNo].update();  // don't forget to call upload after uniform data changes
 
+  ImGui::Text("Material");
   MaterialUniform& mat = perMaterialUniform[params.frameInFlightNo].src;
   static float specularExponent = mat.specularParams.x;
-  if (ImGui::SliderFloat("Specular Exponent (Smoothness)", &specularExponent, 0, 255)) {
-    mat.specularParams.x = specularExponent;
-    perMaterialUniform[params.frameInFlightNo].update();
-  }
+  ImGui::SliderFloat("Specular Exponent (Smoothness)", &specularExponent, 0, 255);
+  mat.specularParams.x = specularExponent;
+  static bool shouldUseGooch = static_cast<bool>(mat.shouldUseGooch.x);
+  ImGui::Checkbox("Goochify", &shouldUseGooch);
+  mat.shouldUseGooch.x = static_cast<int32_t>(shouldUseGooch);
+  perMaterialUniform[params.frameInFlightNo].update();
+  ImGui::Separator();
 
   //
   computeUniformBuffer.src.targetPosition = glm::vec4(targetPosition, 0);
@@ -1064,7 +1080,6 @@ void TransformGPUConstructionStudy::onUpdate(const vku::UpdateParams& params) {
   computeUniformBuffer.src.shouldTurnInstantly = glm::ivec4(static_cast<int>(shouldTurnInstantly), 0, 0, 0);
   computeUniformBuffer.update();
 
-  ImGui::Text(std::format("yaw: {}, pitch: {}\n", camera.yaw, camera.pitch).c_str());
   ImGui::End();
 
   t += params.deltaTime;

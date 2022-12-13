@@ -63,6 +63,9 @@ class TransformGPUConstructionStudy : public vku::Study {
 
   struct MaterialUniform {
     glm::vec4 specularParams{5.0f, 0, 0, 0};  // x: specularExponent/smoothness
+    glm::vec4 goochCool{0.1f, 0.2f, 0.9f, 1.0f};
+    glm::vec4 goochWarm{0.9f, 0.2f, 0.1f, 1.0f};
+    glm::ivec4 shouldUseGooch{0, 0, 0, 0};
   };
 
  private:
