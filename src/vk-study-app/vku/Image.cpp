@@ -101,8 +101,9 @@ void setImageLayout(
     case vk::ImageLayout::eColorAttachmentOptimal:
       destinationStage = vk::PipelineStageFlagBits::eColorAttachmentOutput;
       break;
+    // https://github.com/KhronosGroup/Vulkan-Guide/blob/master/chapters/depth.adoc#layout
     case vk::ImageLayout::eDepthStencilAttachmentOptimal:
-      destinationStage = vk::PipelineStageFlagBits::eEarlyFragmentTests;
+      destinationStage = vk::PipelineStageFlagBits::eEarlyFragmentTests | vk::PipelineStageFlagBits::eLateFragmentTests;
       break;
     case vk::ImageLayout::eGeneral:
       destinationStage = vk::PipelineStageFlagBits::eHost;
