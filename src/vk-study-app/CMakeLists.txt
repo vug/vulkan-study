@@ -24,7 +24,7 @@ add_executable(${APP}
   studies/05-Instanced.hpp studies/05-Instanced.cpp
   studies/06-Transforms.hpp studies/06-Transforms.cpp
   studies/07-TransformsCompute.hpp studies/07-TransformsCompute.cpp
-)
+  studies/08-Outlines.hpp studies/08-Outlines.cpp)
 
 # One way of finding include directory of a library
 get_target_property(glfw_interface_includes glfw INTERFACE_INCLUDE_DIRECTORIES)
