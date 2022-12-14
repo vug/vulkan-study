@@ -37,7 +37,7 @@ class VertexInputStateCreateInfo : public vk::PipelineVertexInputStateCreateInfo
 };
 
 DefaultMeshData makeQuad(const glm::vec2& dimensions);
-DefaultMeshData makeBox(const glm::vec3& dimensions);
+DefaultMeshData makeBox(const glm::vec3& dimensions = {1, 1, 1});
 DefaultMeshData makeTorus(float outerRadius, uint32_t outerSegments, float innerRadius, uint32_t innerSegments);
 DefaultMeshData makeAxes();
 DefaultMeshData loadOBJ(const std::filesystem::path& filepath);

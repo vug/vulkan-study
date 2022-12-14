@@ -5,12 +5,34 @@
 #include "../vku/Buffer.hpp"
 #include "../vku/Camera.hpp"
 #include "../vku/Math.hpp"
+#include "../vku/Model.hpp"
 #include "../vku/UniformBuffer.hpp"
 
 #include <glm/mat4x4.hpp>
 #include <glm/vec4.hpp>
 
 #include <memory>
+
+namespace vku {
+struct Mesh {
+  uint32_t offset;
+  uint32_t size;
+};
+
+class MeshStore {
+ private:
+  DefaultMeshData allMeshesData;
+  vku::Buffer vertexBuffer;
+  vku::Buffer indexBuffer;
+
+ public:
+  Mesh insertMeshData(const DefaultMeshData& newMesh);
+  void upload(const vku::VulkanContext& vc);
+  inline uint32_t getNumIndices() const {
+    return (uint32_t)allMeshesData.indices.size();
+  }
+};
+}  // namespace vku
 
 class OutlinesViaDepthBuffer : public vku::Study {
   struct MeshId {
@@ -19,9 +41,11 @@ class OutlinesViaDepthBuffer : public vku::Study {
     static const size_t Monkey = 2;
   };
 
-  struct Mesh {
-    uint32_t offset;
-    uint32_t size;
+  struct Meshes {
+    vku::Mesh box;
+    vku::Mesh axes;
+    vku::Mesh monkeyFlat;
+    vku::Mesh monkeySmooth;
   };
 
   struct PushConstants {
@@ -31,7 +55,7 @@ class OutlinesViaDepthBuffer : public vku::Study {
   };
 
   struct Entity {
-    Mesh mesh;
+    vku::Mesh mesh;
     vku::Transform transform;
     glm::vec4 color;
 
@@ -60,11 +84,10 @@ class OutlinesViaDepthBuffer : public vku::Study {
   };
 
  private:
-  vku::Buffer vertexBuffer;
-  vku::Buffer indexBuffer;
-  std::vector<Mesh> meshes;
+  vku::MeshStore meshStore;
+  Meshes meshes;
   std::vector<Entity> entities;
-  uint32_t indexCount;
+ 
   //
   std::vector<vku::UniformBuffer<PerFrameUniform>> perFrameUniform;
   std::vector<vku::UniformBuffer<PerPassUniform>> perPassUniform;
