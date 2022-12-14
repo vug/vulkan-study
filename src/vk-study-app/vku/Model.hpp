@@ -18,10 +18,13 @@ struct DefaultVertex {
   // custom1 (glm::vec4), custom2 (glm::ivec4)
 };
 
+template <typename TVertex>
 struct MeshData {
-  std::vector<DefaultVertex> vertices;
+  std::vector<TVertex> vertices;
   std::vector<uint32_t> indices;
 };
+
+using DefaultMeshData = MeshData<DefaultVertex>;
 
 class VertexInputStateCreateInfo : public vk::PipelineVertexInputStateCreateInfo {
  private:
@@ -33,9 +36,9 @@ class VertexInputStateCreateInfo : public vk::PipelineVertexInputStateCreateInfo
   VertexInputStateCreateInfo();  // Meaningful default constructor
 };
 
-MeshData makeQuad(const glm::vec2& dimensions);
-MeshData makeBox(const glm::vec3& dimensions);
-MeshData makeTorus(float outerRadius, uint32_t outerSegments, float innerRadius, uint32_t innerSegments);
-MeshData makeAxes();
-MeshData loadOBJ(const std::filesystem::path& filepath);
+DefaultMeshData makeQuad(const glm::vec2& dimensions);
+DefaultMeshData makeBox(const glm::vec3& dimensions);
+DefaultMeshData makeTorus(float outerRadius, uint32_t outerSegments, float innerRadius, uint32_t innerSegments);
+DefaultMeshData makeAxes();
+DefaultMeshData loadOBJ(const std::filesystem::path& filepath);
 }  // namespace vku

@@ -17,13 +17,13 @@ void UniformsStudy::onInit(const vku::AppSettings appSettings, const vku::Vulkan
   std::cout << vivid::ansi::lightBlue << "Hi from Vivid at UniformsStudy" << vivid::ansi::reset << std::endl;
   //---- Vertex Data
   const vivid::ColorMap cmap = vivid::ColorMap::Preset::Viridis;
-  vku::MeshData boxMeshData = vku::makeBox({0.6f, 0.9f, 1.5f});
-  vku::MeshData torusMeshData = vku::makeTorus(1.f, 17, .5f, 6);
-  vku::MeshData quadMeshData = vku::makeQuad({1, 1});
+  vku::DefaultMeshData boxMeshData = vku::makeBox({0.6f, 0.9f, 1.5f});
+  vku::DefaultMeshData torusMeshData = vku::makeTorus(1.f, 17, .5f, 6);
+  vku::DefaultMeshData quadMeshData = vku::makeQuad({1, 1});
   // TODO: do not hard-code absolute paths, instead have a global "assets root folder"
-  vku::MeshData objMeshData = vku::loadOBJ(vku::assetsRootFolder / "models/suzanne.obj");
+  vku::DefaultMeshData objMeshData = vku::loadOBJ(vku::assetsRootFolder / "models/suzanne.obj");
 
-  vku::MeshData& md = objMeshData;
+  vku::DefaultMeshData& md = objMeshData;
 
   uint32_t vboSizeBytes = (uint32_t)(md.vertices.size() * sizeof(vku::DefaultVertex));
   vbo = vku::Buffer(vc, md.vertices.data(), vboSizeBytes, vk::BufferUsageFlagBits::eVertexBuffer);

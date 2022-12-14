@@ -31,13 +31,13 @@ void TransformConstructionStudy::onInit(const vku::AppSettings appSettings, cons
 
   //---- Vertex Data
   const vivid::ColorMap cmap = vivid::ColorMap::Preset::Viridis;
-  vku::MeshData boxMeshData = vku::makeBox({0.2f, 0.5f, 0.7f});
-  vku::MeshData axesMeshData = vku::makeAxes();
-  vku::MeshData objMeshData = vku::loadOBJ(vku::assetsRootFolder / "models/suzanne.obj");
+  vku::DefaultMeshData boxMeshData = vku::makeBox({0.2f, 0.5f, 0.7f});
+  vku::DefaultMeshData axesMeshData = vku::makeAxes();
+  vku::DefaultMeshData objMeshData = vku::loadOBJ(vku::assetsRootFolder / "models/suzanne.obj");
 
   {
-    vku::MeshData allMeshesData;
-    auto insertMeshData = [&](const vku::MeshData& newMesh) -> Mesh {
+    vku::DefaultMeshData allMeshesData;
+    auto insertMeshData = [&](const vku::DefaultMeshData& newMesh) -> Mesh {
       Mesh mesh = {static_cast<uint32_t>(allMeshesData.indices.size()), static_cast<uint32_t>(newMesh.indices.size())};
       std::ranges::copy(newMesh.vertices, std::back_inserter(allMeshesData.vertices));
       std::ranges::transform(newMesh.indices, std::back_inserter(allMeshesData.indices), [&](uint32_t ix) { return ix + mesh.offset; });

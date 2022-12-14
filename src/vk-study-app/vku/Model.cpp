@@ -13,7 +13,7 @@
 #include <unordered_map>
 
 namespace vku {
-MeshData makeQuad(const glm::vec2& dimensions) {
+DefaultMeshData makeQuad(const glm::vec2& dimensions) {
   const float halfWidth = .5f * dimensions.x;
   const float halfHeight = .5f * dimensions.y;
 
@@ -28,7 +28,7 @@ MeshData makeQuad(const glm::vec2& dimensions) {
   const DefaultVertex bottomLeft{.position = {-halfWidth, -halfHeight, 0}, .texCoord = {0, 0}, .normal = normal, .color = green};
   const DefaultVertex bottomRight{.position = {halfWidth, -halfHeight, 0}, .texCoord = {1, 0}, .normal = normal, .color = blue};
   const DefaultVertex topRight{.position = {halfWidth, halfHeight, 0}, .texCoord = {1, 1}, .normal = normal, .color = white};
-  return MeshData{
+  return DefaultMeshData {
       .vertices = {topLeft, bottomLeft, bottomRight, topRight},
       .indices = {
           0,
@@ -40,7 +40,7 @@ MeshData makeQuad(const glm::vec2& dimensions) {
       }};
 }
 
-MeshData makeBox(const glm::vec3& dimensions) {
+DefaultMeshData makeBox(const glm::vec3& dimensions) {
   const glm::vec3 halfDim = dimensions * 0.5f;
   const float width = halfDim.x, height = halfDim.y, depth = halfDim.z;
 
@@ -102,7 +102,7 @@ MeshData makeBox(const glm::vec3& dimensions) {
   const Face fUp = {{p010, p011, p111, p110}, nUp};
   const Face fDown = {{p100, p101, p001, p000}, nDown};
 
-  MeshData meshData;
+  DefaultMeshData meshData;
   const int faceIndices[] = {
       0,
       1,
@@ -126,8 +126,8 @@ MeshData makeBox(const glm::vec3& dimensions) {
   return meshData;
 }
 
-MeshData makeTorus(float outerRadius, uint32_t outerSegments, float innerRadius, uint32_t innerSegments) {
-  MeshData meshData;
+DefaultMeshData makeTorus(float outerRadius, uint32_t outerSegments, float innerRadius, uint32_t innerSegments) {
+  DefaultMeshData meshData;
   for (uint32_t i = 0; i < outerSegments; i++) {
     const float u = (float)i / (outerSegments - 1);
     const float outerAngle = 2.f * std::numbers::pi_v<float> * u;
@@ -164,11 +164,11 @@ MeshData makeTorus(float outerRadius, uint32_t outerSegments, float innerRadius,
   return meshData;
 }
 
-MeshData makeAxes() {
-  MeshData xAxis = makeBox({1, 0.2, 0.2});
-  MeshData yAxis = makeBox({0.2, 1, 0.2});
-  MeshData zAxis = makeBox({0.2, 0.2, 1});
-  MeshData axes;
+DefaultMeshData makeAxes() {
+  DefaultMeshData xAxis = makeBox({1, 0.2, 0.2});
+  DefaultMeshData yAxis = makeBox({0.2, 1, 0.2});
+  DefaultMeshData zAxis = makeBox({0.2, 0.2, 1});
+  DefaultMeshData axes;
   for (auto& v : xAxis.vertices) {
     v.color = {1, 0, 0, 1};
     v.position += glm::vec3{0.5f, 0, 0};
@@ -218,7 +218,7 @@ struct VertexId {
 // OBJ file is a compressed format. Each attribute (position, texCoord, normal) stores unqiue values, e.g. only one normal value is stored if all vertices have the same normal etc.
 // However, vertices sent to the GPU have combinations of the attributes. Here we stores only vertices with unique attributes in vertex data
 // and triangles are stored as successive triplets of indices to the vertex data.
-MeshData loadOBJ(const std::filesystem::path& filepath) {  // taken from https://github.com/tinyobjloader/tinyobjloader and modified
+DefaultMeshData loadOBJ(const std::filesystem::path& filepath) {  // taken from https://github.com/tinyobjloader/tinyobjloader and modified
   tinyobj::ObjReaderConfig reader_config;
   tinyobj::ObjReader reader;
   // TODO: When errors happen return with a failure result. Can be done via optionals.
@@ -233,7 +233,7 @@ MeshData loadOBJ(const std::filesystem::path& filepath) {  // taken from https:/
   // const std::vector<tinyobj::material_t>& materials = reader.GetMaterials(); TODO: use material info if mat file with the same name exists
   assert(attrib.vertices.size() % 3 == 0);  // Assert triangular mesh TODO: check should be on all faces
 
-  MeshData meshData;
+  DefaultMeshData meshData;
   uint32_t vertexIndex = 0;
   std::unordered_map<VertexId, uint32_t, VertexId::HashFunc> vertexToIndex;  // map from unique vertex attribute combinations to IndexBuffer index
   for (const auto& shape : shapes) {

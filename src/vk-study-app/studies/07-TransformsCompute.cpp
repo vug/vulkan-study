@@ -34,8 +34,8 @@ void TransformGPUConstructionStudy::onInit(const vku::AppSettings appSettings, c
   uint32_t instanceBufferSize{};
   uint32_t transformBufferSize{};
   {
-    vku::MeshData allMeshesData;
-    auto insertMeshData = [&](const vku::MeshData& newMesh) -> Mesh {
+    vku::DefaultMeshData allMeshesData;
+    auto insertMeshData = [&](const vku::DefaultMeshData& newMesh) -> Mesh {
       Mesh mesh = {static_cast<uint32_t>(allMeshesData.indices.size()), static_cast<uint32_t>(newMesh.indices.size())};
       std::ranges::copy(newMesh.vertices, std::back_inserter(allMeshesData.vertices));
       std::ranges::transform(newMesh.indices, std::back_inserter(allMeshesData.indices), [&](uint32_t ix) { return ix + mesh.offset; });
