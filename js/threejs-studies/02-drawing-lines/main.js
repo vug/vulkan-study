@@ -1,5 +1,5 @@
-// From https://threejs.org/docs/#manual/en/introduction/Creating-a-scene
-import * as THREE from '../node_modules/three/build/three.module.js';
+// From https://threejs.org/docs/#manual/en/introduction/Drawing-lines
+import * as THREE from 'three';
 
 const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
