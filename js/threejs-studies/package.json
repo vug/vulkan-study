@@ -1,4 +1,7 @@
 {
   "name": "threejs-studies",
-  "packageManager": "yarn@3.3.1"
+  "packageManager": "yarn@3.3.1",
+  "dependencies": {
+    "three": "^0.147.0"
+  }
 }
