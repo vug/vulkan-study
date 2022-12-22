@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+  <title>RawShaderMaterial Study</title>
+  <style>
+    body {
+      margin: 0;
+    }
+
+    #container {
+      position: absolute;
+      top: 0px;
+      width: 100%;
+      bottom: 0px;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="container"></div>
+  <script id="vertexShader" type="x-shader/x-vertex">
+    precision mediump float;
+    precision mediump int;
+
+    uniform mat4 modelViewMatrix; // optional
+    uniform mat4 projectionMatrix; // optional
+
+    attribute vec3 position;
+    attribute vec3 normal;
+    attribute vec2 uv;
+    attribute vec4 color;
+
+    varying vec3 vPosition;
+    varying vec3 vNormal;
+    varying vec2 vUv;
+    varying vec4 vColor;
+
+    void main()	{
+      vPosition = position;
+      vNormal = normal * 0.5 + 0.5;
+      vUv = uv;
+      vColor = color;
+
+      gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+    }
+  </script>
+
+  <script id="fragmentShader" type="x-shader/x-fragment">
+    precision mediump float;
+    precision mediump int;
+
+    uniform float time;
+
+    varying vec3 vPosition;
+    varying vec3 vNormal;
+    varying vec2 vUv;
+    varying vec4 vColor;
+
+    void main()	{
+      vec4 color = vec4( vColor ); // for BoxGeometry defaults to vec4(1)
+      color.r += sin( vPosition.x * 10.0 + time ) * 0.5;
+      color.g += sin( vPosition.y * 10.0 + time ) * 0.5;
+      color.b += sin( vPosition.z * 10.0 + time ) * 0.5;
+
+      // vec4 color = vec4(vNormal, 1);
+
+      //vec4 color = vec4(vUv.x, vUv.y, 0, 1);
+      
+      gl_FragColor = color;
+    }
+  </script>
+
+  <script type="importmap">
+    {
+        "imports": {
+            "three": "../node_modules/three/build/three.module.js",
+            "three/addons/": "../node_modules/three/examples/jsm/"
+        }
+    }
+  </script>
+  <script type="module" src="main.js"></script>
+</body>
+
+</html>
