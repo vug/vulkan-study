@@ -52,7 +52,7 @@
     }
   </script>
 
-  <script id="fragmentShader" type="x-shader/x-fragment">#version 300 es
+  <script id="fragmentShader1" type="x-shader/x-fragment">#version 300 es
     precision mediump float;
     precision mediump int;
     
@@ -74,11 +74,49 @@
       color.g += sin( v2f.position.y * 10.0 + time ) * 0.5;
       color.b += sin( v2f.position.z * 10.0 + time ) * 0.5;
 
-      //vec4 color = vec4(v2f.normal, 1);
-
-      //vec4 color = vec4(v2f.uv.x, v2f.uv.y, 0, 1);
-      
       fragColor = color;
+    }
+  </script>
+
+  <script id="fragmentShader2" type="x-shader/x-fragment">#version 300 es
+    precision mediump float;
+    precision mediump int;
+    
+    struct VertexData {
+      vec3 position;
+      vec3 normal;
+      vec2 uv;
+      vec4 color;  
+    };
+    in VertexData v2f;
+    
+    uniform float time;
+
+    out vec4 fragColor;
+
+    void main()	{
+      fragColor = vec4(v2f.normal, 1);     
+    }
+  </script>
+
+  <script id="fragmentShader3" type="x-shader/x-fragment">#version 300 es
+    precision mediump float;
+    precision mediump int;
+    
+    struct VertexData {
+      vec3 position;
+      vec3 normal;
+      vec2 uv;
+      vec4 color;  
+    };
+    in VertexData v2f;
+    
+    uniform float time;
+
+    out vec4 fragColor;
+
+    void main()	{
+      fragColor = vec4(v2f.uv.x, v2f.uv.y, 0, 1);
     }
   </script>
 

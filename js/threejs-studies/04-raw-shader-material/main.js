@@ -29,24 +29,40 @@ controls.enableDamping = true; // an animation loop is required when either damp
 controls.dampingFactor = 0.05;
 controls.screenSpacePanning = false;
 
+const scene = new THREE.Scene();
+
+let addObject = (geo, mat, pos) => {
+  const obj = new THREE.Mesh(geo, mat);
+  obj.position.set(pos.x, pos.y, pos.z);
+  scene.add(obj);
+  return obj;
+};
+
 const geometry = new THREE.BoxGeometry(1, 2, 3, 1, 1, 1);
 
-// const material = new THREE.MeshBasicMaterial({ color: 0x888888 });
-const material = new THREE.RawShaderMaterial({
+const material1 = new THREE.RawShaderMaterial({
   uniforms: {
     time: { value: 1.0 }
   },
   vertexShader: document.getElementById('vertexShader').textContent,
-  fragmentShader: document.getElementById('fragmentShader').textContent,
-  side: THREE.FrontSide,
-  transparent: false
+  fragmentShader: document.getElementById('fragmentShader1').textContent,
 });
+const object1 = addObject(geometry, material1, new THREE.Vector3(3, 0, 0));
 
-const object = new THREE.Mesh(geometry, material);
-object.position.set(3, 0, 0);
+const material2 = new THREE.RawShaderMaterial({
+  vertexShader: document.getElementById('vertexShader').textContent,
+  fragmentShader: document.getElementById('fragmentShader2').textContent,
+});
+const object2 = addObject(geometry, material2, new THREE.Vector3(0, 0, 0));
 
-const scene = new THREE.Scene();
-scene.add(object);
+const material3 = new THREE.RawShaderMaterial({
+  vertexShader: document.getElementById('vertexShader').textContent,
+  fragmentShader: document.getElementById('fragmentShader3').textContent,
+});
+const object3 = addObject(geometry, material3, new THREE.Vector3(-3, 0, 0));
+
+
+// const material = new THREE.MeshBasicMaterial({ color: 0x888888 });
 
 window.addEventListener('resize', onWindowResize);
 
@@ -55,8 +71,10 @@ function animate() {
   controls.update(); // only required if controls.enableDamping = true, or if controls.autoRotate = true
 
   const time = performance.now() / 1000; // sec
-  object.position.y = Math.sin(2 * Math.PI * time * params.boxSpeed) * 0.5;
-  object.material.uniforms.time.value = time * params.shaderSpeed;
+  object1.position.y = Math.sin(2 * Math.PI * time * params.boxSpeed) * 0.5;
+  object1.material.uniforms.time.value = time * params.shaderSpeed;
+
+  object2.setRotationFromAxisAngle(new THREE.Vector3(0, 1, 0), time * params.boxSpeed);
 
   renderer.render(scene, camera);
   stats.update();
