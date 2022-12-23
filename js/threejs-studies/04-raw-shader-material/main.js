@@ -30,7 +30,6 @@ controls.dampingFactor = 0.05;
 controls.screenSpacePanning = false;
 
 const geometry = new THREE.BoxGeometry(1, 2, 3, 1, 1, 1);
-geometry.position = new THREE.Vector3(0, 0, 0);
 
 // const material = new THREE.MeshBasicMaterial({ color: 0x888888 });
 const material = new THREE.RawShaderMaterial({
@@ -44,6 +43,7 @@ const material = new THREE.RawShaderMaterial({
 });
 
 const object = new THREE.Mesh(geometry, material);
+object.position.set(3, 0, 0);
 
 const scene = new THREE.Scene();
 scene.add(object);
