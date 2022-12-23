@@ -16,7 +16,7 @@ const gui = new GUI({ title: 'settings' });
 gui.add(params, 'shaderSpeed', 0, 5);
 gui.add(params, 'boxSpeed', 0, 5);
 
-const renderer = new THREE.WebGLRenderer();
+const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
