@@ -79,8 +79,10 @@
   </script>
 
   <script id="fragmentShader2" type="x-shader/x-fragment">#version 300 es
-    precision mediump float;
+    precision highp float;
     precision mediump int;
+
+    #include <common>
     
     struct VertexData {
       vec3 position;
@@ -95,13 +97,14 @@
     layout(location = 0) out vec4 fragColor;
 
     void main()	{
-      fragColor = vec4(v2f.normal, 1);     
+      fragColor = vec4(v2f.normal, 1);
+      fragColor.rgb -= rand(v2f.uv) * 0.1;
     }
   </script>
 
   <script id="fragmentShader3" type="x-shader/x-fragment">#version 300 es
     precision highp float;
-    
+   
     struct VertexData {
       vec3 position;
       vec3 normal;
