@@ -38,8 +38,7 @@ let addObject = (geo, mat, pos) => {
   return obj;
 };
 
-const geometry = new THREE.BoxGeometry(1, 2, 3, 1, 1, 1);
-
+const geometry1 = new THREE.BoxGeometry(1, 2, 3, 1, 1, 1);
 const material1 = new THREE.RawShaderMaterial({
   uniforms: {
     time: { value: 1.0 }
@@ -47,19 +46,56 @@ const material1 = new THREE.RawShaderMaterial({
   vertexShader: document.getElementById('vertexShader').textContent,
   fragmentShader: document.getElementById('fragmentShader1').textContent,
 });
-const object1 = addObject(geometry, material1, new THREE.Vector3(3, 0, 0));
+const object1 = addObject(geometry1, material1, new THREE.Vector3(3, 0, 0));
 
+const geometry2 = new THREE.SphereGeometry(1, 32, 16);
 const material2 = new THREE.RawShaderMaterial({
   vertexShader: document.getElementById('vertexShader').textContent,
   fragmentShader: document.getElementById('fragmentShader2').textContent,
 });
-const object2 = addObject(geometry, material2, new THREE.Vector3(0, 0, 0));
+const object2 = addObject(geometry2, material2, new THREE.Vector3(0, 0, 0));
 
+const geometry3 = new THREE.BufferGeometry();
+{
+  const vertices = [
+    -0.5, 0.5, 0.0,
+    -0.5, -0.5, 0.0,
+    0.5, -0.5, 0.0,
+    0.5, 0.5, 0.0,
+  ];
+  const uv = [
+    0, 1,
+    0, 0,
+    1, 0,
+    1, 1,
+  ];
+  const colors = [
+    1, 1, 1, 1,
+    1, 1, 1, 1,
+    1, 1, 1, 1,
+    1, 1, 1, 1,
+  ];
+  const indicies = [
+    0, 1, 2,
+    0, 2, 3,
+  ];
+  geometry3.setIndex(indicies);
+  geometry3.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+  geometry3.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  let colorAttr = geometry3.setAttribute('color', new THREE.Float32BufferAttribute(colors, 4));
+  colorAttr.normalized = true;
+}
+const textureLoader = new THREE.TextureLoader();
 const material3 = new THREE.RawShaderMaterial({
   vertexShader: document.getElementById('vertexShader').textContent,
   fragmentShader: document.getElementById('fragmentShader3').textContent,
+  uniforms: {
+    time: { value: 1.0 },
+    tAlbedo1: { value: textureLoader.load('/assets/images/uv_grid_opengl.jpg') },
+    tAlbedo2: { value: textureLoader.load('/assets/images/crate.gif') },
+  },
 });
-const object3 = addObject(geometry, material3, new THREE.Vector3(-3, 0, 0));
+const object3 = addObject(geometry3, material3, new THREE.Vector3(-3, 0, 0));
 
 
 // const material = new THREE.MeshBasicMaterial({ color: 0x888888 });
@@ -71,10 +107,15 @@ function animate() {
   controls.update(); // only required if controls.enableDamping = true, or if controls.autoRotate = true
 
   const time = performance.now() / 1000; // sec
-  object1.position.y = Math.sin(2 * Math.PI * time * params.boxSpeed) * 0.5;
   object1.material.uniforms.time.value = time * params.shaderSpeed;
+  object1.setRotationFromAxisAngle(new THREE.Vector3(0, 1, 0), time * params.boxSpeed);
 
-  object2.setRotationFromAxisAngle(new THREE.Vector3(0, 1, 0), time * params.boxSpeed);
+  object2.position.y = Math.sin(2 * Math.PI * time * params.boxSpeed) * 0.5;
+
+  object3.material.uniforms.time.value = time * params.shaderSpeed;
+  const sz = Math.sin(time) + 1.5;
+  object3.scale.set(sz, sz, sz);
+
 
   renderer.render(scene, camera);
   stats.update();
