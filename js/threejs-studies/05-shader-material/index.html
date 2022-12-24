@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+  <title>RawShaderMaterial Study</title>
+  <style>
+    body {
+      margin: 0;
+    }
+
+    #container {
+      position: absolute;
+      top: 0px;
+      width: 100%;
+      bottom: 0px;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="container"></div>
+  <script id="vertexShader" type="x-shader/x-vertex">
+    precision mediump float;
+    precision mediump int;
+
+    in vec3 position;
+    in vec3 normal;
+    in vec2 uv;
+    in vec4 color;
+
+    uniform mat4 modelViewMatrix;
+    uniform mat4 projectionMatrix;
+
+    struct VertexData {
+      vec3 position;
+      vec3 normal;
+      vec2 uv;
+      vec4 color;  
+    };
+
+    out VertexData v2f;
+
+    void main()	{
+      v2f.position = position;
+      v2f.normal = normal * 0.5 + 0.5;
+      v2f.uv = uv;
+      v2f.color = color;
+
+      gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+    }
+  </script>
+
+  <script id="fragmentShader1" type="x-shader/x-fragment">
+    precision mediump float;
+    precision mediump int;
+    
+    struct VertexData {
+      vec3 position;
+      vec3 normal;
+      vec2 uv;
+      vec4 color;  
+    };
+    in VertexData v2f;
+    
+    uniform float time;
+
+    layout(location = 0) out vec4 fragColor;
+
+    void main()	{
+      vec4 color = vec4( v2f.color ); // for BoxGeometry defaults to vec4(1)
+      color.r += sin( v2f.position.x * 10.0 + time ) * 0.5;
+      color.g += sin( v2f.position.y * 10.0 + time ) * 0.5;
+      color.b += sin( v2f.position.z * 10.0 + time ) * 0.5;
+
+      fragColor = color;
+    }
+  </script>
+
+  <script id="fragmentShader2" type="x-shader/x-fragment">
+    precision highp float;
+    precision mediump int;
+
+    #include <common>
+    
+    struct VertexData {
+      vec3 position;
+      vec3 normal;
+      vec2 uv;
+      vec4 color;  
+    };
+    in VertexData v2f;
+    
+    uniform float time;
+
+    layout(location = 0) out vec4 fragColor;
+
+    void main()	{
+      fragColor = vec4(v2f.normal, 1);
+      fragColor.rgb -= rand(v2f.uv) * 0.1;
+    }
+  </script>
+
+  <script id="fragmentShader3" type="x-shader/x-fragment">
+    precision highp float;
+   
+    struct VertexData {
+      vec3 position;
+      vec3 normal;
+      vec2 uv;
+      vec4 color;  
+    };
+    in VertexData v2f;
+    
+    uniform float time;
+    uniform sampler2D tAlbedo1;
+    uniform sampler2D tAlbedo2;    
+
+    layout(location = 0) out vec4 fragColor;
+
+    void main()	{
+      //fragColor = vec4(v2f.uv.x, v2f.uv.y, 0, 1);
+      vec3 colorA = texture(tAlbedo1, v2f.uv).rgb;
+      vec3 colorB = texture(tAlbedo2, v2f.uv).rgb;
+      fragColor = vec4(mix(colorA, colorB, sin(time * 2.)*0.5+0.5), 1);
+    }
+  </script>
+
+  <script type="importmap">
+    {
+        "imports": {
+            "three": "../node_modules/three/build/three.module.js",
+            "three/addons/": "../node_modules/three/examples/jsm/"
+        }
+    }
+  </script>
+  <script type="module" src="main.js"></script>
+</body>
+
+</html>
