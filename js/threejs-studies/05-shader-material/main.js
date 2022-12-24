@@ -27,14 +27,22 @@ const scene = new THREE.Scene();
 const textureLoader = new THREE.TextureLoader();
 
 {
-  const color = 0xFFFFFF;
-  const intensity = 1;
-  const light = new THREE.AmbientLight(color, intensity);
+  const light = new THREE.AmbientLight(0xFFFFFF, 0.1);
   scene.add(light);
 
   const folder = gui.addFolder('Ambient Light');
   folder.addColor(light, 'color');
-  folder.add(light, 'intensity', 0, 2, 0.01).name('foo');
+  folder.add(light, 'intensity', 0, 2, 0.01)
+}
+
+{
+  const light = new THREE.HemisphereLight(0xB1E1FF, 0xB97A20, 1);
+  scene.add(light);
+
+  const folder = gui.addFolder('Hemisphere Light');
+  folder.addColor(light, 'color').name('skyColor');
+  folder.addColor(light, 'groundColor');
+  folder.add(light, 'intensity', 0, 2, 0.01)
 }
 
 {
@@ -66,13 +74,11 @@ let addObject = (geo, mat, pos) => {
 
 const geometry1 = new THREE.BoxGeometry(1, 2, 3, 1, 1, 1);
 const material1 = new THREE.MeshPhongMaterial({ color: '#CA8' });
-const object1 = addObject(geometry1, material1, new THREE.Vector3(3, 0, 0));
-object1.position.set(2, 2, 0);
+const object1 = addObject(geometry1, material1, new THREE.Vector3(2, 2, 0));
 
 const geometry2 = new THREE.SphereGeometry(1, 32, 16);
 const material2 = new THREE.MeshPhongMaterial({ color: '#8AC' });
-const object2 = addObject(geometry2, material2, new THREE.Vector3(0, 0, 0));
-object2.position.set(-2, 2, 0);
+const object2 = addObject(geometry2, material2, new THREE.Vector3(-2, 2, 0));
 
 window.addEventListener('resize', onWindowResize);
 
