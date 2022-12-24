@@ -45,6 +45,7 @@ const material1 = new THREE.RawShaderMaterial({
   },
   vertexShader: document.getElementById('vertexShader').textContent,
   fragmentShader: document.getElementById('fragmentShader1').textContent,
+  glslVersion: THREE.GLSL3,
 });
 const object1 = addObject(geometry1, material1, new THREE.Vector3(3, 0, 0));
 
@@ -52,6 +53,7 @@ const geometry2 = new THREE.SphereGeometry(1, 32, 16);
 const material2 = new THREE.RawShaderMaterial({
   vertexShader: document.getElementById('vertexShader').textContent,
   fragmentShader: document.getElementById('fragmentShader2').textContent,
+  glslVersion: THREE.GLSL3,
 });
 const object2 = addObject(geometry2, material2, new THREE.Vector3(0, 0, 0));
 
@@ -94,6 +96,7 @@ const material3 = new THREE.RawShaderMaterial({
     tAlbedo1: { value: textureLoader.load('/assets/images/uv_grid_opengl.jpg') },
     tAlbedo2: { value: textureLoader.load('/assets/images/crate.gif') },
   },
+  glslVersion: THREE.GLSL3,
 });
 const object3 = addObject(geometry3, material3, new THREE.Vector3(-3, 0, 0));
 
