@@ -4,17 +4,10 @@ import Stats from 'three/addons/libs/stats.module.js';
 import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-const params = {
-  shaderSpeed: 1.0,
-  boxSpeed: 1.0,
-};
-
 const container = document.getElementById('container');
 const stats = new Stats();
 container.appendChild(stats.dom);
-const gui = new GUI({ title: 'settings' });
-gui.add(params, 'shaderSpeed', 0, 5);
-gui.add(params, 'boxSpeed', 0, 5);
+const gui = new GUI({ title: 'Settings' });
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -33,10 +26,16 @@ controls.screenSpacePanning = false;
 const scene = new THREE.Scene();
 const textureLoader = new THREE.TextureLoader();
 
-const color = 0xFFFFFF;
-const intensity = 1;
-const light = new THREE.AmbientLight(color, intensity);
-scene.add(light);
+{
+  const color = 0xFFFFFF;
+  const intensity = 1;
+  const light = new THREE.AmbientLight(color, intensity);
+  scene.add(light);
+
+  const folder = gui.addFolder('Ambient Light');
+  folder.addColor(light, 'color');
+  folder.add(light, 'intensity', 0, 2, 0.01).name('foo');
+}
 
 {
   const planeSize = 40;
@@ -66,68 +65,14 @@ let addObject = (geo, mat, pos) => {
 };
 
 const geometry1 = new THREE.BoxGeometry(1, 2, 3, 1, 1, 1);
-const material1 = new THREE.RawShaderMaterial({
-  uniforms: {
-    time: { value: 1.0 }
-  },
-  vertexShader: document.getElementById('vertexShader').textContent,
-  fragmentShader: document.getElementById('fragmentShader1').textContent,
-  glslVersion: THREE.GLSL3,
-});
+const material1 = new THREE.MeshPhongMaterial({ color: '#CA8' });
 const object1 = addObject(geometry1, material1, new THREE.Vector3(3, 0, 0));
+object1.position.set(2, 2, 0);
 
 const geometry2 = new THREE.SphereGeometry(1, 32, 16);
-const material2 = new THREE.RawShaderMaterial({
-  vertexShader: document.getElementById('vertexShader').textContent,
-  fragmentShader: document.getElementById('fragmentShader2').textContent,
-  glslVersion: THREE.GLSL3,
-});
+const material2 = new THREE.MeshPhongMaterial({ color: '#8AC' });
 const object2 = addObject(geometry2, material2, new THREE.Vector3(0, 0, 0));
-
-const geometry3 = new THREE.BufferGeometry();
-{
-  const vertices = [
-    -0.5, 0.5, 0.0,
-    -0.5, -0.5, 0.0,
-    0.5, -0.5, 0.0,
-    0.5, 0.5, 0.0,
-  ];
-  const uv = [
-    0, 1,
-    0, 0,
-    1, 0,
-    1, 1,
-  ];
-  const colors = [
-    1, 1, 1, 1,
-    1, 1, 1, 1,
-    1, 1, 1, 1,
-    1, 1, 1, 1,
-  ];
-  const indicies = [
-    0, 1, 2,
-    0, 2, 3,
-  ];
-  geometry3.setIndex(indicies);
-  geometry3.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-  geometry3.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
-  let colorAttr = geometry3.setAttribute('color', new THREE.Float32BufferAttribute(colors, 4));
-  colorAttr.normalized = true;
-}
-const material3 = new THREE.RawShaderMaterial({
-  vertexShader: document.getElementById('vertexShader').textContent,
-  fragmentShader: document.getElementById('fragmentShader3').textContent,
-  uniforms: {
-    time: { value: 1.0 },
-    tAlbedo1: { value: textureLoader.load('/assets/images/uv_grid_opengl.jpg') },
-    tAlbedo2: { value: textureLoader.load('/assets/images/crate.gif') },
-  },
-  glslVersion: THREE.GLSL3,
-});
-const object3 = addObject(geometry3, material3, new THREE.Vector3(-3, 0, 0));
-
-
-// const material = new THREE.MeshBasicMaterial({ color: 0x888888 });
+object2.position.set(-2, 2, 0);
 
 window.addEventListener('resize', onWindowResize);
 
@@ -136,15 +81,6 @@ function animate() {
   controls.update(); // only required if controls.enableDamping = true, or if controls.autoRotate = true
 
   const time = performance.now() / 1000; // sec
-  object1.material.uniforms.time.value = time * params.shaderSpeed;
-  object1.setRotationFromAxisAngle(new THREE.Vector3(0, 1, 0), time * params.boxSpeed);
-
-  object2.position.y = Math.sin(2 * Math.PI * time * params.boxSpeed) * 0.5;
-
-  object3.material.uniforms.time.value = time * params.shaderSpeed;
-  const sz = Math.sin(time) + 1.5;
-  object3.scale.set(sz, sz, sz);
-
 
   renderer.render(scene, camera);
   stats.update();
