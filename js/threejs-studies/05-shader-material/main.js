@@ -36,7 +36,7 @@ const textureLoader = new THREE.TextureLoader();
 }
 
 {
-  const light = new THREE.HemisphereLight(0xB1E1FF, 0xB97A20, 1);
+  const light = new THREE.HemisphereLight(0xB1E1FF, 0xB97A20, 0.25);
   scene.add(light);
 
   const folder = gui.addFolder('Hemisphere Light');
@@ -74,11 +74,25 @@ let addObject = (geo, mat, pos) => {
 
 const geometry1 = new THREE.BoxGeometry(1, 2, 3, 1, 1, 1);
 const material1 = new THREE.MeshPhongMaterial({ color: '#CA8' });
-const object1 = addObject(geometry1, material1, new THREE.Vector3(2, 2, 0));
+const object1 = addObject(geometry1, material1, new THREE.Vector3(3, 2, 0));
 
-const geometry2 = new THREE.SphereGeometry(1, 32, 16);
-const material2 = new THREE.MeshPhongMaterial({ color: '#8AC' });
-const object2 = addObject(geometry2, material2, new THREE.Vector3(-2, 2, 0));
+const geometry2 = new THREE.BoxGeometry(1, 2, 3, 1, 1, 1);
+const uniforms = THREE.UniformsUtils.clone(THREE.UniformsLib.lights);
+uniforms.time = { value: 1.0 };
+uniforms.color = { value: new THREE.Vector3(204. / 255, 136. / 255, 170. / 255) };
+const material2 = new THREE.ShaderMaterial({
+  uniforms: uniforms,
+  vertexShader: document.getElementById('vertexShader').textContent,
+  fragmentShader: document.getElementById('fragmentShader').textContent,
+  lights: true,
+  glslVersion: THREE.GLSL3,
+});
+const object2 = addObject(geometry2, material2, new THREE.Vector3(0, 2, 0));
+console.log(object2.material.uniforms);
+
+const geometry3 = new THREE.SphereGeometry(1, 32, 16);
+const material3 = new THREE.MeshPhongMaterial({ color: '#8AC' });
+const object3 = addObject(geometry3, material3, new THREE.Vector3(-3, 2, 0));
 
 window.addEventListener('resize', onWindowResize);
 

@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
-  <title>RawShaderMaterial Study</title>
+  <title>Lit ShaderMaterial Study</title>
   <style>
     body {
       margin: 0;
@@ -22,59 +22,48 @@
 <body>
   <div id="container"></div>
   <script id="vertexShader" type="x-shader/x-vertex">
-    precision mediump float;
-    precision mediump int;
-
-    in vec3 position;
-    in vec3 normal;
-    in vec2 uv;
-    in vec4 color;
-
-    uniform mat4 modelViewMatrix;
-    uniform mat4 projectionMatrix;
-
     struct VertexData {
       vec3 position;
       vec3 normal;
-      vec2 uv;
-      vec4 color;  
+      vec2 uv; 
     };
-
     out VertexData v2f;
 
     void main()	{
       v2f.position = position;
       v2f.normal = normal * 0.5 + 0.5;
       v2f.uv = uv;
-      v2f.color = color;
 
       gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
     }
   </script>
 
-  <script id="fragmentShader1" type="x-shader/x-fragment">
-    precision mediump float;
-    precision mediump int;
-    
+  <script id="fragmentShader" type="x-shader/x-fragment">
+    #include <common>
+    #include <lights_pars_begin> // `struct HemisphereLight;` and `HemisphereLight hemisphereLights[NUM_HEMI_LIGHTS]`
+
     struct VertexData {
       vec3 position;
       vec3 normal;
       vec2 uv;
-      vec4 color;  
     };
     in VertexData v2f;
     
     uniform float time;
+    uniform vec3 color;
 
     layout(location = 0) out vec4 fragColor;
 
     void main()	{
-      vec4 color = vec4( v2f.color ); // for BoxGeometry defaults to vec4(1)
-      color.r += sin( v2f.position.x * 10.0 + time ) * 0.5;
-      color.g += sin( v2f.position.y * 10.0 + time ) * 0.5;
-      color.b += sin( v2f.position.z * 10.0 + time ) * 0.5;
-
-      fragColor = color;
+      bool useMyLightingModel = true;
+      vec3 diffuseLight = vec3(0.0);
+      for (int i = 0; i < NUM_HEMI_LIGHTS; i++) {
+        if(useMyLightingModel)
+          diffuseLight += max(0.0, dot(v2f.normal, hemisphereLights[i].direction));
+        else
+          diffuseLight += getHemisphereLightIrradiance(hemisphereLights[i], v2f.normal);
+      }
+      fragColor = vec4(diffuseLight * color, 1);
     }
   </script>
 
