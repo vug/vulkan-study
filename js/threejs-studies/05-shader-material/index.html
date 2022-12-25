@@ -51,6 +51,7 @@
     
     uniform float time;
     uniform vec3 color;
+    uniform bool useThreeJsLightingModel;
 
     layout(location = 0) out vec4 fragColor;
 
@@ -58,10 +59,10 @@
       bool useMyLightingModel = true;
       vec3 diffuseLight = vec3(0.0);
       for (int i = 0; i < NUM_HEMI_LIGHTS; i++) {
-        if(useMyLightingModel)
-          diffuseLight += max(0.0, dot(v2f.normal, hemisphereLights[i].direction));
-        else
+        if(useThreeJsLightingModel)
           diffuseLight += getHemisphereLightIrradiance(hemisphereLights[i], v2f.normal);
+        else
+          diffuseLight += max(0.0, dot(v2f.normal, hemisphereLights[i].direction));
       }
       fragColor = vec4(diffuseLight * color, 1);
     }

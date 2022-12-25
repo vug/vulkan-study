@@ -4,10 +4,18 @@ import Stats from 'three/addons/libs/stats.module.js';
 import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
+const settings = {
+  useThreeJsLightingModel: false,
+};
+
 const container = document.getElementById('container');
 const stats = new Stats();
 container.appendChild(stats.dom);
 const gui = new GUI({ title: 'Settings' });
+{
+  const folder = gui.addFolder('Main');
+  folder.add(settings, 'useThreeJsLightingModel');
+}
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -77,11 +85,13 @@ const material1 = new THREE.MeshPhongMaterial({ color: '#CA8' });
 const object1 = addObject(geometry1, material1, new THREE.Vector3(3, 2, 0));
 
 const geometry2 = new THREE.BoxGeometry(1, 2, 3, 1, 1, 1);
-const uniforms = THREE.UniformsUtils.clone(THREE.UniformsLib.lights);
-uniforms.time = { value: 1.0 };
-uniforms.color = { value: new THREE.Vector3(204. / 255, 136. / 255, 170. / 255) };
 const material2 = new THREE.ShaderMaterial({
-  uniforms: uniforms,
+  uniforms: {
+    ...THREE.UniformsUtils.clone(THREE.UniformsLib.lights),
+    time: { value: 1.0 },
+    color: { value: new THREE.Vector3(204. / 255, 136. / 255, 170. / 255) },
+    useThreeJsLightingModel: { value: settings.useThreeJsLightingModel },
+  },
   vertexShader: document.getElementById('vertexShader').textContent,
   fragmentShader: document.getElementById('fragmentShader').textContent,
   lights: true,
@@ -99,6 +109,7 @@ window.addEventListener('resize', onWindowResize);
 function animate() {
   requestAnimationFrame(animate);
   controls.update(); // only required if controls.enableDamping = true, or if controls.autoRotate = true
+  object2.material.uniforms.useThreeJsLightingModel.value = settings.useThreeJsLightingModel;
 
   const time = performance.now() / 1000; // sec
 
