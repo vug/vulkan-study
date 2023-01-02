@@ -4,9 +4,9 @@ import Stats from 'three/addons/libs/stats.module.js';
 import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-const visualizationOptions = { sceneColor: 0, sceneDepth: 1, depthUgur: 2, outline: 3 };
+const visualizationOptions = { sceneColor: 0, sceneDepth: 1, depthUgur: 2, outline: 3, composed: 4 };
 const settings = {
-  visualize: visualizationOptions.outline,
+  visualize: visualizationOptions.composed,
   cameraFar: 50.0,
   param: 0.5,
 };
@@ -70,6 +70,10 @@ for (let i = 0, il = renderTargetOutline.texture.length; i < il; i++) {
   renderTargetOutline.texture[i].minFilter = THREE.NearestFilter;
   renderTargetOutline.texture[i].magFilter = THREE.NearestFilter;
 }
+
+const renderTargetCompose = new THREE.WebGLRenderTarget(targetSize.x, targetSize.y);
+renderTargetCompose.texture.minFilter = THREE.NearestFilter;
+renderTargetCompose.texture.magFilter = THREE.NearestFilter;
 
 // Setup Scene
 const scene = new THREE.Scene();
@@ -140,6 +144,20 @@ const outlineQuad = new THREE.Mesh(postPlane, outlineMaterial);
 const outlineScene = new THREE.Scene();
 outlineScene.add(outlineQuad);
 
+// Compose Pass
+const composeMaterial = new THREE.ShaderMaterial({
+  vertexShader: document.querySelector('#post-vert').textContent.trim(),
+  fragmentShader: document.querySelector('#post-compose').textContent.trim(),
+  uniforms: {
+    tScene: { value: null },
+    tOutline: { value: null },
+  },
+});
+const composeQuad = new THREE.Mesh(postPlane, composeMaterial);
+const composeScene = new THREE.Scene();
+composeScene.add(composeQuad);
+
+
 // Final Pass
 const finalMaterial = new THREE.ShaderMaterial({
   vertexShader: document.querySelector('#post-vert').textContent.trim(),
@@ -164,13 +182,20 @@ function animate() {
 
   // Main Scene Pass with Depth
   renderer.setRenderTarget(renderTargetSceneWithDepth);
+  renderer.setClearColor("#FFFFFF");
   renderer.render(scene, camera);
 
   // Outline Pass
-  outlineMaterial.uniforms.tDiffuse.value = renderTargetSceneWithDepth.texture;
+  outlineMaterial.uniforms.tDiffuse.value = renderTargetSceneWithDepth.texture; // not needed
   outlineMaterial.uniforms.tDepth.value = renderTargetSceneWithDepth.depthTexture;
   renderer.setRenderTarget(renderTargetOutline);
   renderer.render(outlineScene, postCamera);
+
+  // Compose Pass
+  composeMaterial.uniforms.tScene.value = renderTargetSceneWithDepth.texture;
+  composeMaterial.uniforms.tOutline.value = renderTargetOutline.texture[0];
+  renderer.setRenderTarget(renderTargetCompose);
+  renderer.render(composeScene, postCamera);
 
   // Final Screen Pass
   const textures = [
@@ -178,6 +203,7 @@ function animate() {
     renderTargetSceneWithDepth.depthTexture,
     renderTargetOutline.texture[1],
     renderTargetOutline.texture[0],
+    renderTargetCompose.texture,
   ];
   finalMaterial.uniforms.tTexture.value = textures[settings.visualize];
   renderer.setRenderTarget(null);

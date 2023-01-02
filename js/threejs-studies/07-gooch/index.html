@@ -132,6 +132,25 @@
     }    
   </script>
 
+  <script id="post-compose" type="x-shader/x-fragment">
+    struct VertexData {
+      vec3 position;
+      vec3 normal;
+      vec2 uv;
+    };
+    in VertexData v2f;
+    
+    uniform sampler2D tScene;
+    uniform sampler2D tOutline;
+
+    void main()	{
+      vec3 sceneColor = texture2D( tScene, v2f.uv ).rgb;
+      vec3 outline = texture2D( tOutline, v2f.uv ).rgb;
+      gl_FragColor.rgb = sceneColor * outline;
+      gl_FragColor.a = 1.0;      
+    }    
+  </script>
+
   <script type="importmap">
     {
         "imports": {
