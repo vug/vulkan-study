@@ -6,8 +6,9 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 const visualizationOptions = { scene: 0, depthOverrideMaterial: 1, depthPostProcessUgur: 2, depthPostProcessLearnOpenGL: 3 };
 const settings = {
-  visualize: visualizationOptions.scene,
+  visualize: visualizationOptions.depthPostProcessUgur,
   cameraFar: 50.0,
+  param: 0.5,
 };
 
 let container, stats, gui;
@@ -34,6 +35,7 @@ function init() {
     const folder = gui.addFolder('Main');
     folder.add(settings, 'visualize', visualizationOptions);
     folder.add(settings, 'cameraFar', 0.1, 100);
+    folder.add(settings, 'param', 0.0, 1.0);
   }
 
   renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -125,6 +127,7 @@ function init() {
       tDiffuse: { value: null },
       tDepth: { value: null },
       linearizationMethod: { value: settings.visualize },
+      param: { value: settings.param },
     }
   });
   const postPlane = new THREE.PlaneGeometry(2, 2);
@@ -143,6 +146,7 @@ function animate() {
 
   camera.far = settings.cameraFar;
   postMaterial.uniforms.cam.value.far = camera.far;
+  postMaterial.uniforms.param.value = settings.param;
 
   const time = performance.now() / 1000; // sec
 
