@@ -37,7 +37,7 @@
     }
   </script>
 
-  <script id="post-frag" type="x-shader/x-fragment">
+  <script id="post-outline" type="x-shader/x-fragment">
     //#include <common>
     //#include <lights_pars_begin> // `struct HemisphereLight;` and `HemisphereLight hemisphereLights[NUM_HEMI_LIGHTS]`
     //#include <packing>
@@ -96,6 +96,22 @@
       gl_FragColor.rgb = vec3(1.0 - smoothstep(param, param + 0.005, diff));
       gl_FragColor.a = 1.0;      
     }
+  </script>
+
+  <script id="post-screen" type="x-shader/x-fragment">
+    struct VertexData {
+      vec3 position;
+      vec3 normal;
+      vec2 uv;
+    };
+    in VertexData v2f;
+    
+    uniform sampler2D tTexture;
+
+    void main()	{
+      gl_FragColor.rgb = texture2D( tTexture, v2f.uv ).rgb;
+      gl_FragColor.a = 1.0;      
+    }    
   </script>
 
   <script type="importmap">

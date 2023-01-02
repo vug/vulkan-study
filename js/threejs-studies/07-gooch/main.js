@@ -4,7 +4,7 @@ import Stats from 'three/addons/libs/stats.module.js';
 import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-const visualizationOptions = { scene: 0, depthOverrideMaterial: 1, depthPostProcessUgur: 2, depthPostProcessLearnOpenGL: 3 };
+const visualizationOptions = { scene: 0, depthPostProcessUgur: 2, depthPostProcessLearnOpenGL: 3 };
 const settings = {
   visualize: visualizationOptions.depthPostProcessUgur,
   cameraFar: 50.0,
@@ -30,11 +30,11 @@ const gui = new GUI({ title: 'Settings' });
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
-
 if (!renderer.capabilities.isWebGL2 && !renderer.extensions.has('WEBGL_depth_texture')) {
   console.warn("Depth Texture extension is not supported. Exiting early...");
   debugger;
 }
+const devicePixelRatio = renderer.getPixelRatio();
 
 const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, settings.cameraFar);
 camera.position.set(0, 10, 20);
@@ -46,9 +46,14 @@ controls.enableDamping = true; // an animation loop is required when either damp
 controls.dampingFactor = 0.05;
 controls.screenSpacePanning = false;
 
-// Setup renderTarget
+// Pass1: scene with depth -> rtSceneWDepth
+// Pass2: outline via tSceneDepth -> rtOutline
+// Pass3: compose tSceneColor + tOutline -> screen
+
+// Setup renderTargets
 const targetSize = new THREE.Vector2();
 renderer.getSize(targetSize);
+targetSize.multiplyScalar(devicePixelRatio);
 
 const renderTargetSceneWithDepth = new THREE.WebGLRenderTarget(targetSize.x, targetSize.y);
 renderTargetSceneWithDepth.texture.minFilter = THREE.NearestFilter;
@@ -57,6 +62,14 @@ renderTargetSceneWithDepth.stencilBuffer = true;
 renderTargetSceneWithDepth.depthTexture = new THREE.DepthTexture();
 renderTargetSceneWithDepth.depthTexture.format = THREE.DepthStencilFormat;
 renderTargetSceneWithDepth.depthTexture.type = THREE.UnsignedInt248Type;
+
+const renderTargetOutline = new THREE.WebGLMultipleRenderTargets(targetSize.x, targetSize.y, 2);
+renderTargetOutline.texture[0].name = 'Outline';
+renderTargetOutline.texture[1].name = 'Depth';
+for (let i = 0, il = renderTargetOutline.texture.length; i < il; i++) {
+  renderTargetOutline.texture[i].minFilter = THREE.NearestFilter;
+  renderTargetOutline.texture[i].magFilter = THREE.NearestFilter;
+}
 
 // Setup Scene
 const scene = new THREE.Scene();
@@ -102,11 +115,14 @@ const scene = new THREE.Scene();
   }
 }
 
-// Setup Post-Processing Stage
+// Post-Processing Objects
 const postCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-const postMaterial = new THREE.ShaderMaterial({
+const postPlane = new THREE.PlaneGeometry(2, 2);
+
+// Outline Pass
+const outlineMaterial = new THREE.ShaderMaterial({
   vertexShader: document.querySelector('#post-vert').textContent.trim(),
-  fragmentShader: document.querySelector('#post-frag').textContent.trim(),
+  fragmentShader: document.querySelector('#post-outline').textContent.trim(),
   uniforms: {
     cam: {
       value: {
@@ -120,18 +136,17 @@ const postMaterial = new THREE.ShaderMaterial({
     param: { value: settings.param },
   }
 });
-const postPlane = new THREE.PlaneGeometry(2, 2);
-const postQuad = new THREE.Mesh(postPlane, postMaterial);
-const postScene = new THREE.Scene();
-postScene.add(postQuad);
+const outlineQuad = new THREE.Mesh(postPlane, outlineMaterial);
+const outlineScene = new THREE.Scene();
+outlineScene.add(outlineQuad);
 
 function animate() {
   requestAnimationFrame(animate);
   controls.update(); // only required if controls.enableDamping = true, or if controls.autoRotate = true
 
   camera.far = settings.cameraFar;
-  postMaterial.uniforms.cam.value.far = camera.far;
-  postMaterial.uniforms.param.value = settings.param;
+  outlineMaterial.uniforms.cam.value.far = camera.far;
+  outlineMaterial.uniforms.param.value = settings.param;
 
   const time = performance.now() / 1000; // sec
 
@@ -145,16 +160,16 @@ function animate() {
     scene.overrideMaterial = null;
   }
   else if (settings.visualize === visualizationOptions.depthPostProcessUgur || settings.visualize === visualizationOptions.depthPostProcessLearnOpenGL) {
-    postMaterial.uniforms.linearizationMethod.value = settings.visualize;
+    outlineMaterial.uniforms.linearizationMethod.value = settings.visualize;
     // Render scene as usual into renderTarget
     renderer.setRenderTarget(renderTargetSceneWithDepth);
     renderer.render(scene, camera);
 
     // Render post-processing
-    postMaterial.uniforms.tDiffuse.value = renderTargetSceneWithDepth.texture;
-    postMaterial.uniforms.tDepth.value = renderTargetSceneWithDepth.depthTexture;
+    outlineMaterial.uniforms.tDiffuse.value = renderTargetSceneWithDepth.texture;
+    outlineMaterial.uniforms.tDepth.value = renderTargetSceneWithDepth.depthTexture;
     renderer.setRenderTarget(null);
-    renderer.render(postScene, postCamera);
+    renderer.render(outlineScene, postCamera);
   }
 
   stats.update();
@@ -171,6 +186,6 @@ function onWindowResize() {
 
   renderer.setSize(width, height);
 
-  const dpr = renderer.getPixelRatio();
-  renderTarget.setSize(width * dpr, height * dpr);
+  renderTargetSceneWithDepth.setSize(targetSize.x, targetSize.y);
+  renderTargetOutline.setSize(targetSize.x, targetSize.y);
 }
