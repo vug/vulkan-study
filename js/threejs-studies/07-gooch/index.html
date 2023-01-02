@@ -37,10 +37,32 @@
     }
   </script>
 
-  <script id="post-outline" type="x-shader/x-fragment">
-    //#include <common>
-    //#include <lights_pars_begin> // `struct HemisphereLight;` and `HemisphereLight hemisphereLights[NUM_HEMI_LIGHTS]`
-    //#include <packing>
+  <script id="post-vert-raw" type="x-shader/x-vertex">
+    in vec3 position;
+    in vec3 normal;
+    in vec2 uv;
+    
+    uniform mat4 modelViewMatrix;
+    uniform mat4 projectionMatrix;    
+        
+    struct VertexData {
+      vec3 position;
+      vec3 normal;
+      vec2 uv;
+    };
+    out VertexData v2f;
+
+    void main() {
+      v2f.position = position;
+      v2f.normal = normal;
+      v2f.uv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  </script>
+
+  <script id="post-outline-raw" type="x-shader/x-fragment">
+    precision highp float;
+    precision highp int;      
 
     struct VertexData {
       vec3 position;
@@ -60,7 +82,8 @@
     uniform int linearizationMethod;
     uniform float param;
 
-    //layout(location = 0) out vec4 fragColor;
+    layout(location = 0) out vec4 fragOutline;
+    layout(location = 1) out vec4 fragDepth;
 
     float linearDepthFromBufferUgur(float depth, float near, float far) {
       float zView = (near * far) / ((near - far) * depth + far);
@@ -79,22 +102,17 @@
     }
 
     void main()	{
-      vec3 originalColor = texture2D( tDiffuse, v2f.uv ).rgb;
-      float depth = texture2D( tDepth, v2f.uv ).r; // from Depth Buffer, which is modified / non-linear
-      float linearDepth = 0.0;
-      if (linearizationMethod == 2)
-        linearDepth = linearDepthFromBufferUgur(depth, cam.near, cam.far);
-      else if (linearizationMethod == 3)
-        linearDepth = linearDepthFromBuffer(depth, cam.near, cam.far);
+      vec3 originalColor = texture( tDiffuse, v2f.uv ).rgb;
+      float depth = texture( tDepth, v2f.uv ).r; // from Depth Buffer, which is modified / non-linear
+      float linearDepth = linearDepthFromBufferUgur(depth, cam.near, cam.far);
       
-      //gl_FragColor.rgb = originalColor;
-      //gl_FragColor.rgb = vec3(linearDepth);
-      //gl_FragColor.rgb = vec3(normalizeDepth(linearDepth));
-      //gl_FragColor.rgb = vec3(fwidth(linearDepth));
+      fragDepth.rgb = vec3(normalizeDepth(linearDepth, cam.near, cam.far));
+      fragDepth.a = 1.0;
       float diff = fwidth(linearDepth);
-      //gl_FragColor.rgb = vec3(step(diff, param));
-      gl_FragColor.rgb = vec3(1.0 - smoothstep(param, param + 0.005, diff));
-      gl_FragColor.a = 1.0;      
+      //fragOutline.rgb = vec3(abs(diff));
+      //fragOutline.rgb = vec3(step(diff, param));
+      fragOutline.rgb = vec3(1.0 - smoothstep(param, param + 0.005, diff));
+      fragOutline.a = 1.0;      
     }
   </script>
 

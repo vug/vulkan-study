@@ -4,9 +4,9 @@ import Stats from 'three/addons/libs/stats.module.js';
 import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-const visualizationOptions = { scene: 0, depthPostProcessUgur: 2, depthPostProcessLearnOpenGL: 3 };
+const visualizationOptions = { sceneColor: 0, sceneDepth: 1, depthUgur: 2, outline: 3 };
 const settings = {
-  visualize: visualizationOptions.depthPostProcessUgur,
+  visualize: visualizationOptions.outline,
   cameraFar: 50.0,
   param: 0.5,
 };
@@ -120,9 +120,9 @@ const postCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 const postPlane = new THREE.PlaneGeometry(2, 2);
 
 // Outline Pass
-const outlineMaterial = new THREE.ShaderMaterial({
-  vertexShader: document.querySelector('#post-vert').textContent.trim(),
-  fragmentShader: document.querySelector('#post-outline').textContent.trim(),
+const outlineMaterial = new THREE.RawShaderMaterial({
+  vertexShader: document.querySelector('#post-vert-raw').textContent.trim(),
+  fragmentShader: document.querySelector('#post-outline-raw').textContent.trim(),
   uniforms: {
     cam: {
       value: {
@@ -132,13 +132,25 @@ const outlineMaterial = new THREE.ShaderMaterial({
     },
     tDiffuse: { value: null },
     tDepth: { value: null },
-    linearizationMethod: { value: settings.visualize },
     param: { value: settings.param },
-  }
+  },
+  glslVersion: THREE.GLSL3,
 });
 const outlineQuad = new THREE.Mesh(postPlane, outlineMaterial);
 const outlineScene = new THREE.Scene();
 outlineScene.add(outlineQuad);
+
+// Final Pass
+const finalMaterial = new THREE.ShaderMaterial({
+  vertexShader: document.querySelector('#post-vert').textContent.trim(),
+  fragmentShader: document.querySelector('#post-screen').textContent.trim(),
+  uniforms: {
+    tTexture: { value: null },
+  }
+});
+const finalQuad = new THREE.Mesh(postPlane, finalMaterial);
+const finalScene = new THREE.Scene();
+finalScene.add(finalQuad);
 
 function animate() {
   requestAnimationFrame(animate);
@@ -150,27 +162,26 @@ function animate() {
 
   const time = performance.now() / 1000; // sec
 
-  if (settings.visualize === visualizationOptions.scene) {
-    renderer.render(scene, camera);
-  }
-  else if (settings.visualize === visualizationOptions.depthOverrideMaterial) {
-    // scene.overrideMaterial = new THREE.MeshDistanceMaterial();
-    scene.overrideMaterial = depthMaterial;
-    renderer.render(scene, camera);
-    scene.overrideMaterial = null;
-  }
-  else if (settings.visualize === visualizationOptions.depthPostProcessUgur || settings.visualize === visualizationOptions.depthPostProcessLearnOpenGL) {
-    outlineMaterial.uniforms.linearizationMethod.value = settings.visualize;
-    // Render scene as usual into renderTarget
-    renderer.setRenderTarget(renderTargetSceneWithDepth);
-    renderer.render(scene, camera);
+  // Main Scene Pass with Depth
+  renderer.setRenderTarget(renderTargetSceneWithDepth);
+  renderer.render(scene, camera);
 
-    // Render post-processing
-    outlineMaterial.uniforms.tDiffuse.value = renderTargetSceneWithDepth.texture;
-    outlineMaterial.uniforms.tDepth.value = renderTargetSceneWithDepth.depthTexture;
-    renderer.setRenderTarget(null);
-    renderer.render(outlineScene, postCamera);
-  }
+  // Outline Pass
+  outlineMaterial.uniforms.tDiffuse.value = renderTargetSceneWithDepth.texture;
+  outlineMaterial.uniforms.tDepth.value = renderTargetSceneWithDepth.depthTexture;
+  renderer.setRenderTarget(renderTargetOutline);
+  renderer.render(outlineScene, postCamera);
+
+  // Final Screen Pass
+  const textures = [
+    renderTargetSceneWithDepth.texture,
+    renderTargetSceneWithDepth.depthTexture,
+    renderTargetOutline.texture[1],
+    renderTargetOutline.texture[0],
+  ];
+  finalMaterial.uniforms.tTexture.value = textures[settings.visualize];
+  renderer.setRenderTarget(null);
+  renderer.render(finalScene, postCamera);
 
   stats.update();
 }
