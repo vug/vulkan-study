@@ -89,11 +89,11 @@
       
       //gl_FragColor.rgb = originalColor;
       //gl_FragColor.rgb = vec3(linearDepth);
-      //gl_FragColor.rgb = vec3(normalizeDepth(linearDepth));
+      gl_FragColor.rgb = vec3(normalizeDepth(linearDepth, cam.near, cam.far));
       //gl_FragColor.rgb = vec3(fwidth(linearDepth));
-      float diff = fwidth(linearDepth);
+      //float diff = fwidth(linearDepth);
       //gl_FragColor.rgb = vec3(step(diff, param));
-      gl_FragColor.rgb = vec3(1.0 - smoothstep(param, param + 0.005, diff));
+      //gl_FragColor.rgb = vec3(1.0 - smoothstep(param, param + 0.005, diff));
       gl_FragColor.a = 1.0;      
     }
   </script>
