@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+  <title>Depth Visualization Study</title>
+  <style>
+    body {
+      margin: 0;
+    }
+
+    #container {
+      position: absolute;
+      top: 0px;
+      width: 100%;
+      bottom: 0px;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="container"></div>
+  <script id="post-vert" type="x-shader/x-vertex">
+    struct VertexData {
+      vec3 position;
+      vec3 normal;
+      vec2 uv;
+    };
+    out VertexData v2f;
+
+    void main() {
+      v2f.position = position;
+      v2f.normal = normal;
+      v2f.uv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  </script>
+
+  <script id="post-frag" type="x-shader/x-fragment">
+    //#include <common>
+    //#include <lights_pars_begin> // `struct HemisphereLight;` and `HemisphereLight hemisphereLights[NUM_HEMI_LIGHTS]`
+    //#include <packing>
+
+    struct VertexData {
+      vec3 position;
+      vec3 normal;
+      vec2 uv;
+    };
+    in VertexData v2f;
+    
+    uniform float time;
+    uniform sampler2D tDiffuse;
+    uniform sampler2D tDepth;
+    struct Camera {
+      float near;
+      float far;
+    };
+    uniform Camera cam;
+    uniform int linearizationMethod;
+    uniform float param;
+
+    //layout(location = 0) out vec4 fragColor;
+
+    float linearDepthFromBufferUgur(float depth, float near, float far) {
+      float zView = (near * far) / ((near - far) * depth + far);
+      return zView;
+    }
+
+    // from https://learnopengl.com/Advanced-OpenGL/Depth-testing
+    float linearDepthFromBuffer(float depth, float near, float far) {
+      float zNDC = depth * 2.0 - 1.0; // back to NDC 
+      float zView = (2.0 * near * far) / (far + near - zNDC * (far - near));	
+      return zView;
+    }
+
+    float normalizeDepth(float zView, float near, float far) {
+      return (zView - near) / (far - near);      
+    }
+
+    void main()	{
+      vec3 originalColor = texture2D( tDiffuse, v2f.uv ).rgb;
+      float depth = texture2D( tDepth, v2f.uv ).r; // from Depth Buffer, which is modified / non-linear
+      float linearDepth = 0.0;
+      if (linearizationMethod == 2)
+        linearDepth = linearDepthFromBufferUgur(depth, cam.near, cam.far);
+      else if (linearizationMethod == 3)
+        linearDepth = linearDepthFromBuffer(depth, cam.near, cam.far);
+      
+      //gl_FragColor.rgb = originalColor;
+      //gl_FragColor.rgb = vec3(linearDepth);
+      //gl_FragColor.rgb = vec3(normalizeDepth(linearDepth));
+      //gl_FragColor.rgb = vec3(fwidth(linearDepth));
+      float diff = fwidth(linearDepth);
+      //gl_FragColor.rgb = vec3(step(diff, param));
+      gl_FragColor.rgb = vec3(1.0 - smoothstep(param, param + 0.005, diff));
+      gl_FragColor.a = 1.0;      
+    }
+  </script>
+
+  <script type="importmap">
+    {
+        "imports": {
+            "three": "../node_modules/three/build/three.module.js",
+            "three/addons/": "../node_modules/three/examples/jsm/"
+        }
+    }
+  </script>
+  <script type="module" src="main.js"></script>
+</body>
+
+</html>
