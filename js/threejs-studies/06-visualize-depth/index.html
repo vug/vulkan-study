@@ -52,20 +52,38 @@
     uniform float time;
     uniform sampler2D tDiffuse;
     uniform sampler2D tDepth;
-    uniform float cameraNear;
-    uniform float cameraFar;
+    struct Camera {
+      float near;
+      float far;
+    };
+    uniform Camera cam;
+    uniform int linearizationMethod;
 
     //layout(location = 0) out vec4 fragColor;
 
+    float linearDepthFromBufferUgur(float depth, float near, float far) {
+      float zView = (near * far) / ((near - far) * depth + far);
+      return (zView - near) / (far - near);
+    }
+
+    // from https://learnopengl.com/Advanced-OpenGL/Depth-testing
+    float linearDepthFromBuffer(float depth, float near, float far) {
+      float zNDC = depth * 2.0 - 1.0; // back to NDC 
+      float zView = (2.0 * near * far) / (far + near - zNDC * (far - near));	
+      return (zView - near) / (far - near);
+    }
+
     void main()	{
       vec3 originalColor = texture2D( tDiffuse, v2f.uv ).rgb;
-      float depth = texture2D( tDepth, v2f.uv ).r;
-      float viewZ = ( cameraNear * cameraFar ) / ( ( cameraFar - cameraNear ) * depth - cameraFar );
-      float orthoDepth = ( viewZ + cameraNear ) / ( cameraNear - cameraFar );
-
+      float depth = texture2D( tDepth, v2f.uv ).r; // from Depth Buffer, which is modified / non-linear
+      float linearDepth = 0.0;
+      if (linearizationMethod == 2)
+        linearDepth = linearDepthFromBufferUgur(depth, cam.near, cam.far);
+      else if (linearizationMethod == 3)
+        linearDepth = linearDepthFromBuffer(depth, cam.near, cam.far);
       
       //gl_FragColor.rgb = originalColor;
-      gl_FragColor.rgb = vec3(orthoDepth);
+      gl_FragColor.rgb = vec3(linearDepth);
       gl_FragColor.a = 1.0;      
     }
   </script>

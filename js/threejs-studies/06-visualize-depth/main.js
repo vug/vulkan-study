@@ -4,15 +4,21 @@ import Stats from 'three/addons/libs/stats.module.js';
 import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-const visualizationOptions = { scene: 0, depth: 1 };
+const visualizationOptions = { scene: 0, depthOverrideMaterial: 1, depthPostProcessUgur: 2, depthPostProcessLearnOpenGL: 3 };
 const settings = {
   visualize: visualizationOptions.scene,
+  cameraFar: 50.0,
 };
 
 let container, stats, gui;
-let renderer, camera, controls, scene;
+let renderer, controls, scene;
+/** @type {THREE.PerspectiveCamera} */
+let camera;
+let depthMaterial = new THREE.MeshDepthMaterial();
 let renderTarget;
-let postScene, postCamera, postMaterial;
+let postScene, postCamera;
+/** @type {THREE.ShaderMaterial} */
+let postMaterial;
 let supportsExtension = true;
 // const textureLoader = new THREE.TextureLoader();
 
@@ -27,6 +33,7 @@ function init() {
   {
     const folder = gui.addFolder('Main');
     folder.add(settings, 'visualize', visualizationOptions);
+    folder.add(settings, 'cameraFar', 0.1, 100);
   }
 
   renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -39,7 +46,7 @@ function init() {
     return;
   }
 
-  camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+  camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, settings.cameraFar);
   camera.position.set(0, 10, 20);
   camera.lookAt(0, 0, 0);
   controls = new OrbitControls(camera, container);
@@ -82,9 +89,10 @@ function init() {
   }
   const geometry = new THREE.TorusKnotGeometry(1, 0.3, 128, 64);
   // const material = new THREE.MeshBasicMaterial({ color: 'blue' });
-  const material = new THREE.MeshPhongMaterial({
+  const material = new THREE.MeshStandardMaterial({
     color: 0xAABBCC,
-    // flatShading: true,
+    metalness: 0.5,
+    roughness: 0.6,
   });
   const count = 50;
   const scale = 5;
@@ -108,10 +116,15 @@ function init() {
     vertexShader: document.querySelector('#post-vert').textContent.trim(),
     fragmentShader: document.querySelector('#post-frag').textContent.trim(),
     uniforms: {
-      cameraNear: { value: camera.near },
-      cameraFar: { value: camera.far },
+      cam: {
+        value: {
+          near: camera.near,
+          far: camera.far,
+        }
+      },
       tDiffuse: { value: null },
-      tDepth: { value: null }
+      tDepth: { value: null },
+      linearizationMethod: { value: settings.visualize },
     }
   });
   const postPlane = new THREE.PlaneGeometry(2, 2);
@@ -127,14 +140,23 @@ function animate() {
 
   requestAnimationFrame(animate);
   controls.update(); // only required if controls.enableDamping = true, or if controls.autoRotate = true
-  // object2.material.uniforms.useThreeJsLightingModel.value = settings.useThreeJsLightingModel;
+
+  camera.far = settings.cameraFar;
+  postMaterial.uniforms.cam.value.far = camera.far;
 
   const time = performance.now() / 1000; // sec
 
   if (settings.visualize === visualizationOptions.scene) {
     renderer.render(scene, camera);
   }
-  else {
+  else if (settings.visualize === visualizationOptions.depthOverrideMaterial) {
+    // scene.overrideMaterial = new THREE.MeshDistanceMaterial();
+    scene.overrideMaterial = depthMaterial;
+    renderer.render(scene, camera);
+    scene.overrideMaterial = null;
+  }
+  else if (settings.visualize === visualizationOptions.depthPostProcessUgur || settings.visualize === visualizationOptions.depthPostProcessLearnOpenGL) {
+    postMaterial.uniforms.linearizationMethod.value = settings.visualize;
     // Render scene as usual into renderTarget
     renderer.setRenderTarget(renderTarget);
     renderer.render(scene, camera);
